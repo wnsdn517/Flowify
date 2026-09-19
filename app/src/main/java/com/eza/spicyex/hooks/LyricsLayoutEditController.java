@@ -66,7 +66,8 @@ final class LyricsLayoutEditController {
                 Settings.TRACK_INFO_ART_SIZE, Settings.TRACK_INFO_ART_SIZE_CUSTOM_DP,
                 Settings.TRACK_INFO_TEXT_ALIGN, Settings.TRACK_INFO_TEXT_SIZE_ADAPTIVE,
                 Settings.LYRICS_FOCUS_POSITION, Settings.LYRICS_FOCUS_POSITION_CUSTOM_PERCENT,
-                Settings.LYRICS_BLUR_INTENSITY, Settings.LYRICS_TEXT_SIZE, Settings.LYRICS_TEXT_SIZE_CUSTOM,
+                Settings.ENABLE_LINE_BLUR, Settings.LYRICS_BLUR_INTENSITY,
+                Settings.LYRICS_TEXT_SIZE, Settings.LYRICS_TEXT_SIZE_CUSTOM,
                 Settings.TRACK_INFO_TEXT_SIZE, Settings.TRACK_INFO_TEXT_SIZE_CUSTOM,
                 Settings.BACKGROUND_STYLE, Settings.BEAT_REACTIVE_BACKGROUND,
                 Settings.FORCE_DARK_BACKGROUND, Settings.EXTRA_DARK_BACKGROUND,
@@ -98,6 +99,7 @@ final class LyricsLayoutEditController {
         private final FrameLayout artLayer;
         private final FrameLayout skipLayer;
         private final LinearLayout optionsCard;
+        private final MaxHeightScrollView optionsScroll;
         private TextView demoButton;
 
         private Element selected = Element.ARTWORK;
@@ -130,6 +132,7 @@ final class LyricsLayoutEditController {
             this.artLayer = new FrameLayout(activity);
             this.skipLayer = new FrameLayout(activity);
             this.optionsCard = new LinearLayout(activity);
+            this.optionsScroll = new MaxHeightScrollView(activity);
         }
 
         /** Writes through the settings store, then forces the real shell to re-apply - bypassing
@@ -217,20 +220,31 @@ final class LyricsLayoutEditController {
                     Gravity.TOP));
 
             optionsCard.setOrientation(LinearLayout.VERTICAL);
+            optionsCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+
+            // The card can run long (Artwork/Background have half a dozen rows each), and in
+            // landscape's shorter height a plain WRAP_CONTENT card would grow tall enough to sit
+            // under the top bar, with no way to reach whatever scrolled past it. Wrapping it in a
+            // scroll view - capped well short of the full height by MaxHeightScrollView - keeps it
+            // reachable by drag in both orientations instead.
             GradientDrawable cardBg = new GradientDrawable();
             cardBg.setColor(0xF01C1C22);
             cardBg.setCornerRadius(dp(20));
             cardBg.setStroke(dp(1), 0x24FFFFFF);
-            optionsCard.setBackground(cardBg);
-            optionsCard.setPadding(dp(16), dp(14), dp(16), dp(14));
-            optionsCard.setElevation(dp(12));
+            optionsScroll.setBackground(cardBg);
+            optionsScroll.setElevation(dp(12));
+            optionsScroll.setVerticalScrollBarEnabled(false);
+            optionsScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+            optionsScroll.addView(optionsCard, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
             FrameLayout.LayoutParams cardLp = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.BOTTOM);
             cardLp.leftMargin = dp(20);
             cardLp.rightMargin = dp(20);
             cardLp.bottomMargin = dp(28);
-            overlay.addView(optionsCard, cardLp);
+            overlay.addView(optionsScroll, cardLp);
 
             refreshArtwork();
             selectElement(Element.ARTWORK);
@@ -618,8 +632,13 @@ final class LyricsLayoutEditController {
         private void buildFocusHandle() {
             View line = new FocusLineView(activity);
             int touchHeight = dp(FOCUS_TOUCH_HEIGHT_DP);
+            // Width/left come from focusArea's own real rect, not the full screen - in two-column
+            // landscape the lyrics text frame is only part of the width (the other column is
+            // artwork), and a full-width line there reads as misaligned, floating over artwork it
+            // has nothing to do with. repaintFocusHandle() re-reads both on every call, same as
+            // the vertical position, so this still tracks correctly if that rect ever changes.
             FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, touchHeight, Gravity.TOP);
+                    Math.max(0, focusArea.getWidth()), touchHeight, Gravity.TOP | Gravity.START);
             overlay.addView(line, lp);
             focusHandle = line;
             repaintFocusHandle();
@@ -666,6 +685,8 @@ final class LyricsLayoutEditController {
             int areaHeight = Math.max(1, focusArea.getHeight());
             float fraction = currentFocusFraction();
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) focusHandle.getLayoutParams();
+            lp.width = Math.max(0, focusArea.getWidth());
+            lp.leftMargin = pos[0];
             lp.topMargin = pos[1] + Math.round(areaHeight * fraction) - lp.height / 2;
             focusHandle.setLayoutParams(lp);
         }
@@ -856,13 +877,23 @@ final class LyricsLayoutEditController {
 
             optionsCard.addView(divider(), new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
-            optionsCard.addView(text("Blur intensity - how much stronger the blur gets on lines "
-                    + "further from the current one", 12, 0x99FFFFFF, false), matchWrap(8));
-            optionsCard.addView(dragRow(
-                    Settings.LYRICS_BLUR_INTENSITY.minValue, Settings.LYRICS_BLUR_INTENSITY.maxValue,
-                    safeGet(Settings.LYRICS_BLUR_INTENSITY), "%",
-                    value -> writer.put(Settings.LYRICS_BLUR_INTENSITY, value)),
-                    matchWrap(0));
+            optionsCard.addView(text("Blur distant lines", 13, 0x99FFFFFF, false), matchWrap(4));
+            optionsCard.addView(chipRow(Settings.ENABLE_LINE_BLUR,
+                    new String[]{"Off", "Slight", "Heavy"},
+                    new String[]{"Off", "Slight", "Heavy"},
+                    () -> selectElement(Element.BACKGROUND)), matchWrap(12));
+
+            if (!"Off".equals(store.get(Settings.ENABLE_LINE_BLUR))) {
+                optionsCard.addView(divider(), new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+                optionsCard.addView(text("Blur intensity - how much stronger the blur gets on lines "
+                        + "further from the current one", 12, 0x99FFFFFF, false), matchWrap(8));
+                optionsCard.addView(dragRow(
+                        Settings.LYRICS_BLUR_INTENSITY.minValue, Settings.LYRICS_BLUR_INTENSITY.maxValue,
+                        safeGet(Settings.LYRICS_BLUR_INTENSITY), "%",
+                        value -> writer.put(Settings.LYRICS_BLUR_INTENSITY, value)),
+                        matchWrap(0));
+            }
         }
 
         private void buildSkipOptions() {
@@ -1013,6 +1044,14 @@ final class LyricsLayoutEditController {
             track.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> paint[0].run());
             track.setOnTouchListener((v, event) -> {
                 int action = event.getActionMasked();
+                // The options card now scrolls (see MaxHeightScrollView) - without this, a drag
+                // that drifts even slightly vertically hands the gesture to that scroll instead
+                // of finishing the slide here.
+                if (action == MotionEvent.ACTION_DOWN) {
+                    if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(false);
+                }
                 if (action != MotionEvent.ACTION_DOWN && action != MotionEvent.ACTION_MOVE) return false;
                 int trackW = track.getWidth() - thumbSize;
                 if (trackW <= 0) return false;
@@ -1082,6 +1121,28 @@ final class LyricsLayoutEditController {
         private int safeGet(Settings.IntegerSetting setting) {
             Integer value = store.get(setting);
             return value == null ? setting.defaultValue : value;
+        }
+    }
+
+    /** Caps its own height to a fraction of whatever space its FrameLayout parent offers it, and
+     *  scrolls the rest - a plain WRAP_CONTENT ScrollView here would still grow to fill nearly the
+     *  entire available height before Android ever has reason to let it scroll, which in
+     *  landscape's shorter screen means the options card sitting under (and blocking) the top
+     *  bar rather than leaving room below it. */
+    private static final class MaxHeightScrollView extends android.widget.ScrollView {
+        private static final float MAX_HEIGHT_FRACTION = 0.6f;
+
+        MaxHeightScrollView(Activity activity) {
+            super(activity);
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            if (View.MeasureSpec.getMode(heightMeasureSpec) != View.MeasureSpec.UNSPECIFIED) {
+                int capped = Math.round(View.MeasureSpec.getSize(heightMeasureSpec) * MAX_HEIGHT_FRACTION);
+                heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(capped, View.MeasureSpec.AT_MOST);
+            }
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         }
     }
 

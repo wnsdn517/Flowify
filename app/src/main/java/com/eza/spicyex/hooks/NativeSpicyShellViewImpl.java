@@ -277,6 +277,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private boolean demoModeActive;
     private SpotifyTrack demoTrack;
     private Bitmap demoArtBitmap;
+    private long demoStartElapsedMs;
 
     private void hideChrome() {
         if (running && chromeHeader != null && !"Always on".equals(fullscreenControlsMode())) {
@@ -424,6 +425,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (demoTrack == null) demoTrack = DemoLyricsContent.demoTrack();
         if (demoArtBitmap == null) demoArtBitmap = DemoLyricsContent.demoArtBitmap();
         document = DemoLyricsContent.demoDocument();
+        demoStartElapsedMs = SystemClock.elapsedRealtime();
+        clearRowCascade();
+        followState.resetActive();
+        resetScrollForNextDocument = true;
         pendingLoadEntrance = true;
         renderDocument();
         if (trackInfoController != null) trackInfoController.showDemoTrack(demoTrack, demoArtBitmap);
@@ -1437,10 +1442,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void updateState(float deltaSeconds) {
         if (demoModeActive) {
-            // Freeze the real per-frame pipeline entirely - it must not race the layout editor's
-            // synthetic preview content (e.g. treating the demo track's sentinel URI as a real
-            // track change and trying to fetch lyrics for it through the real host).
-            updateFrameDemand(false);
+            // A dedicated, self-contained animation path - not the real per-track pipeline below,
+            // which must never see the demo track's sentinel URI (it would read as a real track
+            // change and try to fetch lyrics for it through the real host).
+            updateDemoFrame(deltaSeconds);
             return;
         }
         SpotifyTrack track = currentTrackThrottled();
@@ -1591,6 +1596,33 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             setTextIfChanged(status, (playingNow ? "Playing" : "Paused") + " • fetching lyrics for " + shortTrackId(uri));
         }
         updateFrameDemand(playingNow);
+    }
+
+    /** Demo mode's whole per-frame job: a synthetic clock looping over the demo document's
+     *  duration, driving the same active-row and animation calls the real pipeline uses once it
+     *  already has a position and a document - everything upstream of that (track-change
+     *  detection, lyric fetch, ad handling) never runs, since none of it makes sense for a fake
+     *  track with a sentinel URI. */
+    private void updateDemoFrame(float deltaSeconds) {
+        if (document == null) {
+            updateFrameDemand(false);
+            return;
+        }
+        long lyricPos = (SystemClock.elapsedRealtime() - demoStartElapsedMs)
+                % Math.max(1L, document.durationMs);
+        int nextActive = LyricTimeline.findPrimaryActiveRow(document.appliedLines, lyricPos);
+        if (nextActive != followState.activeIndex()) {
+            setActiveLine(nextActive, lyricPos, demoTrack);
+        }
+        boolean userScrollHeld = followState.isHoldingNow();
+        long visibleRange = userScrollHeld && scrollController != null
+                ? scrollController.visibleLineRange(rowHeightPrefix(), document.appliedLines.size())
+                : LyricsScrollController.ALL_LINES;
+        frameRenderer.applySynced(document, rowMountController.mountedIndices(), mountedRowsHost,
+                renderConfig, lyricPos, nextActive, deltaSeconds, userScrollHeld,
+                LyricsScrollController.rangeStart(visibleRange),
+                LyricsScrollController.rangeEnd(visibleRange));
+        updateFrameDemand(true);
     }
 
     private void updateFrameDemand(boolean playingNow) {
@@ -1871,8 +1903,31 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
     }
 
+    /** Rows rise from just behind their own resting position and fade in, staggered slightly by
+     *  on-screen order. Each row's start offset is a fraction of its own measured height rather
+     *  than one flat pixel value shared by every row - a fixed offset reads as the whole column
+     *  pinned to some arbitrary edge, while a per-row one reads as each line arriving from just
+     *  behind where it already is. */
     private void startLoadEntranceAnimation() {
-        // TODO: Implement load entrance animation
+        if (document == null) return;
+        int order = 0;
+        for (int i : rowMountController.mountedIndices()) {
+            if (i < 0 || i >= document.appliedLines.size()) continue;
+            AppliedLine line = document.appliedLines.get(i);
+            if (line == null) continue;
+            View row = rowMountController.attachedRowView(line);
+            if (row == null || row.getHeight() <= 0) continue;
+            float startTranslationY = row.getHeight() * 0.35f;
+            row.animate().cancel();
+            row.setTranslationY(startTranslationY);
+            row.setAlpha(0f);
+            row.animate().translationY(0f).alpha(1f)
+                    .setStartDelay(Math.min(order, 8) * 28L)
+                    .setDuration(360L)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .start();
+            order++;
+        }
     }
 
     private void ensureLyricsColumnScaffold() {
