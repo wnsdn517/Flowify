@@ -100,9 +100,10 @@ public final class LyricsAnimationApplier {
                         motionActive = positionMs >= groupStartMs && positionMs < groupEndMs;
                         motionProgress = progress01(positionMs, groupStartMs, groupEndMs);
                     }
-                    boolean letterUnitMotion = individualWordMotion && !grouped
-                            && LyricsSyllableViewState.letterCount(motionOwner) > 1;
-                    boolean appleLetterDriven = appleLift && liftMotion
+                    // Apple lift always moves whole words together (see the word-grouping
+                    // request this guards) - it never drops to per-letter motion, unlike the
+                    // Word zoom/Word lift bounce styles this flag otherwise serves.
+                    boolean letterUnitMotion = individualWordMotion && !grouped && !appleLift
                             && LyricsSyllableViewState.letterCount(motionOwner) > 1;
                     // A segment that qualifies for the strong per-letter pop but isn't getting
                     // letter treatment here - most commonly a furigana-annotated Japanese word,
@@ -119,7 +120,7 @@ public final class LyricsAnimationApplier {
                     float targetScale = (grouped && individualWordMotion) || letterUnitMotion
                             ? 1f : wordMotionScale(
                             liftMotion, motionActive, positionMs >= groupEndMs, motionProgress, strongWordPop);
-                    float targetY = (grouped && individualWordMotion) || letterUnitMotion || appleLetterDriven
+                    float targetY = (grouped && individualWordMotion) || letterUnitMotion
                             ? 0f : wordMotionY(
                             liftMotion, motionActive, positionMs >= groupEndMs, motionProgress, appleLift);
                     float scale = LyricsSyllableViewState.stepWordScale(
@@ -138,7 +139,7 @@ public final class LyricsAnimationApplier {
                             float localProgress = segment == null ? 0f : progress01(
                                     positionMs, segment.startMs, segment.endMs);
                             boolean localSung = segment != null && positionMs >= segment.endMs;
-                            boolean localLetterUnits = individualWordMotion
+                            boolean localLetterUnits = individualWordMotion && !appleLift
                                     && LyricsSyllableViewState.letterCount(segment) > 1;
                             float localScaleTarget = groupedLocalScale(
                                     individualWordMotion && !localLetterUnits,
@@ -225,7 +226,8 @@ public final class LyricsAnimationApplier {
 
         int letterCount = LyricsSyllableViewState.letterCount(seg);
         if (letterCount <= 0) return;
-        boolean letterUnitMotion = wordBounceEnabled && individualWordMotion && letterCount > 1;
+        boolean letterUnitMotion = wordBounceEnabled && individualWordMotion && !appleLift
+                && letterCount > 1;
         float timeAlpha = (float) Math.sin(progress * (Math.PI / 2d));
         float letterAnchor = LyricAnimations.activeLetterPosition(letterCount, timeAlpha);
         for (int letterIndex = 0; letterIndex < letterCount; letterIndex++) {
@@ -250,11 +252,6 @@ public final class LyricsAnimationApplier {
             float ownLetterY = letterUnitMotion
                     ? wordMotionY(liftMotion, motionActive, motionSung, motionProgress, appleLift) : 0f;
             float targetLetterY = ownLetterY;
-            if (letterUnitMotion && liftMotion && appleLift) {
-                float wavePos = timeAlpha * letterCount - letterIndex;
-                float localLift = clamp01(wavePos);
-                targetLetterY = -0.04f * localLift * localLift * (3f - 2f * localLift);
-            }
             float targetLetterGlow = spotlight
                     ? ((active || (sung && !appleGlow)) ? 0.6f : 0f)
                     : ((sung && !appleGlow) ? 0.55f

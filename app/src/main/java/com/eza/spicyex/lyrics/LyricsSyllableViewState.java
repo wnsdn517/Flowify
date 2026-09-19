@@ -522,8 +522,11 @@ public final class LyricsSyllableViewState {
 
     private static void ensureWordYSpring(SyllableSegment segment, float initialY) {
         if (state(segment).ySpring != null) return;
+        // Apple lift now drives the whole word (see setAppleMotion), so this spring carries the
+        // entire visible motion - slower and closer to critically damped than the bouncier
+        // per-style default reads as a calm, natural rise rather than a snap.
         state(segment).ySpring = appleMotion
-                ? new Spring(initialY, 1.3f, 0.7f)
+                ? new Spring(initialY, 0.95f, 0.85f)
                 : new Spring(initialY, 1.45f, 0.4f);
     }
 
@@ -544,7 +547,7 @@ public final class LyricsSyllableViewState {
     private static void ensureLocalWordYSpring(SyllableSegment segment, float initialY) {
         if (state(segment).localYSpring != null) return;
         state(segment).localYSpring = appleMotion
-                ? new Spring(initialY, 1.3f, 0.7f)
+                ? new Spring(initialY, 0.95f, 0.85f)
                 : new Spring(initialY, 1.45f, 0.4f);
     }
 
