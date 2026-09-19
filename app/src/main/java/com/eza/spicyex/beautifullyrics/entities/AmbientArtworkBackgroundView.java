@@ -3,6 +3,7 @@ package com.eza.spicyex.beautifullyrics.entities;
 import android.content.Context;
 import android.graphics.*;
 import android.os.Build;
+import android.os.PowerManager;
 import android.view.Choreographer;
 import android.view.View;
 import androidx.annotation.RequiresApi;
@@ -107,6 +108,20 @@ public final class AmbientArtworkBackgroundView extends View implements AmbientB
     private int colorA = Color.rgb(30,21,18), colorB = Color.rgb(16,15,16);
     private final Choreographer.FrameCallback frame = this::tick;
     /**
+     * The AGSL noise shader's cost is per output pixel, so it's rendered into a much smaller
+     * offscreen surface and upscaled (the blur/warp look hides the extra softness) instead of at
+     * full view resolution every frame - a full-res fragment shader running continuously for the
+     * whole lyrics session is a real sustained-heat source on older/weaker GPUs.
+     * RuntimeShader only works on a hardware-accelerated canvas, so the low-res surface has to be
+     * a RenderNode recording, not a Bitmap-backed Canvas (which is always software/raster).
+     */
+    private static final float RENDER_SCALE = 0.34f;
+    private final RenderNode renderNode = new RenderNode("ambientShader");
+    /** Freezes the animation (last frame stays visible) once the OS reports the device running
+     *  hot, instead of continuing to add GPU load on top of whatever caused it. */
+    private boolean thermalThrottled;
+    private PowerManager.OnThermalStatusChangedListener thermalListener;
+    /**
      * Beat reactivity: the live audio level is applied as a transient boost on top of the shader's
      * steady-state warp amount, so the background visibly kicks with the music instead of only
      * flowing at a constant rate. Written from the capture thread, read on the next draw.
@@ -178,8 +193,8 @@ public final class AmbientArtworkBackgroundView extends View implements AmbientB
         invalidate();
     }
     private boolean animating() {
-        return enabled && moving && playing && texture != null && isAttachedToWindow()
-                && getWindowVisibility() == VISIBLE && isShown();
+        return enabled && moving && playing && !thermalThrottled && texture != null
+                && isAttachedToWindow() && getWindowVisibility() == VISIBLE && isShown();
     }
     private void schedule() {
         if (!animating()) {
@@ -188,7 +203,8 @@ public final class AmbientArtworkBackgroundView extends View implements AmbientB
         }
         if (!posted) {
             posted = true;
-            Choreographer.getInstance().postFrameCallbackDelayed(frame, 30);
+            // ~20fps: slow drifting noise reads the same as at 33fps but wakes the GPU less often.
+            Choreographer.getInstance().postFrameCallbackDelayed(frame, 50);
         }
     }
     private void tick(long now) {
@@ -199,11 +215,43 @@ public final class AmbientArtworkBackgroundView extends View implements AmbientB
         invalidate();
         schedule();
     }
-    protected void onAttachedToWindow() { super.onAttachedToWindow(); schedule(); }
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        registerThermalListener();
+        schedule();
+    }
     protected void onDetachedFromWindow() {
+        unregisterThermalListener();
         Choreographer.getInstance().removeFrameCallback(frame);
         posted = false; lastFrame = 0;
+        renderNode.discardDisplayList();
         super.onDetachedFromWindow();
+    }
+    private void registerThermalListener() {
+        if (thermalListener != null || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return;
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        if (pm == null) return;
+        try {
+            thermalListener = status -> {
+                boolean hot = status >= PowerManager.THERMAL_STATUS_MODERATE;
+                if (hot == thermalThrottled) return;
+                thermalThrottled = hot;
+                schedule();
+            };
+            pm.addThermalStatusListener(getContext().getMainExecutor(), thermalListener);
+            thermalThrottled = pm.getCurrentThermalStatus() >= PowerManager.THERMAL_STATUS_MODERATE;
+        } catch (Throwable ignored) {
+            thermalListener = null;
+        }
+    }
+    private void unregisterThermalListener() {
+        if (thermalListener == null) return;
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        if (pm != null) {
+            try { pm.removeThermalStatusListener(thermalListener); } catch (Throwable ignored) { }
+        }
+        thermalListener = null;
+        thermalThrottled = false;
     }
     protected void onWindowVisibilityChanged(int visibility) {
         super.onWindowVisibilityChanged(visibility);
@@ -215,7 +263,12 @@ public final class AmbientArtworkBackgroundView extends View implements AmbientB
     }
     protected void onSizeChanged(int w,int h,int oldw,int oldh) {
         super.onSizeChanged(w,h,oldw,oldh);
-        shader.setFloatUniform("resolution",Math.max(1,w),Math.max(1,h));
+        int lowW = Math.max(1, Math.round(w * RENDER_SCALE));
+        int lowH = Math.max(1, Math.round(h * RENDER_SCALE));
+        // Uniform tracks the offscreen surface's own size, not the view's - the shader's uv
+        // mapping (p / resolution) only needs to span 0..1 across whatever it's drawn onto.
+        shader.setFloatUniform("resolution", lowW, lowH);
+        renderNode.setPosition(0, 0, lowW, lowH);
         updateFallback();
     }
     private void updateFallback() {
@@ -228,13 +281,29 @@ public final class AmbientArtworkBackgroundView extends View implements AmbientB
     }
 
     protected void onDraw(Canvas canvas) {
-        if (texture != null) {
+        // RuntimeShader is a GPU-only feature: a software-rendered canvas (e.g. a view snapshot,
+        // or hardware acceleration disabled for the window) can't draw the shader paint at all,
+        // on the offscreen surface or directly, so fall back to the plain gradient in that case.
+        if (texture != null && canvas.isHardwareAccelerated()) {
             shader.setFloatUniform("time", (float) elapsedSeconds);
             // A paused or stopped background must not keep pulsing: the measured level can still
             // be non-zero for a beat after the shell stops advancing time.
             float reactivity = moving && playing ? audioLevel : 0f;
             shader.setFloatUniform("warpIntensity", 1f + BEAT_BOOST * reactivity);
+            int lowW = renderNode.getWidth(), lowH = renderNode.getHeight();
+            if (lowW > 0 && lowH > 0) {
+                RecordingCanvas recording = renderNode.beginRecording();
+                recording.drawRect(0, 0, lowW, lowH, paint);
+                renderNode.endRecording();
+                canvas.save();
+                canvas.scale(getWidth() / (float) lowW, getHeight() / (float) lowH);
+                canvas.drawRenderNode(renderNode);
+                canvas.restore();
+            } else {
+                canvas.drawRect(0, 0, getWidth(), getHeight(), paint);
+            }
+            return;
         }
-        canvas.drawRect(0,0,getWidth(),getHeight(),texture == null ? fallback : paint);
+        canvas.drawRect(0,0,getWidth(),getHeight(),fallback);
     }
 }
