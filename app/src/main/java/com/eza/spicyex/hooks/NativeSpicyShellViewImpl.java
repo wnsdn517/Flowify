@@ -408,7 +408,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                         ? columnArtFrame
                         : (trackInfoController == null ? null : trackInfoController.currentArtFrame()),
                 lyricsFrame, this::refreshPreferences, this::revealChrome,
-                this::enableDemoMode, this::disableDemoMode);
+                this::enableDemoMode, this::disableDemoMode,
+                () -> skipGapController == null ? null : skipGapController.view(),
+                () -> { if (skipGapController != null) skipGapController.showForEditing(); },
+                () -> { if (skipGapController != null) skipGapController.restoreAfterEditing(); });
     }
 
     /** Layout editor's Demo toggle: swaps in a synthetic track/artwork/lyrics document so the
@@ -1040,6 +1043,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 chrome.header,
                 chrome.headerTitle);
         trackInfoController.setSkipGapController(skipGapController);
+        // TrackInfoReadoutController.attach() just added topBox/bottomBox/sideBox as later
+        // siblings of chromeHeader on this same shellRoot, so in Top position they paint (and
+        // steal touches) over the roman/translate/like/settings cluster wherever the two
+        // overlap. The chrome row must stay the topmost child so those buttons stay reachable.
+        chromeHeader.bringToFront();
         LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
         scrollLp.topMargin = 0;
         rowContainer().addView(lyricsFrame, scrollLp);

@@ -49,10 +49,13 @@ final class LyricsLayoutEditController {
 
     static void show(Activity activity, ViewGroup shellRoot, Supplier<View> artFrameSupplier,
             View focusArea, Runnable applyPreferences, Runnable onChromeReveal,
-            Runnable enableDemoData, Runnable disableDemoData) {
+            Runnable enableDemoData, Runnable disableDemoData,
+            Supplier<View> skipChipSupplier, Runnable showSkipChipForEditing,
+            Runnable restoreSkipChipVisibility) {
         if (activity == null || shellRoot == null) return;
         new Session(activity, shellRoot, artFrameSupplier, focusArea, applyPreferences, onChromeReveal,
-                enableDemoData, disableDemoData).start();
+                enableDemoData, disableDemoData, skipChipSupplier, showSkipChipForEditing,
+                restoreSkipChipVisibility).start();
     }
 
     /** One editor invocation's mutable state - a plain instance instead of a pile of one-element
@@ -66,14 +69,15 @@ final class LyricsLayoutEditController {
                 Settings.LYRICS_BLUR_INTENSITY, Settings.LYRICS_TEXT_SIZE, Settings.LYRICS_TEXT_SIZE_CUSTOM,
                 Settings.TRACK_INFO_TEXT_SIZE, Settings.TRACK_INFO_TEXT_SIZE_CUSTOM,
                 Settings.BACKGROUND_STYLE, Settings.BEAT_REACTIVE_BACKGROUND,
-                Settings.FORCE_DARK_BACKGROUND, Settings.EXTRA_DARK_BACKGROUND
+                Settings.FORCE_DARK_BACKGROUND, Settings.EXTRA_DARK_BACKGROUND,
+                Settings.SKIP_CHIP_POSITION, Settings.SKIP_CHIP_STYLE
         };
 
         /** BLUR and TRACK_INFO used to be separate top-level elements, reachable only through the
          *  chip row this file no longer has - BLUR folded into BACKGROUND (a piece of glass), and
          *  TRACK_INFO into ARTWORK (there's no on-screen element for "track info" distinct from
          *  the artwork it's paired with). */
-        private enum Element { ARTWORK, FOCUS, TEXT, BACKGROUND }
+        private enum Element { ARTWORK, FOCUS, TEXT, BACKGROUND, SKIP }
 
         private final Activity activity;
         private final ViewGroup shellRoot;
@@ -85,10 +89,14 @@ final class LyricsLayoutEditController {
         private final Runnable onChromeReveal;
         private final Runnable enableDemoData;
         private final Runnable disableDemoData;
+        private final Supplier<View> skipChipSupplier;
+        private final Runnable showSkipChipForEditing;
+        private final Runnable restoreSkipChipVisibility;
         private final Map<Settings.Setting<?>, Object> snapshot = new HashMap<>();
 
         private final FrameLayout overlay;
         private final FrameLayout artLayer;
+        private final FrameLayout skipLayer;
         private final LinearLayout optionsCard;
         private TextView demoButton;
 
@@ -96,11 +104,15 @@ final class LyricsLayoutEditController {
         private View artCapture;
         private View artHandle;
         private View focusHandle;
+        private View textOutline;
+        private View skipCapture;
         private boolean demoActive;
 
         Session(Activity activity, ViewGroup shellRoot, Supplier<View> artFrameSupplier, View focusArea,
                 Runnable applyPreferences, Runnable onChromeReveal,
-                Runnable enableDemoData, Runnable disableDemoData) {
+                Runnable enableDemoData, Runnable disableDemoData,
+                Supplier<View> skipChipSupplier, Runnable showSkipChipForEditing,
+                Runnable restoreSkipChipVisibility) {
             this.activity = activity;
             this.shellRoot = shellRoot;
             this.artFrameSupplier = artFrameSupplier;
@@ -109,10 +121,14 @@ final class LyricsLayoutEditController {
             this.onChromeReveal = onChromeReveal;
             this.enableDemoData = enableDemoData;
             this.disableDemoData = disableDemoData;
+            this.skipChipSupplier = skipChipSupplier;
+            this.showSkipChipForEditing = showSkipChipForEditing;
+            this.restoreSkipChipVisibility = restoreSkipChipVisibility;
             this.store = new SettingsStore(activity);
             this.writer = new SettingsWriter(store);
             this.overlay = new FrameLayout(activity);
             this.artLayer = new FrameLayout(activity);
+            this.skipLayer = new FrameLayout(activity);
             this.optionsCard = new LinearLayout(activity);
         }
 
@@ -186,6 +202,14 @@ final class LyricsLayoutEditController {
             buildTextTapLayer();
             buildFocusHandle();
 
+            // Added after the lyrics tap layer (not into artLayer, which refreshArtwork() clears
+            // wholesale on every artwork change) so the skip chip's capture region - which sits
+            // inside focusArea's own bounds, near its bottom edge - wins overlapping touches
+            // there instead of being swallowed as a lyrics tap or forwarded as a scroll.
+            skipLayer.setClipChildren(false);
+            overlay.addView(skipLayer, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
             // The top bar (Cancel/Reset/Apply) sits on top of the interactive artwork/text layers
             // and the focus handle so its buttons are always grabbable.
             overlay.addView(topBar(), new FrameLayout.LayoutParams(
@@ -213,6 +237,14 @@ final class LyricsLayoutEditController {
 
             shellRoot.addView(overlay, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+            // The skip chip only exists on screen while a real gap is active, so force it
+            // visible for the duration of the edit - otherwise there is nothing here to select
+            // or position. It may not have a real size yet the instant show() flips it to
+            // VISIBLE, so also refresh once the layout pass that gives it one lands.
+            if (showSkipChipForEditing != null) showSkipChipForEditing.run();
+            refreshSkipChip();
+            afterNextLayout(this::refreshSkipChip);
         }
 
         private void paintDemoButton() {
@@ -225,6 +257,7 @@ final class LyricsLayoutEditController {
                 demoActive = false;
                 disableDemoData.run();
             }
+            if (restoreSkipChipVisibility != null) restoreSkipChipVisibility.run();
             ViewGroup parent = (ViewGroup) overlay.getParent();
             if (parent != null) parent.removeView(overlay);
             // The overlay's own scrim sat over the real chrome row the whole time it was open;
@@ -259,6 +292,18 @@ final class LyricsLayoutEditController {
             bar.addView(cancel, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+            // Open background has no on-screen handle of its own the way artwork/focus/skip do,
+            // and the lyrics tap layer covers most of the visible area (it has to, to keep
+            // scrolling working while the editor is open) - leaving too little of the screen
+            // actually reachable as "background" to rely on tap geometry alone. An explicit
+            // button guarantees it is always selectable.
+            TextView background = textButton("Background");
+            background.setOnClickListener(v -> selectElement(Element.BACKGROUND));
+            LinearLayout.LayoutParams backgroundLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            backgroundLp.leftMargin = dp(8);
+            bar.addView(background, backgroundLp);
+
             TextView title = text("Layout Editor", 16, Color.WHITE, true);
             LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -275,6 +320,7 @@ final class LyricsLayoutEditController {
                     afterNextLayout(() -> {
                         refreshArtwork();
                         repaintFocusHandle();
+                        refreshSkipChip();
                         selectElement(selected);
                     });
                 });
@@ -478,6 +524,8 @@ final class LyricsLayoutEditController {
             lp.leftMargin = pos[0];
             lp.topMargin = pos[1];
             overlay.addView(layer, lp);
+            textOutline = layer;
+            paintTextSelection(selected == Element.TEXT);
 
             int slopPx = android.view.ViewConfiguration.get(activity).getScaledTouchSlop();
             float[] startRawX = new float[1];
@@ -640,6 +688,7 @@ final class LyricsLayoutEditController {
         private void selectElement(Element element) {
             selected = element;
             optionsCard.removeAllViews();
+            paintTextSelection(element == Element.TEXT);
 
             optionsCard.addView(text(labelFor(element), 14, TEXT_COLOR, true), matchWrap(10));
             optionsCard.addView(divider(), new LinearLayout.LayoutParams(
@@ -658,7 +707,26 @@ final class LyricsLayoutEditController {
                 case BACKGROUND:
                     buildBackgroundOptions();
                     break;
+                case SKIP:
+                    buildSkipOptions();
+                    break;
             }
+        }
+
+        /** Lyrics text has no permanent on-screen handle the way artwork/focus/skip do (it's the
+         *  transparent tap layer built in buildTextTapLayer()), so unlike those it showed no
+         *  visible sign it was the current selection. Painted directly onto that same layer,
+         *  matching the artwork capture outline's look. */
+        private void paintTextSelection(boolean isSelected) {
+            if (textOutline == null) return;
+            if (!isSelected) {
+                textOutline.setBackground(null);
+                return;
+            }
+            GradientDrawable outline = new GradientDrawable();
+            outline.setStroke(dp(2), ACCENT_COLOR);
+            outline.setCornerRadius(dp(12));
+            textOutline.setBackground(outline);
         }
 
         private static String labelFor(Element element) {
@@ -666,6 +734,7 @@ final class LyricsLayoutEditController {
                 case ARTWORK: return "Artwork";
                 case FOCUS: return "Focus point";
                 case TEXT: return "Lyrics text";
+                case SKIP: return "Skip button";
                 default: return "Background";
             }
         }
@@ -794,6 +863,54 @@ final class LyricsLayoutEditController {
                     safeGet(Settings.LYRICS_BLUR_INTENSITY), "%",
                     value -> writer.put(Settings.LYRICS_BLUR_INTENSITY, value)),
                     matchWrap(0));
+        }
+
+        private void buildSkipOptions() {
+            optionsCard.addView(text("Position", 13, 0x99FFFFFF, false), matchWrap(4));
+            optionsCard.addView(chipRow(Settings.SKIP_CHIP_POSITION,
+                    new String[]{"Left", "Center", "Right"},
+                    new String[]{"Left", "Center", "Right"},
+                    () -> {
+                        refreshSkipChip();
+                        selectElement(Element.SKIP);
+                    }), matchWrap(12));
+
+            optionsCard.addView(divider(), new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+            optionsCard.addView(text("Style", 13, 0x99FFFFFF, false), matchWrap(4));
+            optionsCard.addView(chipRow(Settings.SKIP_CHIP_STYLE,
+                    new String[]{"Auto", "Label", "Icon"},
+                    new String[]{"Auto", "Label", "Icon"},
+                    () -> {
+                        refreshSkipChip();
+                        selectElement(Element.SKIP);
+                    }), matchWrap(0));
+        }
+
+        /** Rebuilds the skip chip's capture outline anchored to its real on-screen rect - same
+         *  pattern as refreshArtwork(). The chip itself is forced visible for the duration of the
+         *  edit by showSkipChipForEditing (called once from start()), since it normally only
+         *  exists on screen during a real skip gap. */
+        private void refreshSkipChip() {
+            if (skipCapture != null) {
+                skipLayer.removeView(skipCapture);
+                skipCapture = null;
+            }
+            View chip = skipChipSupplier == null ? null : skipChipSupplier.get();
+            if (chip == null || chip.getWidth() <= 0 || chip.getHeight() <= 0) return;
+            int[] pos = relativePosition(chip, shellRoot);
+            View capture = new View(activity);
+            GradientDrawable outline = new GradientDrawable();
+            outline.setStroke(dp(2), ACCENT_COLOR);
+            outline.setCornerRadius(dp(20));
+            capture.setBackground(outline);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                    chip.getWidth(), chip.getHeight(), Gravity.TOP | Gravity.START);
+            lp.leftMargin = pos[0];
+            lp.topMargin = pos[1];
+            capture.setOnClickListener(v -> selectElement(Element.SKIP));
+            skipLayer.addView(capture, lp);
+            skipCapture = capture;
         }
 
         // -- shared row builders ------------------------------------------------

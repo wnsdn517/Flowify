@@ -60,6 +60,9 @@ final class LyricsSkipGapController {
     private boolean visible;
     private ValueAnimator widthAnimator;
     private int bottomMarginDp = 24 + STACK_OFFSET_DP;
+    /** Set only by {@link #showForEditing()}, so {@link #restoreAfterEditing()} never hides a
+     *  chip a real skip gap put up on its own. */
+    private boolean editingForcedVisible;
 
     private LyricsSkipGapController(SpotifyPlusConfig config, LinearLayout pill, TextView label,
             FrameLayout.LayoutParams lp, Runnable onTap) {
@@ -173,6 +176,30 @@ final class LyricsSkipGapController {
         bottomMarginDp = target;
         lp.bottomMargin = dp(target);
         pill.setLayoutParams(lp);
+    }
+
+    /** The real on-screen chip, for the layout editor's tap/outline overlay. */
+    View view() {
+        return pill;
+    }
+
+    /** Layout editor preview: shows the chip with a placeholder label so its position can be
+     *  edited even with no real skip gap active right now. A no-op if a real gap already has it
+     *  showing - {@link #restoreAfterEditing()} must never hide that. */
+    void showForEditing() {
+        if (visible) return;
+        editingForcedVisible = true;
+        show(com.eza.spicyex.lyrics.SkipGapPolicy.defaultLabel(
+                com.eza.spicyex.lyrics.SkipGapPolicy.GapKind.LEADING));
+        pill.removeCallbacks(collapse);
+    }
+
+    /** Pairs with {@link #showForEditing()}: hides the chip again only if this controller was
+     *  the one that forced it visible. */
+    void restoreAfterEditing() {
+        if (!editingForcedVisible) return;
+        editingForcedVisible = false;
+        hide();
     }
 
     /** Shows the chip with the given label, or updates the label of an already-shown chip
