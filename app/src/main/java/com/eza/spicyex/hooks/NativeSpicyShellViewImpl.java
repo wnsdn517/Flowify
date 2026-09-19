@@ -1891,7 +1891,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             pendingLoadEntrance = false;
             if (config != null && Boolean.TRUE.equals(config.get(Settings.LOAD_LIFT_ANIMATION))
                     && "Apple Music".equals(config.get(Settings.ANIMATION_STYLE))) {
-                startLoadEntranceAnimation();
+                // The rows renderWindowForActive() just mounted haven't been through a layout
+                // pass yet, so every row.getHeight() would still read 0 here - the animation
+                // would silently skip every row. Defer to the next layout, same pattern as
+                // LyricsShellEmptyStateController#alignLoadingStart.
+                lyricsScroll.post(this::startLoadEntranceAnimation);
             }
         }
         if (resetScrollForNextDocument) {
@@ -1909,7 +1913,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  pinned to some arbitrary edge, while a per-row one reads as each line arriving from just
      *  behind where it already is. */
     private void startLoadEntranceAnimation() {
-        if (document == null) return;
+        if (!running || document == null) return;
         int order = 0;
         for (int i : rowMountController.mountedIndices()) {
             if (i < 0 || i >= document.appliedLines.size()) continue;

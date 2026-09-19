@@ -2,6 +2,7 @@ package com.eza.spicyex.hooks;
 
 import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
 import static com.eza.spicyex.hooks.NativeLyricsUtils.safe;
+import static com.eza.spicyex.hooks.NativeLyricsUtils.sideSystemPadding;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -43,6 +44,9 @@ final class LyricsShellEmptyStateController {
             LinearLayout.LayoutParams skeletonLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
+            int sideInset = sideInset();
+            skeletonLp.leftMargin = sideInset;
+            skeletonLp.rightMargin = sideInset;
             lyricsColumn.addView(skeleton, skeletonLp);
             // Height may be 0 if called before layout; defer margin calculation to
             // the first layout pass via a posted runnable (never immediate) so the
@@ -57,12 +61,24 @@ final class LyricsShellEmptyStateController {
                 Color.rgb(179, 179, 179),
                 textFactory.resolveTypeface(true));
         loading.setGravity(Gravity.CENTER);
-        loading.setPadding(dp(16), dp(100), dp(16), dp(16));
+        loading.setPadding(dp(16) + sideInset(), dp(100), dp(16) + sideInset(), dp(16));
         lyricsColumn.addView(loading, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         // Defer scroll reset to the layout pass so lyricsScroll.getHeight() is valid.
         lyricsScroll.post(() -> lyricsScroll.scrollTo(0, 0));
+    }
+
+    /** The reading-margin offset real lyric rows get from horizontalOffsetPx (see
+     *  NativeSpicyShellViewImpl#applyLyricsScrollPadding) - the lyrics frame itself now reaches
+     *  the true screen edges in portrait so its blur/glow surface isn't clipped, so anything that
+     *  isn't a mounted row (this controller's loading/skeleton/interlude states) has to add the
+     *  same margin back itself, or it reads flush against the screen edge. Landscape already keeps
+     *  its inset on contentColumn, so no extra margin is needed there. */
+    private int sideInset() {
+        boolean landscape = activity.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        return landscape ? 0 : sideSystemPadding(activity);
     }
 
     private void alignLoadingStart(
@@ -139,7 +155,7 @@ final class LyricsShellEmptyStateController {
                 Color.WHITE, textFactory.resolveTypeface(true));
         indicator.setGravity(Gravity.START);
         indicator.setAlpha(0f);
-        indicator.setPadding(dp(16), dp(80), dp(16), dp(16));
+        indicator.setPadding(dp(16) + sideInset(), dp(80), dp(16) + sideInset(), dp(16));
         lyricsColumn.addView(indicator, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         indicator.animate().alpha(1f).setDuration(350L).start();
