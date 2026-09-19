@@ -292,11 +292,15 @@ public final class LyricsRenderConfig {
                 appleLift,
                 appleStyle && get(cfg, Settings.APPLE_FADE_PASSED_LINES),
                 appleStyle && get(cfg, Settings.APPLE_COMPACT_TEXT),
-                appleStyle && get(cfg, Settings.APPLE_CJK_WRAP_FIX),
+                get(cfg, Settings.LYRICS_CJK_WRAP_FIX),
                 get(cfg, Settings.ENABLE_GLOW_BLUR),
                 !"Off".equals(lineBlurLevel),
                 "Heavy".equals(lineBlurLevel),
-                shell.lineBlurQualityMultiplier(),
+                // Blur intensity is a user-facing artistic knob (Settings#LYRICS_BLUR_INTENSITY,
+                // 100 = unchanged), separate from lineBlurQualityMultiplier()'s device-performance
+                // tier scaling - folded into the same blurQuality slot since both are plain
+                // multipliers over the same curve (LyricsFrameRenderer#mobileLineBlurPx).
+                shell.lineBlurQualityMultiplier() * (get(cfg, Settings.LYRICS_BLUR_INTENSITY) / 100f),
                 "note".equals(get(cfg, Settings.INTERLUDE_ICON)),
                 get(cfg, Settings.TOGGLE_PROGRESS_RING),
                 transliterationAvailable && shell.attachTransliterationToWordsEnabled(),
@@ -382,8 +386,8 @@ public final class LyricsRenderConfig {
                  wordBounceEnabled,
                  wordBounceScope,
                  wordBounceStyle,
-                 false, false, false, false, false,
-                 glow,
+false, false, false, false, true,
+                  glow,
                  false,
                  false,
                  blurQuality,
@@ -563,8 +567,7 @@ public final class LyricsRenderConfig {
             needsRowRemount = interludeChanged || weightChanged || textSizeChanged || attachChanged || transliterationChanged
                     || adaptiveSectioningChanged || spacingChanged || fillChanged || japaneseModeConfigChanged
                     || oldValue.translationBright != next.translationBright
-                    || oldValue.appleCompactText != next.appleCompactText
-                    || oldValue.appleCjkWrap != next.appleCjkWrap;
+|| oldValue.appleCompactText != next.appleCompactText;
             needsLocalReprocess = transliterationChanged || chineseModeConfigChanged || koreanChanged || chineseTonesChanged || cyrillicChanged;
             needsBackgroundToggle = changed(oldValue.backgroundStyle, next.backgroundStyle)
                     || oldValue.forceDarkBackground != next.forceDarkBackground

@@ -141,17 +141,26 @@ final class PlaybackBridge {
         }
     }
 
+    /** Same capability-checked posture as skipToNext/PreviousTrack: false, and no transport call
+     *  sent at all, when the current PlaybackState doesn't currently advertise ACTION_SEEK_TO
+     *  (most visibly a free-account session with seek/skip restricted) - callers can use this to
+     *  proactively hide/disable seek affordances instead of firing a seek that gets silently
+     *  ignored server-side, which used to be the only way this surfaced. */
     boolean seekSpotifyTo(long positionMs) {
-        try {
-            MediaController controller = transportController();
-            if (controller == null) return false;
-            controller.getTransportControls().seekTo(positionMs);
-            forcePosition(positionMs);
-            return true;
-        } catch (Throwable t) {
-            XpLog.log(NativeSpicyLyricsHook.TAG + " media seek failed: " + t);
-            return false;
-        }
+        boolean ok = sendTransportControl("seek", PlaybackState.ACTION_SEEK_TO,
+                tc -> tc.seekTo(positionMs));
+        if (ok) forcePosition(positionMs);
+        return ok;
+    }
+
+    /** Whether the current PlaybackState advertises ACTION_SEEK_TO right now - see
+     *  {@link #seekSpotifyTo}. False whenever no session is captured yet, same as every other
+     *  capability check here. */
+    boolean canSeek() {
+        MediaController controller = transportController();
+        if (controller == null) return false;
+        PlaybackState state = controller.getPlaybackState();
+        return state != null && (state.getActions() & PlaybackState.ACTION_SEEK_TO) != 0;
     }
 
     /** Toggles play/pause through Spotify's own MediaSession transport. Null-safe: false when

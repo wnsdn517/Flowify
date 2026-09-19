@@ -30,6 +30,16 @@ public final class LyricAnimations {
         return lerp(1.025f, 1f, smoothStep((t - 0.7f) / 0.3f));
     }
 
+    /** Word-granularity version of {@link #letterScaleSpline}'s amplitude (0.95 -> 1.18 -> 1.0),
+     *  for words that qualify for the strong pop but can't run the per-letter animator - e.g. a
+     *  furigana-annotated Japanese word, whose ruby span needs a single contiguous text layout
+     *  rather than one view per code point. Keeps grow intensity comparable to English's
+     *  per-letter pop instead of falling back to the much weaker {@link #scaleSpline}. */
+    public static float wordScaleSplineStrong(float t) {
+        if (t <= 0.7f) return lerp(0.95f, 1.18f, smoothStep(t / 0.7f));
+        return lerp(1.18f, 1f, smoothStep((t - 0.7f) / 0.3f));
+    }
+
     /** Zoom style Y range retained from the original Spicy curve. */
     public static float yOffsetSpline(float t) {
         if (t <= 0.9f) return lerp(0.01f, -(1f / 60f), t / 0.9f);

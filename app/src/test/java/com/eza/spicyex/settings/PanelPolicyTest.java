@@ -210,9 +210,9 @@ public class PanelPolicyTest {
     }
 
     @Test
-    public void animatedBackgroundOptionNamesItsDeviceRequirement() {
+    public void backgroundStyleAlwaysSelectable() {
         PanelSnapshot oldDevice = PanelSnapshot.builder().build();
-        assertEquals("Android 13+ required", PanelPolicy.optionUnavailableReason(
+        assertEquals("", PanelPolicy.optionUnavailableReason(
                 (Settings.StringSetting) Settings.BACKGROUND_STYLE,
                 "Animated texture", oldDevice, strings()));
         assertEquals("", PanelPolicy.optionUnavailableReason(
@@ -289,7 +289,6 @@ public class PanelPolicyTest {
         Settings.Setting<?>[] appleRows = {
                 Settings.APPLE_FADE_PASSED_LINES,
                 Settings.APPLE_COMPACT_TEXT,
-                Settings.APPLE_CJK_WRAP_FIX,
                 Settings.LINE_SLIDE_ANIMATION,
                 Settings.APPLE_LIFT
         };

@@ -99,9 +99,9 @@ public final class PanelPolicy {
     public static boolean isAppleOwned(Settings.Setting<?> setting) {
         return setting == Settings.APPLE_FADE_PASSED_LINES
                 || setting == Settings.APPLE_COMPACT_TEXT
-                || setting == Settings.APPLE_CJK_WRAP_FIX
                 || setting == Settings.LINE_SLIDE_ANIMATION
-                || setting == Settings.APPLE_LIFT;
+                || setting == Settings.APPLE_LIFT
+                || setting == Settings.LOAD_LIFT_ANIMATION;
     }
 
     public static boolean unavailable(Settings.Setting<?> setting, PanelSnapshot snapshot) {
@@ -113,11 +113,6 @@ public final class PanelPolicy {
     /** Why one option is dimmed; empty means selectable. Locale-resolved, never hardcoded. */
     public static String optionUnavailableReason(Settings.StringSetting setting, String value,
                                                  PanelSnapshot snapshot, PanelStrings strings) {
-        if (setting == Settings.BACKGROUND_STYLE
-                && LyricsBackgroundStyle.usesTexture(value)
-                && !snapshot.animatedBackgroundAvailable()) {
-            return strings.get("settings_unavailable_android_13", "Android 13+ required");
-        }
         if (setting != Settings.LIVE_CARD_SECONDARY_MODE) return "";
         boolean needsTransliteration = "Transliteration".equals(value) || "Both".equals(value);
         boolean needsTranslation = "Translation".equals(value) || "Both".equals(value);

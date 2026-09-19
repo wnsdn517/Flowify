@@ -289,8 +289,11 @@ public final class LyricsAmbientController {
         // Borrow only artwork with matching metadata identity; own the small copy before dispatch.
         Bitmap borrowed = SpotifyArtworkCache.snapshot(imageId, currentTrackUri);
         final Bitmap local = borrowed;
-        Call call = http.newCall(new Request.Builder()
-                .url("https://i.scdn.co/image/" + Uri.encode(imageId)).build());
+        // Ad creatives / remote playback may already carry a full https URL as imageId —
+        // prefixing the CDN host again would produce an invalid URL and break ad artwork.
+        String artUrl = imageId.startsWith("http") ? imageId
+                : "https://i.scdn.co/image/" + Uri.encode(imageId);
+        Call call = http.newCall(new Request.Builder().url(artUrl).build());
         inFlightArtCall = call;
         artWork = ART_WORKER.submit(() -> {
             Bitmap prepared = null;

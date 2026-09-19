@@ -151,6 +151,11 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
     }
 
     @Override
+    public boolean canSeek() {
+        return playbackBridge.canSeek();
+    }
+
+    @Override
     public boolean togglePlayPause() {
         return playbackBridge.togglePlayPause();
     }

@@ -40,14 +40,22 @@ public final class SettingLabels {
     }
 
     public static String formatStepper(Settings.IntegerSetting setting, int value) {
-        if (setting == Settings.EXTRA_DARK_BACKGROUND) {
+        if (setting == Settings.EXTRA_DARK_BACKGROUND
+                || setting == Settings.LYRICS_FOCUS_POSITION_CUSTOM_PERCENT
+                || setting == Settings.LYRICS_BLUR_INTENSITY) {
             return value + "%";
+        }
+        if (setting == Settings.TRACK_INFO_ART_SIZE_CUSTOM_DP) {
+            return value + "dp";
         }
         if (setting == Settings.LYRICS_TEXT_SIZE_CUSTOM || setting == Settings.LINE_SPACING_CUSTOM
                 || setting == Settings.LIVE_CARD_TEXT_SIZE_CUSTOM
                 || setting == Settings.TRACK_INFO_TEXT_SIZE_CUSTOM) {
             return String.format(java.util.Locale.US, "×%.2f", value / 100f);
         }
+        // Falls through to a millisecond-offset display (e.g. "+0.1s") - only correct for
+        // SYNC_OFFSET_MS. Any new stepper-style IntegerSetting must be added above, or it will
+        // silently render as a bogus seconds value here instead of failing to compile.
         return formatOffset(value);
     }
 

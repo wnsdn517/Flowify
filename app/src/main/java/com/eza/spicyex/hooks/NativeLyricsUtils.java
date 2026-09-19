@@ -59,6 +59,16 @@ final class NativeLyricsUtils {
     }
 
     static int topSystemPadding(Context context) {
+        // Landscape hides the status bar entirely (see
+        // NativeSpicyShellViewImpl#applyLandscapeStatusBar), so there's no bar height to reserve
+        // there - just the fixed chrome clearance.
+        boolean landscape = false;
+        try {
+            landscape = context.getResources().getDisplayMetrics().widthPixels
+                    > context.getResources().getDisplayMetrics().heightPixels;
+        } catch (Throwable ignored) {
+        }
+        if (landscape) return dp(28);
         int status = 0;
         try {
             int resId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");

@@ -73,6 +73,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     private final java.util.function.BooleanSupplier isHalfSize;
     private final Runnable onToggleSize;
     private final Runnable onClose;
+    private final Runnable onOpenLayoutEditor;
     private final java.util.function.Consumer<CacheClearKind> onClearCache;
 
     private LinearLayout sectionsContainer;
@@ -106,6 +107,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     public SettingsPanel(Context context, SettingsStore store,
                          java.util.function.BooleanSupplier isHalfSize,
                          Runnable onToggleSize, Runnable onClose,
+                         Runnable onOpenLayoutEditor,
                          java.util.function.Consumer<CacheClearKind> onClearCache) {
         this.context = context;
         this.style = new PanelStyle(context);
@@ -117,6 +119,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         this.isHalfSize = isHalfSize;
         this.onToggleSize = onToggleSize;
         this.onClose = onClose;
+        this.onOpenLayoutEditor = onOpenLayoutEditor;
         this.onClearCache = onClearCache;
         writer.ensureBackgroundStyleMigrated(store.get(Settings.ENABLE_BACKGROUND));
         this.uiStrings = UiLanguage.strings(context, store.get(Settings.UI_LANGUAGE));
@@ -266,6 +269,22 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         LinearLayout card = style.newCard();
         card.setTag(PanelTags.card(section));
         for (Settings.Setting<?> setting : items) renderSetting(card, setting);
+        if (section == Settings.LYRICS_SCREEN) {
+            // Tap/drag-to-configure surface for the settings this section's rows above already
+            // cover in list form (track info position, artwork corner radius) - an alternative
+            // entry point, not a replacement, so the ordinary rows stay for anyone who prefers
+            // them.
+            rows.actionRow(card, Kind.ALIGN_VERTICAL_DISTRIBUTE_CENTER,
+                    uiStrings.get("settings_layout_editor", "Layout editor…"),
+                    v -> {
+                        // Close this dialog first (same animated exit the panel's own close
+                        // button/back-press use), then hand off to the shell: the layout editor
+                        // is an overlay on the real lyrics screen itself (same view hierarchy,
+                        // same process - see LyricsLayoutEditController), not a separate window.
+                        if (onClose != null) onClose.run();
+                        if (onOpenLayoutEditor != null) onOpenLayoutEditor.run();
+                    });
+        }
         if (section == Settings.AI && aiAvailable()) {
             // Dynamic AI rows churn with setup state; they live in their own tagged block so
             // keyed rebinding refreshes them as a unit without touching ordinary rows.

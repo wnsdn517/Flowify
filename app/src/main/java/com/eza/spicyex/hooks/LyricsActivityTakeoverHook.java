@@ -697,6 +697,10 @@ final class LyricsActivityTakeoverHook {
                 removeNativeSpicyRoot(activity);
                 return;
             }
+            // Captured before the flag flips below: true here means a lyrics session was already
+            // active going into this call, i.e. this mount is a reattach after an orientation-
+            // driven activity recreate, not the screen's first open this session.
+            boolean rotationContinuation = nativeLyricsSessionActive;
             nativeLyricsSessionActive = true; // our screen owns this lyrics session (survives rotation)
             ensureSystemBackCallback(activity);
 
@@ -716,14 +720,19 @@ final class LyricsActivityTakeoverHook {
             NativeSpicyShellView root = new NativeSpicyShellView(host, activity);
             root.setTag(TAG_NATIVE_SPICY_ROOT);
             root.setAlpha(0f);
-            root.setTranslationY(NativeLyricsUtils.dp(24));
+            // A fresh open slides up from below to announce itself; a rotation reattach was
+            // showing this same song a moment ago (the old activity's root is simply gone), so a
+            // quick plain crossfade reads as the screen settling into its new orientation instead
+            // of another arrival - the slide-up there just looks like an unmotivated jump.
+            if (!rotationContinuation) root.setTranslationY(NativeLyricsUtils.dp(24));
             content.addView(root, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
             ));
             markLyricsActivityKeepWindow(activity);
             root.start();
-            root.animate().alpha(1f).translationY(0f).setDuration(260).start();
+            root.animate().alpha(1f).translationY(0f)
+                    .setDuration(rotationContinuation ? 140 : 260).start();
             XpLog.log(NativeSpicyLyricsHook.TAG + " mounted native Spicy renderer shell");
             Diagnostics.event("renderer", "mount_state",
                     Diagnostics.context("surface", "fullscreen", "mounted", "true"));

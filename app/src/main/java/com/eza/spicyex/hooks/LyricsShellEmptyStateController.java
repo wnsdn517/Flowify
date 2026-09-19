@@ -43,9 +43,10 @@ final class LyricsShellEmptyStateController {
             LinearLayout.LayoutParams skeletonLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
-            skeletonLp.topMargin = loadingTopMargin(
-                    lyricsScroll.getHeight(), lyricsScroll.getPaddingTop());
             lyricsColumn.addView(skeleton, skeletonLp);
+            // Height may be 0 if called before layout; defer margin calculation to
+            // the first layout pass via a posted runnable (never immediate) so the
+            // offset is always correct.
             alignLoadingStart(lyricsScroll, lyricsColumn, skeleton);
             return;
         }
@@ -60,6 +61,8 @@ final class LyricsShellEmptyStateController {
         lyricsColumn.addView(loading, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+        // Defer scroll reset to the layout pass so lyricsScroll.getHeight() is valid.
+        lyricsScroll.post(() -> lyricsScroll.scrollTo(0, 0));
     }
 
     private void alignLoadingStart(
@@ -78,11 +81,10 @@ final class LyricsShellEmptyStateController {
                 params.topMargin = topMargin;
                 loadingView.setLayoutParams(params);
             }
-            // A song change can leave the prior document's scroll offset in place. Reset both now
-            // and after layout, when ScrollView has recalculated the shorter loading content range.
             lyricsScroll.scrollTo(0, 0);
         };
-        align.run();
+        // Height may be 0 on first call (pre-layout). Post instead of running immediately
+        // so lyricsScroll.getHeight() always returns a valid value after layout.
         lyricsScroll.post(align);
     }
 

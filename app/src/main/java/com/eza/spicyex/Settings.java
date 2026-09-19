@@ -69,6 +69,22 @@ public final class Settings {
             "Off", "On demand", "Auto"
     );
 
+    // How the "On demand" skip chip presents itself: a plain icon, a permanently-labelled pill,
+    // or Auto (opens as a labelled pill so an unexplained chevron icon doesn't have to speak for
+    // itself, then collapses to the icon after a few seconds so it stops competing with the
+    // lyrics for attention).
+    public static final Setting<String> SKIP_CHIP_STYLE = enumSetting(
+            "lyric_skip_chip_style", LYRICS, "Skip chip style", "Auto",
+            "Icon", "Label", "Auto"
+    );
+
+    // Which side the skip chip floats above the jump-to-current control at (always along the
+    // bottom edge - the jump chip itself always stays at Right regardless of this setting).
+    public static final Setting<String> SKIP_CHIP_POSITION = enumSetting(
+            "lyric_skip_chip_position", LYRICS, "Skip chip position", "Right",
+            "Left", "Center", "Right"
+    );
+
     // Silently ducks the media volume for the duration of a spotify:ad: track and restores it
     // once real playback resumes - see AdMuteController.
     public static final Setting<Boolean> AUTO_MUTE_ADS = boolSetting(
@@ -267,6 +283,23 @@ public final class Settings {
             "lyrics_fullscreen_controls", TEXT, "Fullscreen controls", "Always on",
             "5 seconds", "10 seconds", "30 seconds", "Always on"
     );
+
+    // Where the active lyric line rests vertically in the viewport. Auto keeps the existing
+    // behavior (raised when the Apple-style line-slide animation is on and the screen is
+    // portrait, center otherwise); Top/Center/Bottom pin it explicitly regardless of that
+    // animation setting; Custom unlocks LYRICS_FOCUS_POSITION_CUSTOM_PERCENT (set by the layout
+    // editor's focus-point drag handle). See LyricsScrollController's anchor fractions.
+    public static final Setting<String> LYRICS_FOCUS_POSITION = enumSetting(
+            "lyrics_focus_position", TEXT, "Lyrics focus point", "Auto",
+            "Auto", "Top", "Center", "Bottom", "Custom"
+    );
+
+    // 0 = top edge, 100 = bottom edge, for LYRICS_FOCUS_POSITION == "Custom".
+    public static final IntegerSetting LYRICS_FOCUS_POSITION_CUSTOM_PERCENT = intSetting(
+            "lyrics_focus_position_custom_percent", TEXT, "Custom focus point",
+            50, 0, 100, 5
+    );
+
     // Position of the fullscreen track-info readout (artwork + title/artist). Off hides the
     // readout, its metadata, and its artwork gestures; back, config toggles, and the floating
     // cluster stay. New-feature rule: default Off for all installs, no migration.
@@ -305,9 +338,41 @@ public final class Settings {
 
     // Readout artwork size (bottom = value, top portrait = value − 24; landscape top stays 54dp
     // for test-build parity; the side panel is container-driven and unaffected). Default Normal.
+    // Custom unlocks TRACK_INFO_ART_SIZE_CUSTOM_DP (set by the layout editor's resize handle).
     public static final Setting<String> TRACK_INFO_ART_SIZE = enumSetting(
             "lyrics_track_info_art_size", TEXT, "Track info art size", "Normal",
-            "Small", "Normal", "Large"
+            "Small", "Normal", "Large", "Custom"
+    );
+
+    // Bottom-art dp for TRACK_INFO_ART_SIZE == "Custom" - top portrait derives the same
+    // value-minus-24 relationship the fixed presets use. See
+    // TrackInfoReadoutController#readoutArtSizes(String, int).
+    public static final IntegerSetting TRACK_INFO_ART_SIZE_CUSTOM_DP = intSetting(
+            "lyrics_track_info_art_size_custom_dp", TEXT, "Custom art size",
+            96, 48, 160, 4
+    );
+
+    // Corner radius (dp) for the readout artwork and its dock/scrim, in every placement
+    // (top/bottom/side). Applies live.
+    public static final IntegerSetting TRACK_INFO_ART_RADIUS = intSetting(
+            "lyrics_track_info_art_radius", TEXT, "Track info art corner radius",
+            16, 0, 32, 2
+    );
+
+    // Vertical alignment of the title/artist text block within its row, for Top/Bottom/Header
+    // placements (Side stacks text below the artwork instead of beside it, so this has no effect
+    // there). Default Center matches the readout's original hardcoded behavior.
+    public static final Setting<String> TRACK_INFO_TEXT_ALIGN = enumSetting(
+            "lyrics_track_info_text_align", TEXT, "Track info text alignment", "Center",
+            "Top", "Center", "Bottom"
+    );
+
+    // When on, title/artist text size is derived proportionally from the current artwork size
+    // (TRACK_INFO_ART_SIZE / TRACK_INFO_ART_SIZE_CUSTOM_DP) instead of TRACK_INFO_TEXT_SIZE's
+    // manual value - so dragging the layout editor's resize handle scales the text along with the
+    // artwork. See TrackInfoReadoutController#applyTextSize().
+    public static final Setting<Boolean> TRACK_INFO_TEXT_SIZE_ADAPTIVE = boolSetting(
+            "lyrics_track_info_text_size_adaptive", TEXT, "Adaptive track info text size", false
     );
 
     // Separate landscape mode from the Off/Top/Bottom readout: when on and the screen is
@@ -349,8 +414,8 @@ public final class Settings {
             "lyric_apple_compact_text", APPLE, "Compact text size", true
     );
 
-    public static final Setting<Boolean> APPLE_CJK_WRAP_FIX = boolSetting(
-            "lyric_apple_cjk_wrap_fix", APPLE, "Wrap long CJK words", true
+    public static final Setting<Boolean> LYRICS_CJK_WRAP_FIX = boolSetting(
+            "lyrics_cjk_wrap_fix", LYRICS, "Wrap long CJK words", true
     );
 
     // Row-scroll cascade. Apple-owned: rendered only inside the Apple sub-section.
@@ -362,6 +427,14 @@ public final class Settings {
     // carries no competing "Apple lift" value; the renderer reads this key under Apple Music.
     public static final Setting<Boolean> APPLE_LIFT = boolSetting(
             "lyric_apple_lift", APPLE, "Apple lift", true
+    );
+
+    // Apple-owned: a one-shot reveal for the first render of a freshly loaded document (opening
+    // the lyrics screen, or a track/source change) - rows rise up from below and fade in instead
+    // of appearing instantly. Distinct from LINE_SLIDE_ANIMATION, which is the per-scroll-step
+    // cascade; this plays once per document, not on every active-line change.
+    public static final Setting<Boolean> LOAD_LIFT_ANIMATION = boolSetting(
+            "lyric_load_lift_animation", APPLE, "Rise in on load", false
     );
 
     // One selector owns both the bounce gate and its scope.
@@ -385,6 +458,15 @@ public final class Settings {
     public static final Setting<String> ENABLE_LINE_BLUR = enumSetting(
             "lyric_enable_line_blur", ANIMATION, "Blur distant lines", "Off",
             "Off", "Slight", "Heavy"
+    );
+
+    // Percent multiplier over the Slight/Heavy blur curve above (100 = unchanged). Since the
+    // curve is max * distanceFalloff(distance), scaling it scales both how strong the blur gets
+    // and how quickly it ramps up with distance together - a single safe knob rather than
+    // exposing the falloff shape's own constants directly. See
+    // LyricsFrameRenderer#mobileLineBlurPx.
+    public static final IntegerSetting LYRICS_BLUR_INTENSITY = intSetting(
+            "lyrics_blur_intensity", ANIMATION, "Blur intensity", 100, 25, 250, 5
     );
 
     // Direction the karaoke gradient fills each line as it plays: down the line ("Top to bottom")
@@ -447,6 +529,7 @@ public final class Settings {
     public static final Setting<String> KOREAN_ROMANIZATION = enumSetting(
             "lyrics_korean_romanization", TRANSLITERATION, "Korean reading",
             KoreanDisplayMode.RR_STANDARD.value,
+            "off",
             KoreanDisplayMode.RR_STANDARD.value,
             KoreanDisplayMode.WORD_TRANSLIT.value,
             KoreanDisplayMode.RR_PRONUNCIATION.value,

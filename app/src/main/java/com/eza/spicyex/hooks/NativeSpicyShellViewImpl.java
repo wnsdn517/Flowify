@@ -28,6 +28,7 @@ import static com.eza.spicyex.hooks.NativeSpicyLyricsHook.dbg;
 import static com.eza.spicyex.hooks.NativeSpicyLyricsHook.dbgEnter;
 
 import android.app.Activity;
+import android.content.ComponentCallbacks;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -128,9 +129,30 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private String skipAckUri = "";
     private long skipAckGapStartMs = -1;
     private long lastSkipSeenPosMs = -1;
+    // Ground-truth rescue: a seek/skip a free account isn't allowed to make (most visibly
+    // tapping a lyric line to jump to it) can leave Spotify's own reported PlaybackState stuck -
+    // it stops advancing/being "playing" even though the track keeps audibly playing - which
+    // otherwise freezes lyricPos forever since playbackClock only advances while its "playing"
+    // flag is true. host.currentAudioLevel() (the real Visualizer-measured output level) is
+    // independent ground truth: if there's genuine audio energy right now, treat the clock as
+    // playing regardless of what Spotify's own state claims. Deliberately narrow - only feeds
+    // the clock, not the play/pause icon or "Playing"/"Paused" status text.
+    private static final float AUDIO_ACTIVE_LEVEL_THRESHOLD = 0.04f;
+    private boolean lastAudioRescueActive;
     /** Apple-owned row-scroll cascade (LINE_SLIDE_ANIMATION under Apple Music). */
     private boolean slideAnimationEnabled;
+    /** Set at the one real "new document" assignment site; consumed (and cleared) the next time
+     *  renderDocument() mounts that document's initial row window, so the LOAD_LIFT_ANIMATION
+     *  reveal plays once per freshly loaded document, never on a same-document re-render (e.g. a
+     *  preference change via rerenderKeepingPosition). */
+    private boolean pendingLoadEntrance;
     private boolean applyingLyricScroll;
+    // ScrollView#smoothScrollTo runs its own animation over time and fires onScrollChange
+    // repeatedly for its whole duration, unlike the instant scrollTo() case applyingLyricScroll
+    // originally guarded (a single synchronous change) - this covers that longer window so the
+    // scroll-change listener doesn't cancel a row cascade we deliberately started alongside it.
+    private final Runnable clearScrollGuardRunnable = () -> applyingLyricScroll = false;
+    private static final long SMOOTH_SCROLL_GUARD_MS = 500L;
     private static final float ROW_CASCADE_STAGGER_SEC = 0.06f;
     private static final float ROW_CASCADE_MAX_DELAY_SEC = 0.42f;
     private static final float ROW_CASCADE_FREQUENCY_HZ = 1.5f;
@@ -176,6 +198,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private final LyricsSettingsDialogController settingsDialogController;
     private final LyricsFollowState followState = new LyricsFollowState();
     private final LyricsShellEmptyStateController emptyStateController;
+    /** Lazily built: the long-press-to-share preview is opened far less often than the screen itself. */
+    private LyricsShareCardController shareCardController;
     private LyricsRowMountController rowMountController;
     private LinearLayout contentColumn;
     /** Non-null only in the adaptive two-column landscape mode; owns header/lyrics/status. */
@@ -188,6 +212,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private ImageView columnArt;
     private View columnScrim;
     private ImageButton columnOverlayButton;
+    private android.graphics.drawable.GradientDrawable columnScrimBg;
+    /** Two-column landscape art/scrim corner radius, in px - see applyColumnArtRadius(). */
+    private int columnArtRadiusPx;
     private android.graphics.drawable.Drawable columnPlayIcon;
     private android.graphics.drawable.Drawable columnPauseIcon;
     private Boolean lastColumnOverlayPlaying;
@@ -229,6 +256,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             scrollInProgress = false;
             remeasureMountedRows();
             renderWindowForActive(currentWindowAnchor());
+            
+            // Mark the point where the user's manual scroll has genuinely settled (momentum ended).
+            // This is the baseline from which we count the auto-resume cooldown, rather than the 
+            // moment the finger was lifted while the list was still flying.
+            followState.markManualScroll();
         }
     };
     private String lastUri = "";
@@ -239,6 +271,12 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private boolean scrollWindowRenderScheduled;
     private boolean resetScrollForNextDocument;
     private boolean showTranslation;
+    /** Layout editor's Demo toggle - see enableDemoMode()/disableDemoMode(). While active,
+     *  updateState() stands down entirely so the real per-frame track/lyrics pipeline can't
+     *  clobber (or be clobbered by) the synthetic preview content. */
+    private boolean demoModeActive;
+    private SpotifyTrack demoTrack;
+    private Bitmap demoArtBitmap;
 
     private void hideChrome() {
         if (running && chromeHeader != null && !"Always on".equals(fullscreenControlsMode())) {
@@ -267,7 +305,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceListener =
             (prefs, key) -> schedulePreferenceRefresh();
 
-    private void refreshPreferences() {
+    /** Package-private so the in-place layout editor can force a synchronous re-apply right
+     *  after a live write, instead of waiting on the async SharedPreferences-listener round trip
+     *  (registerPreferenceListener's callback is posted, not immediate) - without this, reading
+     *  real view geometry back right after a write sees stale pre-change values. */
+    void refreshPreferences() {
         preferenceRefreshPosted = false;
         if (!running) return;
         likedMode = config.get(Settings.LIKED_SONGS_BUTTON);
@@ -279,6 +321,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         ambientController.applySettings(renderConfig.backgroundStyle, renderConfig.forceDarkBackground,
                 renderConfig.extraDarkBackground);
         if (trackInfoController != null) trackInfoController.onPreferenceChanged();
+        if (skipGapController != null) skipGapController.onPreferenceChanged();
+        applyColumnArtRadius();
         if (chromeViews != null) {
             LyricsShellChromeController.applyTopMode(chromeViews, isTopReadout(),
                     chromeButtonDp(), isLandscape());
@@ -338,8 +382,134 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
     };
 
+    /** Keeps the two-column landscape art/scrim radius in sync with Settings#TRACK_INFO_ART_RADIUS
+     *  - this was previously a hardcoded 20dp regardless of that setting, so changing artwork
+     *  roundness elsewhere had no effect here and the play/pause reveal scrim behind it stayed
+     *  visibly stuck at the old radius. */
+    private void applyColumnArtRadius() {
+        if (columnArt == null || columnScrimBg == null) return;
+        int radiusPx = dp(config.get(Settings.TRACK_INFO_ART_RADIUS));
+        if (radiusPx == columnArtRadiusPx) return;
+        columnArtRadiusPx = radiusPx;
+        columnArt.invalidateOutline();
+        columnScrimBg.setCornerRadius(radiusPx);
+    }
+
+    /** Opens the direct-manipulation layout editor as an overlay directly on this shell (same
+     *  view hierarchy as the real artwork/lyrics, not a separate window) - see
+     *  LyricsLayoutEditController. Called from the settings panel's "Layout editor…" row via
+     *  LyricsSettingsDialogController, after that dialog has already closed itself. */
+    private void enterLayoutEditMode() {
+        // A Supplier, not a captured View: which real frame is "current" can change (a position
+        // change moves the artwork to a different view - top/bottom/side/column are all separate
+        // objects), so the editor re-queries this after anything that could change it.
+        LyricsLayoutEditController.show(activity, this,
+                () -> twoColumn && columnArtFrame != null
+                        ? columnArtFrame
+                        : (trackInfoController == null ? null : trackInfoController.currentArtFrame()),
+                lyricsFrame, this::refreshPreferences, this::revealChrome,
+                this::enableDemoMode, this::disableDemoMode);
+    }
+
+    /** Layout editor's Demo toggle: swaps in a synthetic track/artwork/lyrics document so the
+     *  editor previews something even with nothing (useful) actually playing. See
+     *  {@link #updateState}'s early-return guard, which stands the real per-frame pipeline down
+     *  for the duration so it can't race this synthetic content. */
+    private void enableDemoMode() {
+        if (demoModeActive) return;
+        demoModeActive = true;
+        if (demoTrack == null) demoTrack = DemoLyricsContent.demoTrack();
+        if (demoArtBitmap == null) demoArtBitmap = DemoLyricsContent.demoArtBitmap();
+        document = DemoLyricsContent.demoDocument();
+        pendingLoadEntrance = true;
+        renderDocument();
+        if (trackInfoController != null) trackInfoController.showDemoTrack(demoTrack, demoArtBitmap);
+        if (twoColumn && columnArt != null) {
+            clearColumnArtwork();
+            columnArtwork = demoArtBitmap.copy(demoArtBitmap.getConfig(), false);
+            columnArt.setImageBitmap(columnArtwork);
+            columnArt.setVisibility(VISIBLE);
+            columnArt.invalidateOutline();
+            displayedColumnArtImageId = demoTrack.imageId;
+        }
+        skipGapController.show(SkipGapPolicy.defaultLabel(SkipGapPolicy.GapKind.LEADING));
+        jumpToCurrentController.update(true);
+    }
+
+    /** Reverts everything {@link #enableDemoMode} touched; the next real per-frame update (now
+     *  unfrozen) repaints title/artwork/lyrics from the real track normally. */
+    private void disableDemoMode() {
+        if (!demoModeActive) return;
+        demoModeActive = false;
+        skipGapController.hide();
+        jumpToCurrentController.update(false);
+        if (trackInfoController != null) trackInfoController.clearDemoArt();
+        if (twoColumn && columnArt != null) {
+            clearColumnArtwork();
+            columnArt.setVisibility(GONE);
+            lastColumnArtImageId = "";
+            displayedColumnArtImageId = "";
+        }
+        document = null;
+        lastUri = "";
+        showLoading("Waiting for Spotify track…");
+    }
+
     private boolean isLandscape() {
         return getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+    }
+
+    /** Hides the system status bar while the lyrics screen is open in landscape - there's no
+     *  chrome under it there worth keeping it visible for, and it eats into the already-tight
+     *  landscape two-column/side-dock layout. Portrait is unaffected. Swipe from the edge still
+     *  reveals it transiently (BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE / the pre-R sticky-immersive
+     *  equivalent), it just isn't pinned on screen. See NativeLyricsUtils#topSystemPadding, which
+     *  stops reserving status-bar height in landscape to match. */
+    private void applyLandscapeStatusBar() {
+        if (isLandscape()) hideStatusBar(); else showStatusBar();
+    }
+
+    private void hideStatusBar() {
+        android.view.Window window = activity == null ? null : activity.getWindow();
+        if (window == null) return;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(false);
+                android.view.WindowInsetsController controller = window.getInsetsController();
+                if (controller != null) {
+                    controller.hide(android.view.WindowInsets.Type.statusBars());
+                    controller.setSystemBarsBehavior(
+                            android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                }
+            } else {
+                View decor = window.getDecorView();
+                decor.setSystemUiVisibility(decor.getSystemUiVisibility()
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+            }
+        } catch (Throwable t) {
+            XpLog.log(TAG + " hideStatusBar failed: " + t);
+        }
+    }
+
+    private void showStatusBar() {
+        android.view.Window window = activity == null ? null : activity.getWindow();
+        if (window == null) return;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(true);
+                android.view.WindowInsetsController controller = window.getInsetsController();
+                if (controller != null) controller.show(android.view.WindowInsets.Type.statusBars());
+            } else {
+                View decor = window.getDecorView();
+                decor.setSystemUiVisibility(decor.getSystemUiVisibility()
+                        & ~(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY));
+            }
+        } catch (Throwable t) {
+            XpLog.log(TAG + " showStatusBar failed: " + t);
+        }
     }
 
     /** Minimum width/height ratio for the adaptive two-column landscape mode (PR9's gate). */
@@ -382,17 +552,22 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private void applyLyricsScrollPadding() {
         if (lyricsScroll == null) return;
         int safeTop = lyricsTopInsetPx + dp(lyricsTopPaddingDp());
+        // The lyrics frame itself now reaches the true screen edges (contentColumn carries no
+        // outer padding in portrait any more), so the reading margin lives here instead, on the
+        // scroll view's own padding, same as it always effectively did.
+        int sidePad = isLandscape() ? 0 : sideSystemPadding(activity);
         if (scrollController != null) {
             scrollController.applyCenterPadding(
                     safeTop,
                     dp(lyricsBottomPaddingDp()),
                     getResources().getDisplayMetrics().heightPixels,
-                    dp(56));
+                    dp(56), sidePad);
             return;
         }
         int viewport = lyricsScroll.getHeight();
         if (viewport <= 0) viewport = getResources().getDisplayMetrics().heightPixels;
         int center = Math.max(0, viewport / 2 - dp(56));
+        // Horizontal padding moved to rows; vertical padding remains on the container.
         lyricsScroll.setPadding(0, Math.max(safeTop, center), 0, Math.max(dp(lyricsBottomPaddingDp()), center));
     }
 
@@ -448,7 +623,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         this.localReprocessController = new LyricsLocalReprocessController(secondaryProcessor);
         this.ambientController = new LyricsAmbientController(activity, HTTP, config);
         this.settingsDialogController = new LyricsSettingsDialogController(
-                activity, frameScheduler, ambientController, host, this::onSettingsClosed, TAG);
+                activity, frameScheduler, ambientController, host, this::onSettingsClosed,
+                this::enterLayoutEditMode, TAG);
         this.emptyStateController = new LyricsShellEmptyStateController(activity, config, textFactory);
         this.shellLifecycle = new LyricsShellLifecycle(activity, () -> {
             host.markExplicitLyricsExit(activity);
@@ -482,7 +658,17 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         contentColumn.setGravity(twoColumn ? Gravity.CENTER_VERTICAL : Gravity.CENTER_HORIZONTAL);
         contentColumn.setClipChildren(false);
         contentColumn.setClipToPadding(false);
-        contentColumn.setPadding(sideSystemPadding(activity), 0, sideSystemPadding(activity), dp(isLandscape() ? 16 : 10));
+        // Portrait: title/subtitle/progress/status are GONE here (the track-info readout owns
+        // song text; see TrackInfoReadoutController), so the only persistently visible child is
+        // lyricsFrame itself - outer padding here just insets its background/blur surface from
+        // the true screen edges, reading as a visible border. Individual lyric rows already carry
+        // their own small text-safety padding (LyricsRowViewFactory#leadingPadding), so this
+        // outer padding is redundant for portrait and is dropped; landscape/two-column keep it,
+        // since its column gutters are sized assuming it's present.
+        contentColumn.setPadding(
+                isLandscape() ? sideSystemPadding(activity) : 0, 0,
+                isLandscape() ? sideSystemPadding(activity) : 0,
+                isLandscape() ? dp(16) : 0);
         addView(contentColumn, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         if (twoColumn) {
@@ -540,18 +726,23 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             columnArt.setVisibility(GONE);
             columnArt.setClipToOutline(true);
             columnArt.setElevation(dp(16));
-            final int columnArtRadiusPx = dp(20);
+            columnArtRadiusPx = dp(config.get(Settings.TRACK_INFO_ART_RADIUS));
             columnArt.setOutlineProvider(new android.view.ViewOutlineProvider() {
                 @Override
                 public void getOutline(View view, android.graphics.Outline outline) {
                     outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), columnArtRadiusPx);
                 }
             });
+            // Custom outline providers aren't auto-recomputed on resize (unlike the default
+            // background provider), so a live radius change needs invalidateOutline() too - see
+            // applyColumnArtRadius().
+            columnArt.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                if (r - l != or - ol || b - t != ob - ot) columnArt.invalidateOutline();
+            });
             columnArtFrame.addView(columnArt, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             columnScrim = new View(activity);
-            android.graphics.drawable.GradientDrawable columnScrimBg =
-                    new android.graphics.drawable.GradientDrawable();
+            columnScrimBg = new android.graphics.drawable.GradientDrawable();
             columnScrimBg.setColor(0x73000000);
             columnScrimBg.setCornerRadius(columnArtRadiusPx);
             columnScrim.setBackground(columnScrimBg);
@@ -562,7 +753,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             float columnDensity = activity.getResources().getDisplayMetrics().density;
             columnPlayIcon = new com.eza.spicyex.ui.ActionIconDrawable(
                     com.eza.spicyex.ui.ActionIconDrawable.Kind.PLAY,
-                    Color.rgb(232, 232, 238), columnDensity);
+                    Color.rgb(232, 232, 238), columnDensity, true);
             columnPauseIcon = new TrackInfoReadoutController.PauseBarsDrawable(
                     Color.rgb(232, 232, 238));
             columnOverlayButton = new ImageButton(activity);
@@ -775,7 +966,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 config,
                 followState::holdUntil,
                 followState::setTouching,
-                this::seekNearestLineAt);
+                this::seekNearestLineAt,
+                this::shareLyricLineAt);
         lyricsScroll.setOnTouchListener((view, event) -> {
             if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
                     || event.getActionMasked() == android.view.MotionEvent.ACTION_MOVE) revealChrome();
@@ -810,9 +1002,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 LYRIC_WINDOW_AFTER_ACTIVE,
                 NativeRuntime.LYRIC_WINDOW_EDGE_BUFFER);
         scrollController = new LyricsScrollController(lyricsScroll, lyricsColumn, topStaticSpacer);
-        // Raised slide anchor only in portrait: centered in landscape, where the raised rest
-        // overlaps the chrome and strands empty space at the bottom.
-        scrollController.setRaisedAnchor(slideAnimationEnabled && !isLandscape());
+        scrollController.setAnchorFraction(resolveFocusAnchorFraction());
         applyLyricsScrollPadding();
 
         ensureLyricsColumnScaffold();
@@ -836,6 +1026,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         skipGapController = LyricsSkipGapController.attach(
                 activity,
                 lyricsFrame,
+                config,
                 this::skipCurrentGap);
         trackInfoController = TrackInfoReadoutController.attach(
                 activity,
@@ -884,12 +1075,38 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     /** Mirrors Settings.BEAT_REACTIVE_BACKGROUND; also gates whether the Visualizer is ever
      *  attached, so the feature costs nothing at all while off. */
     private boolean beatReactiveBackground;
+    // Tracks what we've actually told host.setAudioReactiveListening(...), so refreshAudioListening()
+    // only calls it (and touches the Visualizer) on real transitions, not every frame.
+    private boolean audioListeningActive;
+    // Transient listening window opened right after an in-app seek/skip (see seekToLine(),
+    // performSkipSeek()): a free-account seek can be silently rejected server-side, so this gives
+    // the freeze-rescue check in updateState() a real audio-level reading to test against for a
+    // few seconds even when Beat-reactive background is off, without paying Visualizer cost the
+    // rest of the time.
+    private long seekWatchUntilMs = -1L;
+    private static final long SEEK_WATCH_WINDOW_MS = 4000L;
+
+    // Runnable trigger callback intended for instant live UI refreshes when an async CDN network image downloads
+    private final Runnable artworkDownloadListener = () -> {
+        if (running) {
+            handler.post(() -> {
+                if (running) {
+                    lastColumnArtImageId = ""; // force re-eval of current image constraints
+                    frameScheduler.requestFrame();
+                }
+            });
+        }
+    };
 
     void start() {
         dbgEnter("NativeSpicyShellView.start");
         if (running) return;
         running = true;
-        host.setAudioReactiveListening(beatReactiveBackground);
+        synchronized (TrackInfoReadoutController.ART_NETWORK_LISTENERS) {
+            TrackInfoReadoutController.ART_NETWORK_LISTENERS.add(artworkDownloadListener);
+        }
+        applyLandscapeStatusBar();
+        refreshAudioListening();
         ambientController.start();
         revealChrome();
         documentGate.start();
@@ -904,18 +1121,24 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     void stop() {
         dbgEnter("NativeSpicyShellView.stop");
         running = false;
-        host.setAudioReactiveListening(false);
+        seekWatchUntilMs = -1L;
+        refreshAudioListening();
+        showStatusBar();
         documentGate.stop();
         if (lyricRequest != null) lyricRequest.close();
         lyricRequest = null;
         if (sessionSubscription != null) sessionSubscription.close();
         sessionSubscription = null;
+        synchronized (TrackInfoReadoutController.ART_NETWORK_LISTENERS) {
+            TrackInfoReadoutController.ART_NETWORK_LISTENERS.remove(artworkDownloadListener);
+        }
         unregisterPreferenceListener();
         toggleSpinnerController.reset();
         shellLifecycle.stop();
         frameScheduler.stop();
         clearRowCascade();
         ambientController.stop();
+        TrackInfoReadoutController.trimMemory();
         handler.removeCallbacks(idleFrameProbe);
         visuallySettledFrames = 0;
         playbackClock.reset("");
@@ -1017,6 +1240,12 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             android.util.DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
             int panelPx = (int) (metrics.widthPixels * 0.8f / 1.95f);
             art = SpotifyArtworkCache.snapshotLarge(imageId, uri, panelPx);
+            if (art == null) {
+                art = TrackInfoReadoutController.ART_NETWORK_CACHE.get(imageId);
+                if (art == null) {
+                    TrackInfoReadoutController.fetchArtworkFromNetwork(imageId);
+                }
+            }
         } catch (Throwable ignored) {
         }
         if (art == null) return;
@@ -1179,19 +1408,53 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return Math.signum(dx) * (bound + (ax - bound) * 0.3f);
     }
 
+    /** Centralizes Visualizer listening: on whenever Beat-reactive background wants it, or
+     *  transiently after an in-app seek/skip (see seekWatchUntilMs) so the freeze-rescue check
+     *  below has a real reading to test even when that setting is off. Only calls into the host
+     *  on an actual transition, not every frame. */
+    private void refreshAudioListening() {
+        boolean seekWatchActive = seekWatchUntilMs > 0 && SystemClock.elapsedRealtime() < seekWatchUntilMs;
+        if (seekWatchUntilMs > 0 && !seekWatchActive) seekWatchUntilMs = -1L;
+        boolean wanted = running && (beatReactiveBackground || seekWatchActive);
+        if (wanted != audioListeningActive) {
+            audioListeningActive = wanted;
+            host.setAudioReactiveListening(wanted);
+        }
+    }
+
+    // Matches AdMuteController's own detection - Spotify's ad tracks use this URI scheme.
+    private static boolean isAdTrack(SpotifyTrack track) {
+        return track != null && track.uri != null && track.uri.startsWith("spotify:ad:");
+    }
+
     private void updateState(float deltaSeconds) {
+        if (demoModeActive) {
+            // Freeze the real per-frame pipeline entirely - it must not race the layout editor's
+            // synthetic preview content (e.g. treating the demo track's sentinel URI as a real
+            // track change and trying to fetch lyrics for it through the real host).
+            updateFrameDemand(false);
+            return;
+        }
         SpotifyTrack track = currentTrackThrottled();
         boolean playingNow = host.isPlayerActuallyPlaying();
+        refreshAudioListening();
         ambientController.setPlaying(playingNow);
         ambientController.updateAudioLevel(beatReactiveBackground ? host.currentAudioLevel() : 0f);
         updateJumpToCurrentVisibility();
         updateToggleSpinners();
+        // Ad break: Spotify models it as an ordinary track under a spotify:ad: URI. It has its
+        // own title/artwork (whatever the ad creative provides), which is worth showing rather
+        // than hiding, so it flows through the normal per-track update below like any other
+        // track; only the seek/skip-gap chip is suppressed, since seeking within an ad doesn't
+        // mean anything (AdMuteController separately ducks its audio using the same signal).
+        boolean adTrack = isAdTrack(track);
+        if (adTrack) skipGapController.hide();
         if (track == null) {
             setTextIfChanged(title, "Waiting for Spotify track…");
             setTextIfChanged(subtitle, "Player state hook has not emitted yet");
             setTextIfChanged(progress, "--:--");
             setTextIfChanged(status, "Native Spicy renderer mounted. Waiting for player state.");
-            skipGapController.update(false);
+            skipGapController.hide();
             updateFrameDemand(false);
             return;
         }
@@ -1221,10 +1484,27 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             String id = trackIdFromUri(uri);
             ambientController.updateForTrack(track, () -> running);
             XpLog.log(TAG + " active track uri=" + uri + " title=\"" + safe(track.title) + "\"");
-            showLoading("Loading lyrics…");
-            loadLyrics(track, id);
+            if (adTrack) {
+                // Ads carry no lyrics: don't waste a fetch (or flash a stale error screen).
+                // Title/artwork still update below via the normal per-frame path.
+                loadingTrackId = "";
+                showLoading("Advertisement…");
+            } else {
+                showLoading("Loading lyrics…");
+                loadLyrics(track, id);
+            }
         }
-        long pos = playbackClock.getPosition(track, playingNow);
+        // See the class-level rescue fields above: a rejected seek can leave playingNow stuck
+        // false while audio keeps playing, so fall back to measured audio energy to keep the
+        // clock advancing without ever touching playingNow itself (icon/status text stay honest).
+        boolean audioRescueActive = !playingNow && host.currentAudioLevel() > AUDIO_ACTIVE_LEVEL_THRESHOLD;
+        if (audioRescueActive != lastAudioRescueActive) {
+            lastAudioRescueActive = audioRescueActive;
+            XpLog.log(TAG + " clock audio-rescue " + (audioRescueActive ? "engaged" : "released")
+                    + " level=" + host.currentAudioLevel());
+        }
+        boolean clockPlayingNow = playingNow || audioRescueActive;
+        long pos = playbackClock.getPosition(track, clockPlayingNow);
 
         String trackTitle = emptyFallback(track.title, "Unknown title");
         String trackArtist = emptyFallback(track.artist, "Unknown artist");
@@ -1263,14 +1543,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             if (staticDoc) {
                 // Reassert static styling after remounts and late secondary-text updates. Static
                 // rows have synthetic layout timings, never a karaoke-active row.
-                skipGapController.update(false);
+                skipGapController.hide();
                 frameRenderer.applyStatic(document, rowMountController.mountedIndices(), mountedRowsHost);
             } else {
                 long lyricPos = adjustedLyricPositionMs(pos);
                 int nextActive = LyricTimeline.findPrimaryActiveRow(document.appliedLines, lyricPos);
                 boolean drasticSeek = lastLyricPositionMs >= 0 && Math.abs(lyricPos - lastLyricPositionMs) > 1000;
                 lastLyricPositionMs = lyricPos;
-                updateSkipGap(track, uri, lyricPos, playingNow);
+                if (!adTrack) updateSkipGap(track, uri, lyricPos, playingNow);
                 maybeAutoResumeFollow(nextActive, track, lyricPos);
                 if (nextActive != followState.activeIndex() || drasticSeek) {
                     setActiveLine(nextActive, lyricPos, track, drasticSeek);
@@ -1359,10 +1639,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void applyRenderConfigChanges(String reason, boolean fromPanelClose) {
         autoResumeFollow = config.get(Settings.AUTO_RESUME_FOLLOW);
-        boolean wasSlide = slideAnimationEnabled;
         slideAnimationEnabled = readSlideEnabled();
-        if (wasSlide != slideAnimationEnabled && scrollController != null) {
-            scrollController.setRaisedAnchor(slideAnimationEnabled && !isLandscape());
+        if (scrollController != null) {
+            scrollController.setAnchorFraction(resolveFocusAnchorFraction());
             applyLyricsScrollPadding();
         }
         LyricsRenderConfig next = LyricsRenderConfig.read(activity, config);
@@ -1386,7 +1665,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
         if (diff.needsBackgroundToggle) {
             beatReactiveBackground = config.get(Settings.BEAT_REACTIVE_BACKGROUND);
-            if (running) host.setAudioReactiveListening(beatReactiveBackground);
+            refreshAudioListening();
             ambientController.applySettings(next.backgroundStyle, next.forceDarkBackground,
                     next.extraDarkBackground);
             SpotifyTrack track = host.getCurrentTrackSafely();
@@ -1485,6 +1764,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 return;
             }
             document = doc;
+            pendingLoadEntrance = true;
             loadingTrackId = "";
             observeAiRequestFeedback(document);
             LyricPipelineMetrics.increment(LyricPipelineMetrics.Counter.DOCUMENT_REBUILD);
@@ -1567,6 +1847,13 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 : "lyrics provided by " + sourceProviderLabel(document.provider));
         rowMountController.markDirty();
         renderWindowForActive(0);
+        if (pendingLoadEntrance) {
+            pendingLoadEntrance = false;
+            if (config != null && Boolean.TRUE.equals(config.get(Settings.LOAD_LIFT_ANIMATION))
+                    && "Apple Music".equals(config.get(Settings.ANIMATION_STYLE))) {
+                startLoadEntranceAnimation();
+            }
+        }
         if (resetScrollForNextDocument) {
             resetScrollForNextDocument = false;
             // A cache hit can replace the short loading state before ScrollView gets a layout pass
@@ -1574,6 +1861,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             // its opening row starts from the center-padding position even during lyric pre-roll.
             lyricsScroll.scrollTo(0, 0);
         }
+    }
+
+    private void startLoadEntranceAnimation() {
+        // TODO: Implement load entrance animation
     }
 
     private void ensureLyricsColumnScaffold() {
@@ -1706,6 +1997,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 document,
                 LyricsSurfaceRowPlanner.SurfacePolicy.fullscreen(
                         renderConfig, showRomanization(), showTranslation(), japaneseReadingMode()));
+
+        // Move the horizontal safety margin from the scroll container (which would clip 
+        // edge-bleed blur/glow effects) to the row view itself. The row remains full-width
+        // but its content is offset by the system padding.
+        if (rowPlan.options != null) {
+            rowPlan.options.horizontalOffsetPx = isLandscape() ? 0 : sideSystemPadding(activity);
+        }
+
         return rowViewFactory.build(rowPlan.line, rowPlan.options,
                 this::segmentRomanizedText, () -> {
             invalidateRowHeightPrefix();
@@ -1756,8 +2055,16 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private void seekNearestLineAt(float yInScroll) {
-        if (document == null || document.appliedLines == null || document.appliedLines.isEmpty()) return;
         if (staticDoc) return; // unsynced lyrics have no real per-line timing → tapping must not seek
+        int bestIndex = nearestAppliedLineIndexAt(yInScroll);
+        if (bestIndex >= 0) seekToLine(document.appliedLines.get(bestIndex), bestIndex);
+    }
+
+    /** Shared by tap-to-seek and long-press-to-share: which mounted lyric row sits closest to a
+     *  scroll-view touch Y. Unlike {@link #seekNearestLineAt}, sharing works on unsynced (static)
+     *  documents too, so this carries no {@code staticDoc} guard of its own. */
+    private int nearestAppliedLineIndexAt(float yInScroll) {
+        if (document == null || document.appliedLines == null || document.appliedLines.isEmpty()) return -1;
         int contentY = scrollController == null ? Math.round(yInScroll) : scrollController.contentYForTouch(yInScroll);
         int bestIndex = -1;
         int bestDistance = Integer.MAX_VALUE;
@@ -1778,7 +2085,27 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 bestIndex = i;
             }
         }
-        if (bestIndex >= 0) seekToLine(document.appliedLines.get(bestIndex), bestIndex);
+        return bestIndex;
+    }
+
+    /** Long-press-to-share: quotes the nearest lyric row, or falls back to a plain track card
+     *  when there's no usable line under the touch (no document, or an empty/dot row). */
+    private void shareLyricLineAt(float yInScroll) {
+        SpotifyTrack track = currentTrackThrottled();
+        if (track == null) return;
+        if (shareCardController == null) shareCardController = new LyricsShareCardController(activity);
+        Bitmap art = SpotifyArtworkCache.snapshotLarge(track.imageId, track.uri, dp(420));
+        if (art == null && track.imageId != null && !track.imageId.isEmpty()) {
+            art = TrackInfoReadoutController.ART_NETWORK_CACHE.get(track.imageId);
+            if (art == null) TrackInfoReadoutController.fetchArtworkFromNetwork(track.imageId);
+        }
+        int index = nearestAppliedLineIndexAt(yInScroll);
+        AppliedLine line = index >= 0 ? document.appliedLines.get(index) : null;
+        if (line != null && line.text != null && !line.text.trim().isEmpty()) {
+            shareCardController.showForLine(this, track, art, line.text, line.translatedText);
+        } else {
+            shareCardController.showTrackCard(this, track, art);
+        }
     }
 
     private void seekToLine(AppliedLine line, int index) {
@@ -1788,6 +2115,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         followState.clearHold();
         boolean ok = host.seekSpotifyTo(target);
         if (ok) {
+            seekWatchUntilMs = SystemClock.elapsedRealtime() + SEEK_WATCH_WINDOW_MS;
+            refreshAudioListening();
             playbackClock.forcePosition(target, host.isPlayerActuallyPlaying());
             long lyricTarget = adjustedLyricPositionMs(target);
             setActiveLine(index, lyricTarget, host.getCurrentTrackSafely(), true);
@@ -1882,26 +2211,77 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 && Boolean.TRUE.equals(config.get(Settings.LINE_SLIDE_ANIMATION));
     }
 
+    /** Resolves Settings#LYRICS_FOCUS_POSITION to an anchor fraction for scrollController.
+     *  "Auto" preserves the pre-existing behavior (raised only while the Apple-style line-slide
+     *  animation is on); Top/Center/Bottom pin it explicitly. Raised/lowered anchors overlap the
+     *  chrome or strand space at the opposite edge in landscape, so landscape always centers
+     *  regardless of the setting. */
+    private float resolveFocusAnchorFraction() {
+        String pos = config == null ? "Auto" : config.get(Settings.LYRICS_FOCUS_POSITION);
+        float fraction;
+        if ("Top".equals(pos)) {
+            fraction = LyricsScrollController.RAISED_ANCHOR_FRACTION;
+        } else if ("Bottom".equals(pos)) {
+            fraction = LyricsScrollController.LOWERED_ANCHOR_FRACTION;
+        } else if ("Center".equals(pos)) {
+            fraction = LyricsScrollController.CENTER_ANCHOR_FRACTION;
+        } else if ("Custom".equals(pos)) {
+            int percent = config == null ? Settings.LYRICS_FOCUS_POSITION_CUSTOM_PERCENT.defaultValue
+                    : config.get(Settings.LYRICS_FOCUS_POSITION_CUSTOM_PERCENT);
+            fraction = Math.max(0f, Math.min(1f, percent / 100f));
+        } else {
+            fraction = slideAnimationEnabled
+                    ? LyricsScrollController.RAISED_ANCHOR_FRACTION
+                    : LyricsScrollController.CENTER_ANCHOR_FRACTION;
+        }
+        if (isLandscape()) fraction = LyricsScrollController.CENTER_ANCHOR_FRACTION;
+        return fraction;
+    }
+
     private void scrollToActiveTarget(int target, boolean instant) {
         if (lyricsScroll == null) return;
         int oldScroll = lyricsScroll.getScrollY();
-        if (instant || Math.abs(target - oldScroll) <= 2) {
-            boolean moved = Math.abs(target - oldScroll) > 2;
+        int delta = target - oldScroll;
+        if (instant || Math.abs(delta) <= 2) {
+            boolean moved = Math.abs(delta) > 2;
             applyingLyricScroll = true;
             lyricsScroll.scrollTo(0, target);
             applyingLyricScroll = false;
             if (moved) clearRowCascade();
             return;
         }
-        if (!slideAnimationEnabled || Math.abs(target - oldScroll) > glideCapPx()) {
+        if (!slideAnimationEnabled) {
             clearRowCascade();
             lyricsScroll.smoothScrollTo(0, target);
             return;
         }
+        if (Math.abs(delta) <= glideCapPx()) {
+            // The ordinary line-to-line advance: jump the scroll position instantly (imperceptible
+            // at this distance) and let the per-row cascade alone carry the motion. Running
+            // ScrollView's own smoothScrollTo at the same time here fights the cascade instead of
+            // complementing it - two independently-timed animations driving the same rows reads
+            // as choppy/disjointed rather than smooth, and at this distance the cascade alone was
+            // already the "spring" motion, not something that also needed a scroll under it.
+            applyingLyricScroll = true;
+            lyricsScroll.scrollTo(0, target);
+            applyingLyricScroll = false;
+            startRowCascade(delta);
+            return;
+        }
+        // Too far for the cascade to plausibly cover on its own (e.g. resuming after being
+        // scrolled away, or a seek) - a plain smoothScrollTo alone here read as flat, so the
+        // cascade rides on top too, but with its amplitude capped independently of the real
+        // scroll distance so it stays a bounded flourish rather than an oversized, violent spring.
         applyingLyricScroll = true;
-        lyricsScroll.scrollTo(0, target);
-        applyingLyricScroll = false;
-        startRowCascade(target - oldScroll);
+        lyricsScroll.removeCallbacks(clearScrollGuardRunnable);
+        lyricsScroll.postDelayed(clearScrollGuardRunnable, SMOOTH_SCROLL_GUARD_MS);
+        lyricsScroll.smoothScrollTo(0, target);
+        // Pegging this to glideCapPx() itself (up to ~half the screen height) made every far jump
+        // throw every row by that full amount before springing back, regardless of how far the
+        // real scroll actually travels - a single-line-height flourish reads as a settle riding
+        // on top of the scroll; a near-screen-height one reads as a violent overshoot.
+        float cascadeDelta = Math.signum(delta) * Math.min(glideCapPx(), dp(120));
+        startRowCascade(cascadeDelta);
     }
 
     private float glideCapPx() {
@@ -1976,11 +2356,23 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void maybeAutoResumeFollow(int activeIndex, SpotifyTrack track, long lyricPos) {
         if (!autoResumeFollow) return;
-        if (!followState.canAutoResumeNow(750)) return;
+        // The cooldown before auto-resuming follows after a manual scroll settle.
+        // Increased from 750ms to 2500ms (2.5s) to allow users more time to read 
+        // ahead without the view jumping back to the active line prematurely.
+        if (!followState.canAutoResumeNow(2500)) return;
+        // canAutoResumeNow() only knows about actual touch contact, so a fling continuing under
+        // its own momentum after the finger lifts (touching already false) wasn't being waited
+        // out - the view would fight an in-progress fling instead of waiting for it to settle.
+        // scrollInProgress only reflects the user's own motion here: normal auto-advance
+        // scrolling is already suppressed for the whole time manuallySuspended is true (see
+        // isHoldingNow()), which is a precondition of canAutoResumeNow() above.
+        if (scrollInProgress) return;
         if (document == null || document.appliedLines == null || activeIndex < 0 || activeIndex >= document.appliedLines.size()) return;
-        AppliedLine line = document.appliedLines.get(activeIndex);
-        View row = rowMountController.attachedRowView(line);
-        if (row == null || scrollController == null || !scrollController.isRowVisible(row, dp(5))) return;
+        // No visibility/mount check here on purpose: setActiveLine() already re-mounts and
+        // scrolls to the active row itself when it isn't currently in the mounted window
+        // (renderWindowForActive(), below), so this used to only resume when the active row
+        // happened to already be on screen - scrolling far away to preview upcoming lyrics and
+        // stopping never brought the view back at all.
         followState.clearHold();
         setActiveLine(activeIndex, lyricPos, track);
         updateJumpToCurrentVisibility();
@@ -2016,6 +2408,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             applyRenderConfigChanges("settings closed", true);
             ambientController.applySettings(renderConfig.backgroundStyle, renderConfig.forceDarkBackground,
                     renderConfig.extraDarkBackground);
+            revealChrome(); // make sure the settings entry point itself is visible again
         } catch (Throwable t) {
             XpLog.log(TAG + " onSettingsClosed failed: " + t);
         }
@@ -2695,7 +3088,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         String mode = config == null ? "Off" : config.get(Settings.AUTO_SKIP_INTRO_OUTRO);
         if ("Off".equals(mode)) {
             skipAckGapStartMs = -1;
-            skipGapController.update(false);
+            skipGapController.hide();
             lastSkipSeenPosMs = lyricPos;
             return;
         }
@@ -2712,11 +3105,18 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         boolean acked = target != null && skipAckGapStartMs >= 0
                 && target.gapStartMs == skipAckGapStartMs;
         if ("Auto".equals(mode)) {
-            skipGapController.update(false);
-            if (target != null && !acked && playingNow) performSkipSeek(target, uri);
+            skipGapController.hide();
+            if (target != null && !acked && playingNow && host.canSeek()) performSkipSeek(target, uri);
             return;
         }
-        skipGapController.update(target != null && !acked);
+        // host.canSeek() reflects the *current* PlaybackState, which can flip moment to moment
+        // (e.g. an ad starting), so this is re-checked every tick rather than cached - a chip
+        // offering a seek that would just be silently ignored is worse than no chip at all.
+        if (target != null && !acked && host.canSeek()) {
+            skipGapController.show(SkipGapPolicy.defaultLabel(target.kind));
+        } else {
+            skipGapController.hide();
+        }
     }
 
     /** On-demand chip tap: seek past the currently active gap, if it is still there. */
@@ -2735,13 +3135,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 : renderConfig.playbackPositionForLyricMs(target.targetMs);
         boolean ok = host.seekSpotifyTo(playbackMs);
         if (ok) {
+            seekWatchUntilMs = SystemClock.elapsedRealtime() + SEEK_WATCH_WINDOW_MS;
+            refreshAudioListening();
             playbackClock.forcePosition(playbackMs, host.isPlayerActuallyPlaying());
             skipAckUri = uri;
             skipAckGapStartMs = target.gapStartMs;
             lastSkipSeenPosMs = target.targetMs;
             XpLog.log(TAG + " skip gap startMs=" + target.gapStartMs + " targetMs=" + target.targetMs);
         }
-        skipGapController.update(false);
+        skipGapController.hide();
     }
 
     private void cycleTransliterationMode(SharedPreferences prefs) {

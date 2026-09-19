@@ -124,6 +124,12 @@ public final class LyricVisuals {
         String text = safe(seg.text);
         int codePoints = text.codePointCount(0, text.length());
         if (!appleStyle) {
+            // CJK characters are each roughly a syllable/mora on their own, unlike a Latin
+            // letter, so a short multi-character CJK run is still a meaningful per-character
+            // motion unit even under the 1000ms bar an equivalent-length Latin syllable needs -
+            // see RtlLyricsContractTest#shortMultiCjkSegmentsExposeCharacterMotionUnits. This is
+            // not the source of the English/Japanese grow-intensity mismatch (see
+            // LyricsRowViewFactory#buildWordView's furigana gate and wordScaleSplineStrong).
             boolean multiCjk = codePoints > 1
                     && (SpicyTextDetection.itemJapaneseTest(text)
                     || SpicyTextDetection.itemKoreanTest(text));

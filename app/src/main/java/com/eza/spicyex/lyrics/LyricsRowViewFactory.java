@@ -60,11 +60,16 @@ public final class LyricsRowViewFactory {
             if (line.oppositeAligned) leadingPadding = dp(18);
             else trailingPadding = dp(18);
         }
+        if (options != null && options.horizontalOffsetPx > 0) {
+            leadingPadding += options.horizontalOffsetPx;
+            trailingPadding += options.horizontalOffsetPx;
+        }
         row.setPaddingRelative(leadingPadding, topClearancePx(dp(10), multiplier, 0f, false),
                 trailingPadding, Math.round(dp(13) * multiplier));
         row.setClickable(false);
         row.setClipChildren(false);
         row.setClipToPadding(false);
+        row.setClipToOutline(false);
 
         if (line.dotLine) {
             LinearLayout dots = new LinearLayout(activity);
@@ -113,8 +118,15 @@ public final class LyricsRowViewFactory {
                 : LyricVisuals.lyricTextSizeSp(line.text, adaptiveTextSize);
         LyricsLineViewState.setBaseTextSp(line, Math.max(1, Math.round(textCurve * sizeMultiplier)));
         float baseTextPx = sp(LyricsLineViewState.baseTextSp(line));
-        row.setPaddingRelative(leadingPadding, topClearancePx(dp(10), multiplier, baseTextPx, showJapaneseFurigana),
-                trailingPadding, Math.round(dp(13) * multiplier));
+        // Scaled with the actual text size rather than a fixed dp value, so shrinking the font
+        // (LYRICS_TEXT_SIZE/custom) proportionally tightens the gap between lines instead of
+        // leaving disproportionately large whitespace around now-smaller text - floored so a very
+        // small custom size never crushes lines together illegibly.
+        int adaptiveTopPadding = Math.max(dp(6), Math.round(baseTextPx * 0.36f));
+        int adaptiveBottomPadding = Math.max(dp(8), Math.round(baseTextPx * 0.46f));
+        row.setPaddingRelative(leadingPadding,
+                topClearancePx(adaptiveTopPadding, multiplier, baseTextPx, showJapaneseFurigana),
+                trailingPadding, Math.round(adaptiveBottomPadding * multiplier));
         String weight = options == null ? "Medium" : options.lyricWeight;
         String font = options == null ? "spotify" : options.lyricsFont;
         LyricsLineViewState.clearMainView(line);
@@ -874,5 +886,9 @@ public final class LyricsRowViewFactory {
         public boolean appleStyle;
         public boolean appleCompactText;
         public boolean appleCjkWrap;
+        /** Explicit horizontal offset for the lyric text, moved from the scroll container 
+         *  (see LyricsScrollController) so the row view can remain full-screen width for 
+         *  unclipped blur/glow effects while the text keeps its margin. */
+        public int horizontalOffsetPx;
     }
 }

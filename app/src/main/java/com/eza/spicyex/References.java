@@ -99,11 +99,18 @@ public class References {
                     @SuppressWarnings("unchecked")
                     Map<String, String> md = (Map<String, String>) XpReflect.callMethod(track, "metadata");
 
-                    String title = md.get("title");
-                    String artist = md.get("artist_name");
-                    String album = md.get("album_title");
+                    String title = firstNonBlankMeta(md,
+                            "title", "ad_title", "context_title", "name", "track_title");
+                    String artist = firstNonBlankMeta(md,
+                            "artist_name", "ad_advertiser_name", "artist_name:0", "artist", "subtitle");
+                    String album = firstNonBlankMeta(md,
+                            "album_title", "ad_advertiser_name", "album", "context_title");
+
                     String color = md.get("extracted_color");
-                    String imageId = md.get("image_large_url");
+
+                    String imageId = firstNonBlankMeta(md,
+                            "image_large_url", "image_url", "ad_image_url", "image_small_url",
+                            "coverart_image_url", "image_preview_url");
                     long duration = 0;
                     try {
                         String durationValue = md.get("duration_ms");
@@ -150,6 +157,18 @@ public class References {
             Log.e("SpotifyPlus", "Error getting track information", e);
             return null;
         }
+    }
+
+    private static String firstNonBlankMeta(Map<String, String> md, String... keys) {
+        if (md == null || keys == null) return null;
+        for (String key : keys) {
+            try {
+                String value = md.get(key);
+                if (value != null && !value.trim().isEmpty()) return value;
+            } catch (Throwable ignored) {
+            }
+        }
+        return null;
     }
 
     private static long previousMs;

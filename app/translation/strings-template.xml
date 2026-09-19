@@ -32,6 +32,8 @@
     <string name="settings_label_lyric_stay_on_track_change">Stay in lyric screen on song change</string>
     <string name="settings_label_lyric_auto_resume_follow">Auto-resume lyric follow</string>
     <string name="settings_label_lyric_auto_skip_intro_outro">Auto-skip intro/outro</string>
+    <string name="settings_label_lyric_skip_chip_style">Skip chip style</string>
+    <string name="settings_label_lyric_skip_chip_position">Skip chip position</string>
     <string name="settings_label_auto_mute_ads">Auto-mute ads</string>
     <string name="settings_label_mini_player_lyrics_icon">Show lyrics icon on mini player</string>
     <string name="settings_label_lyric_liked_songs_button">Add to Liked Songs button</string>
@@ -50,6 +52,11 @@
     <string name="settings_option_lyrics_source_selection_mode_auto">Auto</string>
     <string name="settings_option_lyrics_source_selection_mode_source_order">Source order</string>
     <string name="settings_option_auto">Auto</string>
+    <string name="settings_option_icon">Icon</string>
+    <string name="settings_option_label">Label</string>
+    <string name="settings_option_left">Left</string>
+    <string name="settings_option_center">Center</string>
+    <string name="settings_option_right">Right</string>
     <string name="settings_option_apple_music">Apple Music</string>
     <string name="settings_option_spicy">Spicy</string>
     <string name="settings_option_lrclib">LRCLIB</string>
@@ -104,6 +111,8 @@
     <string name="settings_label_lyrics_adaptive_text_size">Adaptive text size</string>
     <string name="settings_label_lyric_interlude_icon">Interlude indicator</string>
     <string name="settings_label_lyrics_fullscreen_controls">Fullscreen controls</string>
+    <string name="settings_label_lyrics_focus_position">Lyrics focus point</string>
+    <string name="settings_label_lyrics_focus_position_custom_percent">Custom focus point</string>
     <string name="settings_option_5_seconds">5 seconds</string>
     <string name="settings_option_10_seconds">10 seconds</string>
     <string name="settings_option_30_seconds">30 seconds</string>
@@ -117,6 +126,10 @@
     <string name="settings_label_lyrics_track_info_text_overflow">Track info overflow</string>
     <string name="settings_option_scroll">Scroll</string>
     <string name="settings_label_lyrics_track_info_art_size">Track info art size</string>
+    <string name="settings_label_lyrics_track_info_art_size_custom_dp">Custom art size</string>
+    <string name="settings_label_lyrics_track_info_art_radius">Track info art corner radius</string>
+    <string name="settings_label_lyrics_track_info_text_align">Track info text alignment</string>
+    <string name="settings_label_lyrics_track_info_text_size_adaptive">Adaptive track info text size</string>
     <string name="settings_label_lyrics_adaptive_landscape_layout">Adaptive landscape layout</string>
     <string name="settings_label_lyrics_panel_media_controls">Panel media controls</string>
     <string name="settings_label_lyric_animation_style">Animation style</string>
@@ -125,6 +138,7 @@
     <string name="settings_label_lyric_apple_cjk_wrap_fix">Wrap long CJK words</string>
     <string name="settings_label_lyric_line_slide_animation">Apple Music-style slide</string>
     <string name="settings_label_lyric_apple_lift">Apple lift</string>
+    <string name="settings_label_lyric_load_lift_animation">Rise in on load</string>
     <string name="settings_label_lyric_word_bounce">Word bounce</string>
     <string name="settings_label_lyric_word_bounce_mode">Word bounce</string>
     <string name="settings_option_lyric_word_bounce_mode_off">Off</string>
@@ -138,6 +152,7 @@
     <string name="settings_option_lyric_word_bounce_style_apple_lift">Apple lift</string>
     <string name="settings_label_lyric_enable_glow_blur">Text glow</string>
     <string name="settings_label_lyric_enable_line_blur">Blur distant lines</string>
+    <string name="settings_label_lyrics_blur_intensity">Blur intensity</string>
     <string name="settings_label_lyric_line_sync_fill">Lyric fill direction</string>
     <string name="settings_label_lyric_enable_background">Animated background</string>
     <string name="settings_label_lyric_background_style">Background style</string>

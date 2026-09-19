@@ -11,6 +11,7 @@ public final class AppliedLineRenderState {
     public Spring opacitySpring;
     public Spring lineScaleSpring;
     public Spring lineGlowSpring;
+    public Spring lineBlurSpring;
     public View rowView;
     public SpicyAnimatedTextView mainView;
     public SpicyAnimatedTextView romanView;
@@ -31,6 +32,7 @@ public final class AppliedLineRenderState {
         opacitySpring = null;
         lineScaleSpring = null;
         lineGlowSpring = null;
+        lineBlurSpring = null;
         dotMainScaleSpring = null;
         dotMainOpacitySpring = null;
         lineShadowSpring = null;

@@ -22,7 +22,10 @@ import static com.eza.spicyex.lyrics.LyricUtils.safe;
  */
 public final class FuriganaText {
     static final float RUBY_SIZE_RATIO = 0.46f;
-    static final float RUBY_GAP_RATIO = 0.12f;
+    // Vertical gap between the ruby reading and the kanji it annotates, as a fraction of the base
+    // text size. Was 0.12 - the reading sat noticeably high above the kanji; halved to bring it
+    // down closer while still clearing the base glyphs' ascent.
+    static final float RUBY_GAP_RATIO = 0.06f;
 
     private FuriganaText() {
     }

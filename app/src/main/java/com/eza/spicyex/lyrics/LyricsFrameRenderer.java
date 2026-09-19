@@ -99,11 +99,10 @@ public final class LyricsFrameRenderer {
         boolean scrollHoldChanged = userScrollHeld != lastUserScrollHeld;
         for (int i : mountedIndices) {
             if (i < 0 || i >= document.appliedLines.size()) continue;
-            if (userScrollHeld && i != activeIndex
-                    && (i < boundedVisibleStart || i > boundedVisibleEnd)) continue;
             AppliedLine line = document.appliedLines.get(i);
             if (!LyricsLineViewState.isMounted(line, mountedRowsHost)) continue;
-
+            boolean isOutsideVisibleHoldWindow = userScrollHeld && i != activeIndex
+                    && (i < boundedVisibleStart || i > boundedVisibleEnd);
             LyricsLineAnimationState lineState = LyricsLineAnimationState.forLine(
                     line, positionMs, config.spotlight, config.lineGradientEnabled,
                     config.appleDimPassed);
@@ -116,12 +115,24 @@ public final class LyricsFrameRenderer {
                     config.lineBlurEnabled, activeChanged, scrollHoldChanged, userScrollHeld);
             if (!lineState.active && !blurNeedsRefresh
                     && !LyricsLineViewState.needsFrame(line, targetClass)) {
+                // Still drive the blur spring toward its target even when the row
+                // is otherwise idle (opacity/opacity settled, no animation needed).
+                // Without this, an overdamped blur spring could remain non-zero
+                // indefinitely because stepLineBlur is never called.
+                float blurTarget = mobileLineBlurPx(line, i, activeIndex, lineState.active, userScrollHeld, config);
+                LyricsLineViewState.stepLineBlur(line, blurTarget, deltaSeconds);
                 continue;
             }
             float opacity = LyricsAnimationApplier.stepLineOpacity(line, lineState.active, lineState.sung,
                     deltaSeconds, config.appleDimPassed);
             float blurTarget = mobileLineBlurPx(line, i, activeIndex, lineState.active, userScrollHeld, config);
-            LyricsLineViewState.applyRowFrame(line, styleBatcher, opacity, blurTarget);
+            float blur = LyricsLineViewState.stepLineBlur(line, blurTarget, deltaSeconds);
+            // Always drain blur for rows outside the visible hold window, but skip
+            // expensive rendering since they're not visible during the scroll hold.
+            if (isOutsideVisibleHoldWindow) {
+                continue;
+            }
+            LyricsLineViewState.applyRowFrame(line, styleBatcher, opacity, blur);
             if (config.appleStyle) {
                 float lineShadowTarget = lineState.active && !line.bgLine ? 1f : 0f;
                 float lineShadow = LyricsLineViewState.stepLineShadow(line, lineShadowTarget, deltaSeconds);

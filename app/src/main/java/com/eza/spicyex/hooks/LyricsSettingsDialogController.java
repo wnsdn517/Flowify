@@ -21,6 +21,7 @@ final class LyricsSettingsDialogController {
     private final LyricsAmbientController ambientController;
     private final LyricsHost host;
     private final Runnable onClosed;
+    private final Runnable onOpenLayoutEditor;
     private final String logTag;
 
     LyricsSettingsDialogController(
@@ -29,6 +30,7 @@ final class LyricsSettingsDialogController {
             LyricsAmbientController ambientController,
             LyricsHost host,
             Runnable onClosed,
+            Runnable onOpenLayoutEditor,
             String logTag
     ) {
         this.activity = activity;
@@ -36,6 +38,7 @@ final class LyricsSettingsDialogController {
         this.ambientController = ambientController;
         this.host = host;
         this.onClosed = onClosed;
+        this.onOpenLayoutEditor = onOpenLayoutEditor;
         this.logTag = logTag;
     }
 
@@ -53,7 +56,7 @@ final class LyricsSettingsDialogController {
                         halfMode = !halfMode;
                         applySize(window);
                     }, () -> Motion.exitCardThen(panelRef[0], dialog::isShowing, dialog::dismiss),
-                    host::clearLyricsCache);
+                    onOpenLayoutEditor, host::clearLyricsCache);
             final View panelView = panel.build();
             panelRef[0] = panelView;
             // Back routes through the animated exit; outside-tap keeps platform behavior
