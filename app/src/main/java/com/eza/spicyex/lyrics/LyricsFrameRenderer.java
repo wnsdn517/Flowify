@@ -19,6 +19,11 @@ public final class LyricsFrameRenderer {
     private final float scaledDensity;
     private int lastActiveIndex = Integer.MIN_VALUE;
     private boolean lastUserScrollHeld;
+    /** Last non-negative activeIndex, held through gaps where nothing is currently active (unlike
+     *  lastActiveIndex, which tracks the raw previous-frame value, -1 included, for the change-
+     *  detection gate below). Distance blur anchors to this during a gap instead of activeIndex
+     *  itself - see mobileLineBlurPx(). */
+    private int lastKnownActiveIndex = -1;
 
     public LyricsFrameRenderer(Context context, FrameStyleBatcher styleBatcher) {
         this.styleBatcher = styleBatcher;
@@ -229,6 +234,7 @@ public final class LyricsFrameRenderer {
             LyricsLineViewState.markFrameApplied(line, targetClass);
         }
         lastActiveIndex = activeIndex;
+        if (activeIndex >= 0) lastKnownActiveIndex = activeIndex;
         lastUserScrollHeld = userScrollHeld;
         styleBatcher.flush();
     }
@@ -389,10 +395,15 @@ public final class LyricsFrameRenderer {
         if (userScrollHeld) return 0f;
         float quality = config.blurQuality;
         if (quality <= 0f) return 0f;
-        if (active < 0) return 0f;
+        // A brief pause between lines - or any gap too short to earn its own interlude/dot row -
+        // leaves nothing "active" at all for a while. Falling back to 0 here would flash every
+        // row back to full clarity for the length of the gap instead of holding the blur where
+        // playback still effectively is; anchor to the last real active line instead.
+        int effectiveActive = active >= 0 ? active : lastKnownActiveIndex;
+        if (effectiveActive < 0) return 0f;
         // Apple only: an extended-window active row (index past the active one) never blurs.
         if (config.appleStyle && lineActive) return 0f;
-        int distance = Math.abs(index - active);
+        int distance = Math.abs(index - effectiveActive);
         if (distance == 0) return 0f;
         String lineText = safe(line.text);
         if (config.lineBlurHeavy) {
