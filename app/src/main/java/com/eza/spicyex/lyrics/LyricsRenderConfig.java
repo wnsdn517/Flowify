@@ -292,7 +292,9 @@ public final class LyricsRenderConfig {
                 appleLift,
                 appleStyle && get(cfg, Settings.APPLE_FADE_PASSED_LINES),
                 appleStyle && get(cfg, Settings.APPLE_COMPACT_TEXT),
-                get(cfg, Settings.LYRICS_CJK_WRAP_FIX),
+                // Wrapping a single word view to multiple lines broke the flexbox row layout
+                // for long unspaced CJK lines; disabled until that's fixed properly.
+                false,
                 get(cfg, Settings.ENABLE_GLOW_BLUR),
                 !"Off".equals(lineBlurLevel),
                 "Heavy".equals(lineBlurLevel),

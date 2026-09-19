@@ -112,7 +112,6 @@ public final class SettingsUiSchema {
             // Apple Music (dedicated section; renders only while the Animation style is Apple Music)
             Settings.APPLE_FADE_PASSED_LINES,
             Settings.APPLE_COMPACT_TEXT,
-            Settings.LYRICS_CJK_WRAP_FIX,
             Settings.LINE_SLIDE_ANIMATION,
             Settings.APPLE_LIFT,
             Settings.LOAD_LIFT_ANIMATION,

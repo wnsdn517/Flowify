@@ -414,10 +414,6 @@ public final class Settings {
             "lyric_apple_compact_text", APPLE, "Compact text size", true
     );
 
-    public static final Setting<Boolean> LYRICS_CJK_WRAP_FIX = boolSetting(
-            "lyrics_cjk_wrap_fix", LYRICS, "Wrap long CJK words", true
-    );
-
     // Row-scroll cascade. Apple-owned: rendered only inside the Apple sub-section.
     public static final Setting<Boolean> LINE_SLIDE_ANIMATION = boolSetting(
             "lyric_line_slide_animation", APPLE, "Apple Music-style slide", false
