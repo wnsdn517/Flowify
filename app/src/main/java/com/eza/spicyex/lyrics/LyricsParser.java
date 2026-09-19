@@ -124,6 +124,67 @@ public final class LyricsParser implements LyricsRepository.Parser {
         return doc;
     }
 
+    /**
+     * NetEase's legacy (unencrypted) {@code /api/song/lyric} response: a plain LRC block under
+     * {@code lrc.lyric} plus an optional translated LRC block under {@code tlyric.lyric}, timestamp
+     * -aligned with the main block in practice. NetEase's word-level ("yrc") lyrics require their
+     * weapi request signing and aren't available through this endpoint.
+     */
+    @Override
+    public LyricsDocument parseNeteaseLyrics(Context context, SpotifyTrack track, String body) {
+        JsonElement root = JsonParser.parseString(body);
+        if (!root.isJsonObject()) throw new IllegalStateException("no NetEase result");
+        JsonObject object = root.getAsJsonObject();
+        JsonObject lrcObject = Json.optObject(object, "lrc");
+        String synced = lrcObject == null ? "" : Json.optString(lrcObject, "lyric");
+        if (isBlank(synced)) throw new IllegalStateException("NetEase lyric empty");
+
+        LyricsDocument doc = new LyricsDocument();
+        doc.trackId = trackIdFromUri(track == null ? "" : track.uri);
+        doc.durationMs = track == null ? 0 : Math.max(0, track.duration);
+        doc.fetchSource = "netease";
+        doc.provider = "NetEase";
+        doc.language = "";
+        doc.type = "Line";
+        parseLrcLines(synced, doc);
+
+        JsonObject tlyricObject = Json.optObject(object, "tlyric");
+        String translated = tlyricObject == null ? "" : Json.optString(tlyricObject, "lyric");
+        if (!isBlank(translated)) applyNeteaseTranslation(doc, translated);
+
+        finalizeParsedDocument(context, doc);
+        return doc;
+    }
+
+    private void applyNeteaseTranslation(LyricsDocument doc, String translatedLrc) {
+        java.util.Map<Long, String> byTimestamp = new java.util.LinkedHashMap<>();
+        for (String rawLine : translatedLrc.split("\\r?\\n")) {
+            Matcher matcher = LRC_TIMESTAMP.matcher(cleanInvisibles(rawLine));
+            if (!matcher.matches()) continue;
+            String text = cleanInvisibles(matcher.group(4));
+            if (isBlank(text)) continue;
+            byTimestamp.put(lrcTimestampMs(matcher), text);
+        }
+        if (byTimestamp.isEmpty()) return;
+        for (LyricsLine line : doc.lines) {
+            String translated = byTimestamp.get(line.startMs);
+            if (translated != null && !translated.equals(line.text)) {
+                line.providerTranslatedText = translated;
+            }
+        }
+    }
+
+    private static long lrcTimestampMs(Matcher matcher) {
+        long minutes = parseLongSafe(matcher.group(1));
+        long seconds = parseLongSafe(matcher.group(2));
+        String fraction = matcher.group(3);
+        long millis = 0;
+        if (fraction != null && !fraction.isEmpty()) {
+            millis = parseLongSafe((fraction + "000").substring(0, 3));
+        }
+        return minutes * 60000 + seconds * 1000 + millis;
+    }
+
     private void parseLrcLines(String synced, LyricsDocument doc) {
         String[] rawLines = synced.split("\\r?\\n");
         for (String rawLine : rawLines) {
