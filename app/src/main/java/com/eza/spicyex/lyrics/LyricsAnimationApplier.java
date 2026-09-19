@@ -104,11 +104,21 @@ public final class LyricsAnimationApplier {
                             && LyricsSyllableViewState.letterCount(motionOwner) > 1;
                     boolean appleLetterDriven = appleLift && liftMotion
                             && LyricsSyllableViewState.letterCount(motionOwner) > 1;
+                    // A segment that qualifies for the strong per-letter pop but isn't getting
+                    // letter treatment here - most commonly a furigana-annotated Japanese word,
+                    // whose ruby span needs one contiguous text layout rather than a view per code
+                    // point - would otherwise fall back to the much weaker default word scale and
+                    // read as a noticeably smaller "grow" than equivalent English letters. Give it
+                    // the letter-amplitude curve at word granularity instead. Scoped to ungrouped
+                    // segments only: a multi-syllable phrase blob is a different visual unit than a
+                    // single letter/word and shouldn't pop at letter amplitude.
+                    boolean strongWordPop = !grouped && !letterUnitMotion
+                            && LyricVisuals.shouldUseLetterAnimator(motionOwner, !directMotion);
                     // Phrase modes own the group wrapper. Word modes keep it neutral and animate
                     // each timed segment below.
                     float targetScale = (grouped && individualWordMotion) || letterUnitMotion
                             ? 1f : wordMotionScale(
-                            liftMotion, motionActive, positionMs >= groupEndMs, motionProgress);
+                            liftMotion, motionActive, positionMs >= groupEndMs, motionProgress, strongWordPop);
                     float targetY = (grouped && individualWordMotion) || letterUnitMotion || appleLetterDriven
                             ? 0f : wordMotionY(
                             liftMotion, motionActive, positionMs >= groupEndMs, motionProgress, appleLift);
@@ -267,8 +277,16 @@ public final class LyricsAnimationApplier {
     }
 
     static float wordMotionScale(boolean liftMotion, boolean active, boolean sung, float progress) {
+        return wordMotionScale(liftMotion, active, sung, progress, false);
+    }
+
+    /** @param strong use {@link LyricAnimations#wordScaleSplineStrong} instead of the default
+     *  {@link LyricAnimations#scaleSpline} while active - see the strongWordPop call site. */
+    static float wordMotionScale(boolean liftMotion, boolean active, boolean sung, float progress,
+                                 boolean strong) {
         if (liftMotion) return 1f;
-        return active ? LyricAnimations.scaleSpline(progress) : (sung ? 1f : 0.95f);
+        if (!active) return sung ? 1f : 0.95f;
+        return strong ? LyricAnimations.wordScaleSplineStrong(progress) : LyricAnimations.scaleSpline(progress);
     }
 
     static float wordMotionY(boolean liftMotion, boolean active, boolean sung, float progress) {
@@ -394,12 +412,17 @@ public final class LyricsAnimationApplier {
         }
     }
 
+    // Reused across dots/frames: values are read immediately by the single caller in
+    // animateInterludeDots() before the next dot (or frame) overwrites them, so one shared
+    // mutable instance avoids allocating per dot per Choreographer frame.
+    private static final DotTargets DOT_TARGETS = new DotTargets();
+
     static DotTargets dotTargets(SyllableSegment seg, long positionMs) {
-        if (seg == null) return new DotTargets(0.75f, 0f, 0f, 0.35f, 0f);
-        if (positionMs < seg.startMs) return new DotTargets(0.75f, 0f, 0f, 0.35f, 0f);
-        if (positionMs >= seg.endMs) return new DotTargets(1f, 0f, 1f, 1f, 1f);
+        if (seg == null) return DOT_TARGETS.set(0.75f, 0f, 0f, 0.35f, 0f);
+        if (positionMs < seg.startMs) return DOT_TARGETS.set(0.75f, 0f, 0f, 0.35f, 0f);
+        if (positionMs >= seg.endMs) return DOT_TARGETS.set(1f, 0f, 1f, 1f, 1f);
         float progress = progress01(positionMs, seg.startMs, seg.endMs);
-        return new DotTargets(
+        return DOT_TARGETS.set(
                 LyricAnimations.dotScaleSpline(progress),
                 LyricAnimations.dotYOffsetSpline(progress),
                 LyricAnimations.dotGlowSpline(progress),
@@ -409,18 +432,19 @@ public final class LyricsAnimationApplier {
     }
 
     static final class DotTargets {
-        final float scale;
-        final float yOffset;
-        final float glow;
-        final float opacity;
-        final float gradientProgress;
+        float scale;
+        float yOffset;
+        float glow;
+        float opacity;
+        float gradientProgress;
 
-        DotTargets(float scale, float yOffset, float glow, float opacity, float gradientProgress) {
+        DotTargets set(float scale, float yOffset, float glow, float opacity, float gradientProgress) {
             this.scale = scale;
             this.yOffset = yOffset;
             this.glow = glow;
             this.opacity = opacity;
             this.gradientProgress = gradientProgress;
+            return this;
         }
     }
 

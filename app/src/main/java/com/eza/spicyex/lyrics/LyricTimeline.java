@@ -19,6 +19,9 @@ public final class LyricTimeline {
     public static final long PRE_HIDDEN_DOT_LINE_MS = 500;
     /** Gaps at least this long are instrumental interludes and get a dot row. */
     public static final long INTERLUDE_SHOW_THRESHOLD_MS = 3000;
+    /** Precise sources (Apple Music/Spicy) carry real vocal end times: only breath-level
+     *  gaps stay connected, anything longer is a genuine pause and must deactivate. */
+    public static final long PRECISE_GAP_HOLD_MS = 400;
     /** Fallback duration for a vocal line whose real end time is unknown. */
     public static final long DEFAULT_LINE_DURATION_MS = 3500;
 
@@ -37,6 +40,27 @@ public final class LyricTimeline {
                 + " " + LyricsDocument.safe(doc.selectedSource))
                 .toLowerCase(java.util.Locale.ROOT);
         return hay.contains("spotify") || hay.contains("native") || hay.contains("musixmatch");
+    }
+
+    /**
+     * True for sources with sample-accurate vocal end times (Apple Music / Spicy pipeline).
+     * These must NOT have their active window stretched across short pauses the way
+     * approximate sources (LRCLIB, generic LRC) do to hide jitter.
+     *
+     * <p>Gate on fetchSource/selectedSource (apple_music), not the provider label alone:
+     * every new {@link LyricsDocument} defaults to provider "Spicy Lyrics", so a bare
+     * provider check would misclassify generic/synthetic docs as precise.
+     */
+    public static boolean isPreciseSource(LyricsDocument doc) {
+        if (doc == null) return false;
+        String fetch = LyricsDocument.safe(doc.fetchSource).toLowerCase(java.util.Locale.ROOT);
+        String selected = LyricsDocument.safe(doc.selectedSource).toLowerCase(java.util.Locale.ROOT);
+        String hay = fetch + " " + selected;
+        if (hay.contains("apple_music") || hay.contains("apple")) return true;
+        // Explicit Apple provider only counts when the fetch source isn't the "unknown" default.
+        String provider = LyricsDocument.safe(doc.provider).toLowerCase(java.util.Locale.ROOT);
+        if (provider.contains("apple music") && !fetch.contains("unknown") && !fetch.isEmpty()) return true;
+        return false;
     }
 
     /** Spread synthetic static-lyrics timings across the track instead of a fixed cadence. */
@@ -122,10 +146,9 @@ public final class LyricTimeline {
     }
 
     private static void applyTimedRows(LyricsDocument doc) {
-        // Spotify-native timing is approximate: never synthesize a dot row from a gap — the
-        // highlight holds the current line until the next one starts. Authored interlude
-        // markers still render as dot rows.
         boolean holdGaps = isSpotifyNativeSource(doc);
+        boolean precise = !holdGaps && isPreciseSource(doc);
+        fillMissingEndTimes(doc.lines, holdGaps);
         int firstVocal = firstNonInterludeIndex(doc.lines);
         if (!holdGaps && firstVocal >= 0) {
             LyricsLine first = doc.lines.get(firstVocal);
@@ -141,15 +164,19 @@ public final class LyricTimeline {
             LyricsLine line = doc.lines.get(i);
             if (line == null) continue;
             if (line.interlude) {
-                doc.appliedLines.add(createAppliedDotRow(line.startMs, line.endMs, line.oppositeAligned));
+                long lineDuration = line.endMs - line.startMs;
+                if (lineDuration >= INTERLUDE_SHOW_THRESHOLD_MS) {
+                    doc.appliedLines.add(createAppliedDotRow(line.startMs, line.endMs, line.oppositeAligned));
+                }
                 continue;
             }
             int nextIndex = nextNonInterludeIndex(doc.lines, i + 1);
             long nextStartMs = nextIndex >= 0 ? doc.lines.get(nextIndex).startMs : 0;
             // Extend the row's ACTIVE window across small gaps so the highlight/scroll-follow
             // carries to the next line instead of dropping to "no active row" between lines.
+            // Precise sources use a much tighter hold (breath-level only) so pauses deactivate.
             // The karaoke fill still uses the source line's own end (fillEndMs()).
-            long appliedEndMs = resolveAppliedEndMs(line.endMs, nextStartMs, holdGaps);
+            long appliedEndMs = resolveAppliedEndMs(line.endMs, nextStartMs, holdGaps, precise);
             doc.appliedLines.add(createAppliedVocalRow(line, line.startMs, appliedEndMs));
             for (BackgroundLine bg : line.backgroundLines) {
                 if (bg == null) continue;
@@ -183,10 +210,21 @@ public final class LyricTimeline {
      * however long the gap, instead of dropping to "no active row" past the threshold.
      */
     static long resolveAppliedEndMs(long endMs, long nextStartMs, boolean holdGaps) {
+        return resolveAppliedEndMs(endMs, nextStartMs, holdGaps, false);
+    }
+
+    /**
+     * Precise variant: when {@code precise} is true (Apple Music / Spicy), only breath-level
+     * gaps ({@link #PRECISE_GAP_HOLD_MS}) keep the row active — anything longer is a genuine
+     * vocal pause and the highlight must stop at the real end time. Approximate sources keep
+     * the legacy {@link #INTERLUDE_SHOW_THRESHOLD_MS} hold to hide timing jitter.
+     */
+    static long resolveAppliedEndMs(long endMs, long nextStartMs, boolean holdGaps, boolean precise) {
         if (nextStartMs <= endMs) return endMs;
         if (holdGaps) return nextStartMs;
         long gap = nextStartMs - endMs;
-        if (gap < INTERLUDE_SHOW_THRESHOLD_MS) return nextStartMs;
+        long threshold = precise ? PRECISE_GAP_HOLD_MS : INTERLUDE_SHOW_THRESHOLD_MS;
+        if (gap < threshold) return nextStartMs;
         return endMs;
     }
 

@@ -238,7 +238,7 @@ public final class LyricsLineViewState {
     public static float stepLineScale(AppliedLine line, float targetScale, float deltaSeconds) {
         if (line == null) return targetScale;
         if (state(line).lineScaleSpring == null) {
-            state(line).lineScaleSpring = new Spring(targetScale, 1.0f, 0.7f);
+            state(line).lineScaleSpring = new Spring(targetScale, 2.2f, 0.85f);
         }
         state(line).lineScaleSpring.setGoal(targetScale);
         return state(line).lineScaleSpring.step(frameDelta(deltaSeconds));
@@ -260,6 +260,19 @@ public final class LyricsLineViewState {
         }
         state(line).lineShadowSpring.setGoal(targetIntensity);
         return clamp(state(line).lineShadowSpring.step(frameDelta(deltaSeconds)), 0f, 1f);
+    }
+
+    public static float stepLineBlur(AppliedLine line, float targetBlurPx, float deltaSeconds) {
+        if (line == null) return targetBlurPx;
+        AppliedLineRenderState st = state(line);
+        if (st.lineBlurSpring == null) {
+            // Underdamped spring (frequency 3.0Hz, damping 0.6) so blur releases
+            // quickly when no longer needed — the previous 1.4Hz/0.95 setup was
+            // heavily overdamped and took many seconds to settle to 0.
+            st.lineBlurSpring = new Spring(targetBlurPx, 3.0f, 0.6f);
+        }
+        st.lineBlurSpring.setGoal(targetBlurPx);
+        return Math.max(0f, st.lineBlurSpring.step(frameDelta(deltaSeconds)));
     }
 
     public static boolean hasDotViews(AppliedLine line) {
@@ -301,7 +314,8 @@ public final class LyricsLineViewState {
         if (line == null) return true;
         AppliedLineRenderState state = state(line);
         if (!springAtRest(state.opacitySpring) || !springAtRest(state.lineScaleSpring)
-                || !springAtRest(state.lineGlowSpring) || !springAtRest(state.dotMainScaleSpring)
+                || !springAtRest(state.lineGlowSpring) || !springAtRest(state.lineBlurSpring)
+                || !springAtRest(state.dotMainScaleSpring)
                 || !springAtRest(state.dotMainOpacitySpring)
                 || !springAtRest(state.lineShadowSpring)) return false;
         if (line.words != null) {
