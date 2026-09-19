@@ -1925,10 +1925,16 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             row.animate().cancel();
             row.setTranslationY(startTranslationY);
             row.setAlpha(0f);
+            // A full-fidelity Apple-style row (per-word/syllable spans, glow/blur) redraws its
+            // whole layout on every animated frame without this - expensive enough on a cold
+            // load (competing with the rest of the document mounting/laying out at the same time)
+            // to read as stutter instead of a smooth fade. withLayer() rasterizes the row once and
+            // animates the cached layer instead, and tears it down automatically when done.
             row.animate().translationY(0f).alpha(1f)
                     .setStartDelay(Math.min(order, 8) * 28L)
                     .setDuration(360L)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .withLayer()
                     .start();
             order++;
         }
