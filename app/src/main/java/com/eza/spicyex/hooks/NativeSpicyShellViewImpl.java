@@ -1891,10 +1891,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             pendingLoadEntrance = false;
             if (config != null && Boolean.TRUE.equals(config.get(Settings.LOAD_LIFT_ANIMATION))
                     && "Apple Music".equals(config.get(Settings.ANIMATION_STYLE))) {
-                // The rows renderWindowForActive() just mounted haven't been through a layout
-                // pass yet, so every row.getHeight() would still read 0 here - the animation
-                // would silently skip every row. Defer to the next layout, same pattern as
-                // LyricsShellEmptyStateController#alignLoadingStart.
+                // Hide the rows in this same pass, before the layout/draw traversal that
+                // renderWindowForActive() just requested can ever paint them - otherwise that
+                // first frame shows the fully loaded lyrics, and the entrance (posted below,
+                // once the animation actually has a real row height to rise from) reads as a
+                // pop-in followed by a second, separate fade instead of one continuous motion.
+                hideRowsForLoadEntrance();
+                // The rows haven't been through a layout pass yet, so row.getHeight() would
+                // still read 0 here - the animation itself has to wait for that.
                 lyricsScroll.post(this::startLoadEntranceAnimation);
             }
         }
@@ -1904,6 +1908,22 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             // that clamps the previous song's scrollY. Reset after mounting the new document so
             // its opening row starts from the center-padding position even during lyric pre-roll.
             lyricsScroll.scrollTo(0, 0);
+        }
+    }
+
+    /** Synchronous half of the load entrance: only sets alpha, since translationY needs each
+     *  row's measured height (not known until layout) - alpha alone is enough to keep the mount
+     *  frame from ever painting the rows at full visibility. See startLoadEntranceAnimation(). */
+    private void hideRowsForLoadEntrance() {
+        if (document == null) return;
+        for (int i : rowMountController.mountedIndices()) {
+            if (i < 0 || i >= document.appliedLines.size()) continue;
+            AppliedLine line = document.appliedLines.get(i);
+            if (line == null) continue;
+            View row = rowMountController.attachedRowView(line);
+            if (row == null) continue;
+            row.animate().cancel();
+            row.setAlpha(0f);
         }
     }
 
