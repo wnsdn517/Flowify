@@ -19,6 +19,10 @@ public final class FeatureAvailability {
         return BuildConfig.APPLE_FONT_AVAILABLE;
     }
 
+    public static boolean connectAvailable() {
+        return BuildConfig.CONNECT_AVAILABLE;
+    }
+
     /**
      * The ambient background is an AGSL {@code RuntimeShader}, which is API 33+. Unlike the flags
      * above this is a device limit, not a build flavour one, so it can never become true on an

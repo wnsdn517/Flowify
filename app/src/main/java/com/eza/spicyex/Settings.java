@@ -17,7 +17,11 @@ public final class Settings {
     public static final List<Setting<?>> ALL = new ArrayList<>();
 
     // --- Sections ---
-    public static final Section LYRICS = new Section("Behavior", "lyrics");
+    // Behavior used to hold everything that was not a look; it is split by what a setting is about.
+    public static final Section GENERAL = new Section("General", "general");
+    public static final Section LYRICS = new Section("Lyrics playback", "lyrics");
+    public static final Section GESTURES = new Section("Gestures", "gestures");
+    public static final Section ADS = new Section("Ads", "ads");
     public static final Section LYRICS_SOURCES = new Section("Lyrics Sources", "lyrics_sources");
     public static final Section TRANSLITERATION = new Section("Reading & Transliteration", "transliteration");
     public static final Section ROMANIZATION = TRANSLITERATION;
@@ -29,6 +33,8 @@ public final class Settings {
     public static final Section ANIMATION = LYRICS_SCREEN;
     public static final Section BACKGROUND = LYRICS_SCREEN;
     public static final Section AI = new Section("AI", "ai");
+    public static final Section PIP = new Section("Picture-in-picture", "pip");
+    public static final Section CONNECT = new Section("Spotify Connect", "connect");
     public static final Section DEBUG = new Section("About & Diagnostics", "debug");
     public static final Section DISPLAY = TEXT;
     public static final Section INTERNAL = new Section("Internal", "internal");
@@ -40,12 +46,12 @@ public final class Settings {
 
     // --- Lyrics ---
     public static final Setting<String> UI_LANGUAGE = stringSetting(
-            "settings_ui_language", LYRICS, "Interface language",
+            "settings_ui_language", GENERAL, "Interface language",
             "en"
     );
 
     public static final Setting<String> TAP_SEEK_MODE = enumSetting(
-            "lyric_tap_seek_mode", LYRICS, "Tap lyric to seek",
+            "lyric_tap_seek_mode", GESTURES, "Tap lyric to seek",
             "Double tap",
             "Off", "Single tap", "Double tap"
     );
@@ -59,7 +65,7 @@ public final class Settings {
     // Manual scrolls suspend follow until the floating jump button is tapped. Auto-resume
     // is opt-in: when on, follow returns by itself after the delay below.
     public static final Setting<Boolean> AUTO_RESUME_FOLLOW = boolSetting(
-            "lyric_auto_resume_follow", LYRICS, "Auto-resume lyric follow", false
+            "lyric_auto_resume_follow", LYRICS, "Auto-resume lyric follow", true
     );
 
     // Cooldown, in seconds, after a manual scroll settles before auto-resuming follow - see
@@ -112,37 +118,92 @@ public final class Settings {
             "Icon", "Label", "Auto"
     );
 
+    // Enable/disable dynamic animation for follow chip entrance and exit
+    public static final Setting<Boolean> FOLLOW_CHIP_ANIMATION = boolSetting(
+            "lyric_follow_chip_animation", INTERNAL, "Follow chip animation", true
+    );
+
+    // Show progress bar on follow chip indicating time remaining
+    public static final Setting<Boolean> FOLLOW_CHIP_PROGRESS = boolSetting(
+            "lyric_follow_chip_progress", INTERNAL, "Follow chip progress bar", true
+    );
+
+    // What to do while a spotify:ad: track plays - see AdMuteController. Mute silences only
+    // Spotify's own AudioTrack (the phone's media volume is untouched); music additionally fades
+    // in soft generated instrumental music for the length of the ad break.
+    public static final String AD_MODE_OFF = "Off";
+    public static final String AD_MODE_MUTE = "Mute";
+    public static final String AD_MODE_MUSIC = "Play music instead";
+    public static final Setting<String> AD_MODE = enumSetting(
+            "ad_mode", ADS, "Ads", AD_MODE_OFF,
+            AD_MODE_OFF, AD_MODE_MUTE, AD_MODE_MUSIC
+    );
+    // Style of the music that replaces ads (AD_MODE_MUSIC); Random picks one per ad break.
+    public static final Setting<String> AD_MUSIC_THEME = enumSetting(
+            "ad_music_theme", ADS, "Ad music style", "Random",
+            "Random", "Lofi", "Cafe jazz", "Bossa nova", "Ambient"
+    );
+    /** Pre-AD_MODE boolean; read once by SettingsStore#migrateAdMode. */
+    public static final String LEGACY_AUTO_MUTE_ADS = "auto_mute_ads";
+
     // Adds a button to Spotify's persistent mini player (every non-lyrics screen) that jumps
     // straight to the native fullscreen lyrics - see LyricsActivityTakeoverHook.
     public static final Setting<Boolean> MINI_PLAYER_LYRICS_ICON = boolSetting(
-            "mini_player_lyrics_icon", LYRICS, "Show lyrics icon on mini player", false
+            "mini_player_lyrics_icon", GENERAL, "Show lyrics icon on mini player", false
     );
 
+    // Drops touches on the lyrics screen while the proximity sensor is covered (in a pocket or
+    // bag) and touches with a palm-sized contact patch (see hooks/LyricsTouchGuard).
+    public static final Setting<Boolean> ACCIDENTAL_TOUCH_GUARD = boolSetting(
+            "lyrics_accidental_touch_guard", GESTURES, "Accidental touch guard", true
+    );
+
+    // Holding a lyric line opens a share card for it (see LyricsShareCardController).
+    public static final Setting<Boolean> LONG_PRESS_SHARE = boolSetting(
+            "lyrics_long_press_share", GESTURES, "Long-press a line to share", true
+    );
     // Which orientations keep the status bar hidden on the lyrics screen. A swipe from the
     // edge still shows it for a moment. Migrated from the portrait/landscape bool pair, so
     // existing choices carry over.
     public static final Setting<String> STATUS_BAR_HIDDEN_MODE = enumSetting(
-            "lyrics_status_bar_hidden_mode", LYRICS, "Hide status bar", "Off",
+            "lyrics_status_bar_hidden_mode", GENERAL, "Hide status bar", "Landscape",
             "Off", "Portrait", "Landscape", "Both"
     );
 
     static final String LEGACY_STATUS_BAR_HIDDEN_PORTRAIT = "lyrics_status_bar_hidden_portrait";
     static final String LEGACY_STATUS_BAR_HIDDEN_LANDSCAPE = "lyrics_status_bar_hidden_landscape";
 
-    // Holding a lyric line opens a share card for it (see LyricsShareCardController). Off by
-    // default: long-pressing the lyrics did nothing before, and a held finger while reading
-    // should not start throwing up sheets unexpectedly.
-    public static final Setting<Boolean> LONG_PRESS_SHARE = boolSetting(
-            "lyrics_long_press_share", LYRICS, "Long-press a line to share", false
+    // The share sheet's swipe-up demonstration (see LyricsShareCardController#teaseNextLine):
+    // two passes the first few times then one, on every open, or never.
+    public static final Setting<String> SHARE_GESTURE_HINT = enumSetting(
+            "lyrics_share_gesture_hint", GESTURES, "Share sheet gesture hint",
+            "First few times",
+            "First few times", "Every time", "Off"
     );
 
+    // Double-tapping the lyrics adds the song to Liked Songs with a heart (or star) burst where
+    // the finger was, as on Instagram Reels. It never removes a like. While on it owns the
+    // double tap outright: "Tap lyric to seek" on double tap does nothing, and on single tap
+    // the seek waits out the double-tap window so a double tap never also seeks.
+    public static final Setting<Boolean> DOUBLE_TAP_LIKE = boolSetting(
+            "lyrics_double_tap_like", GESTURES, "Double-tap to like", true
+    );
+
+    // Which mark bursts where the finger double-tapped. Looks only - either way the song goes to
+    // Liked Songs. "Like button" follows the dock's like button style (Layout Editor), falling
+    // back to a heart while that button is off.
+    public static final StringSetting DOUBLE_TAP_LIKE_MARK =
+            (StringSetting) enumSetting(
+                    "lyrics_double_tap_like_mark", GESTURES, "Double-tap mark", "Like button",
+                    "Like button", "Heart", "Star"
+            );
     public static final IntegerSetting SYNC_OFFSET_MS = intSetting(
             "lyric_sync_offset_ms", LYRICS, "Sync offset",
             0, -5000, 5000, 100
     );
 
     public static final Setting<Boolean> HYPERGLOW_ENABLED = boolSetting(
-            "lyrics_hyper_aod_lyrics_enabled", LYRICS, "Publish lyrics to HyperGlow", false
+            "lyrics_hyper_aod_lyrics_enabled", GENERAL, "Publish lyrics to HyperGlow", false
     );
 
     /** Automatic lyric source arbitration mode shared by fullscreen and now-playing. */
@@ -151,7 +212,7 @@ public final class Settings {
             "Auto", "Source order"
     );
 
-    /** Experimental strict source switch. "Spicy" is a retired legacy alias for Apple Music. */
+    /** Current source to use for lyrics fetching. */
     public static final Setting<String> LYRICS_SOURCE_OVERRIDE = enumSetting(
             "lyrics_source_override", LYRICS_SOURCES, "Lyrics source", "Auto",
             "Auto", "Apple Music", "Spicy", "Spotify", "LRCLIB"
@@ -167,15 +228,16 @@ public final class Settings {
             "lyrics_source_order", LYRICS_SOURCES, "Lyrics source order", "managed"
     );
 
-    /** Search the original song title for karaoke/off-vocal releases on search-based sources. */
-    public static final Setting<Boolean> KARAOKE_ORIGINAL_LYRICS = boolSetting(
-            "lyrics_karaoke_original_lyrics", LYRICS_SOURCES,
-            "Show original lyrics for karaoke versions", false
-    );
 
     /** Bounded JSON map of spotify track URI to source id; auto is represented by omission. */
     public static final Setting<String> LYRICS_SOURCE_OVERRIDES = internalSetting(
             "lyrics_source_overrides", "Per-track lyric sources", "{}"
+    );
+
+    // Karaoke / off-vocal / instrumental versions have no lyrics of their own; with this on the
+    // text sources are searched for the original song instead (see KaraokeTitles).
+    public static final Setting<Boolean> KARAOKE_ORIGINAL_LYRICS = boolSetting(
+            "lyrics_karaoke_original_lyrics", LYRICS_SOURCES, "Show original lyrics for karaoke versions", true
     );
 
     // Stored values are the exact display labels; allocation is in CacheStoragePolicy.
@@ -186,109 +248,116 @@ public final class Settings {
             );
 
     // --- Now Playing ---
+    // Listed under Gestures: the Now Playing section itself is only the entry to the card
+    // editor now. (Moving a setting between sections keeps its stored value.)
     public static final Setting<String> LIVE_CARD_TAP_MODE = enumSetting(
-            "lyrics_live_card_tap_mode", NOW_PLAYING, "Tap card to open lyrics",
+            "lyrics_live_card_tap_mode", GESTURES, "Tap card to open lyrics",
             "Double tap",
             "Off", "Single tap", "Double tap"
     );
 
     public static final Setting<String> LIVE_CARD_TAP_TARGET = enumSetting(
-            "lyrics_live_card_tap_target", NOW_PLAYING, "Card tap target",
+            "lyrics_live_card_tap_target", GESTURES, "Card tap target",
             "Fullscreen",
             "Fullscreen", "Artwork"
     );
 
     public static final Setting<String> LIVE_CARD_WEIGHT = enumSetting(
-            "lyrics_live_card_weight", NOW_PLAYING, "Lyric weight",
+            "lyrics_live_card_weight", INTERNAL, "Lyric weight",
             "Medium",
             "Regular", "Medium", "Bold"
     );
 
     public static final Setting<String> LIVE_CARD_TEXT_SIZE = enumSetting(
-            "lyrics_live_card_text_size", NOW_PLAYING, "Text size",
+            "lyrics_live_card_text_size", INTERNAL, "Text size",
             "normal",
             "small", "normal", "large", "xlarge", "custom"
     );
 
     // Multiplier x100 for the live card's "custom" text size mode (0.0-5.0 in 0.05 steps).
     public static final IntegerSetting LIVE_CARD_TEXT_SIZE_CUSTOM = intSetting(
-            "lyrics_live_card_text_size_custom", NOW_PLAYING, "Custom size",
+            "lyrics_live_card_text_size_custom", INTERNAL, "Custom size",
             100, 0, 500, 5
     );
 
     public static final Setting<String> LIVE_CARD_SECONDARY_MODE = enumSetting(
-            "lyrics_live_card_secondary_mode", NOW_PLAYING, "Extra line",
+            "lyrics_live_card_secondary_mode", INTERNAL, "Extra line",
             "Main only",
             "Main only", "Transliteration", "Translation", "Both"
     );
 
     public static final Setting<String> LIVE_CARD_ANIMATION = enumSetting(
-            "lyrics_live_card_animation", NOW_PLAYING, "Animation",
+            "lyrics_live_card_animation", INTERNAL, "Animation",
             "Karaoke fill",
             "Minimal", "Karaoke fill", "Spotlight word"
     );
 
     public static final Setting<String> LIVE_CARD_GLOW = enumSetting(
-            "lyrics_live_card_glow", NOW_PLAYING, "Glow",
+            "lyrics_live_card_glow", INTERNAL, "Glow",
             "Off",
             "Off", "Word only", "Subtle line"
     );
 
     public static final Setting<String> LIVE_CARD_LINE_SYNC_FILL = enumSetting(
-            "lyrics_live_card_line_sync_fill", NOW_PLAYING, "Fill direction",
+            "lyrics_live_card_line_sync_fill", INTERNAL, "Fill direction",
             "Top to bottom",
             "Top to bottom", "Left to right (block)", "Left to right (sentence)"
     );
 
     public static final Setting<String> LIVE_CARD_OVERFLOW = enumSetting(
-            "lyrics_live_card_overflow", NOW_PLAYING, "Overflow",
+            "lyrics_live_card_overflow", INTERNAL, "Overflow",
             "Wrap",
             "Wrap", "Scroll with lyric", "Clip"
     );
 
     public static final Setting<String> LIVE_CARD_SCROLL_SCOPE = enumSetting(
-            "lyrics_live_card_scroll_scope", NOW_PLAYING, "Scroll scope",
+            "lyrics_live_card_scroll_scope", INTERNAL, "Scroll scope",
             "Grouped",
             "Grouped", "Individual lines"
     );
 
     public static final Setting<String> LIVE_CARD_TRANSITION = enumSetting(
-            "lyrics_live_card_transition", NOW_PLAYING, "Transition",
+            "lyrics_live_card_transition", INTERNAL, "Transition",
             "Fade up",
             "Fade up", "Crossfade", "None"
     );
 
     // --- Text ---
     public static final Setting<Boolean> ADAPTIVE_SECTIONING = boolSetting(
-            "lyric_adaptive_sectioning", TEXT, "Adaptive sectioning", true
+            "lyric_adaptive_sectioning", INTERNAL, "Adaptive sectioning", true
     );
 
     // Scales the vertical gap between lyric rows (sentences); wrapped lines inside one sentence
     // keep a fixed 1.18 line-height (LyricsTextFactory).
+    // Editable from the layout editor's Lyrics text element (Size/Font/Weight/Spacing all live
+    // together there now - see LyricsLayoutEditController#buildTextOptions()).
     public static final Setting<String> LINE_SPACING = enumSetting(
-            "line_spacing", TEXT, "Sentence spacing",
+            "line_spacing", INTERNAL, "Sentence spacing",
             "spacious",
             "compact", "default", "spacious", "more", "max", "custom"
     );
 
     // Multiplier x100 for the "custom" line spacing mode (0.0-5.0 in 0.1 steps).
     public static final IntegerSetting LINE_SPACING_CUSTOM = intSetting(
-            "line_spacing_custom", TEXT, "Custom spacing",
+            "line_spacing_custom", INTERNAL, "Custom spacing",
             150, 0, 500, 5
     );
 
     // Lyric font weight (Spotify's own faces): "Medium" (default) = spotify_mix_ui_bold,
     // "Bold" = the heavy title-extrabold (was the old default — too thick for some), "Regular".
     public static final Setting<String> LYRICS_WEIGHT = enumSetting(
-            "lyrics_weight", TEXT, "Lyric weight",
+            "lyrics_weight", INTERNAL, "Lyric weight",
             "Medium",
             "Regular", "Medium", "Bold"
     );
 
     // Stored value "default" (the old alias for the Spotify font) coerces to "spotify" via the
-    // allowed-values check, so existing configs migrate silently.
+    // allowed-values check, so existing configs migrate silently. "custom" loads the font file at
+    // LYRICS_FONT_CUSTOM_PATH - see LyricsTextFactory#resolveLyricTypeface. LYRICS_FONT_CUSTOM_PATH
+    // itself stays a real Settings-panel row (a typed file path needs a text-entry dialog the
+    // layout editor doesn't have) - only the family picker moved.
     public static final Setting<String> LYRICS_FONT = enumSetting(
-            "lyrics_font", TEXT, "Lyric font",
+            "lyrics_font", INTERNAL, "Lyric font",
             "spotify",
             "spotify", "apple", "custom"
     );
@@ -300,35 +369,48 @@ public final class Settings {
     // about which of the app's supported scripts it doesn't cover; unsupported scripts still fall
     // back correctly at render time regardless (LyricsTextFactory's per-script fallback chain).
     public static final Setting<String> LYRICS_FONT_CUSTOM_PATH = stringSetting(
-            "lyrics_font_custom_path", TEXT, "Custom font file", ""
+            "lyrics_font_custom_path", INTERNAL, "Custom font file", ""
     );
 
     public static final Setting<String> LYRICS_TEXT_SIZE = enumSetting(
-            "lyrics_text_size", TEXT, "Lyric text size",
+            "lyrics_text_size", INTERNAL, "Lyric text size",
             "normal",
             "small", "normal", "large", "xlarge", "custom"
     );
 
     // Multiplier x100 for the "custom" text size mode (0.0-5.0 in 0.1 steps).
     public static final IntegerSetting LYRICS_TEXT_SIZE_CUSTOM = intSetting(
-            "lyrics_text_size_custom", TEXT, "Custom size",
+            "lyrics_text_size_custom", INTERNAL, "Custom size",
             100, 0, 500, 5
     );
 
     // When on, long lines shrink (23-28sp by length) so they fit; when off, every line
     // uses the same base size and long lines wrap instead.
+    // Editable from the layout editor's Lyrics text element.
     public static final Setting<Boolean> LYRICS_ADAPTIVE_TEXT_SIZE = boolSetting(
-            "lyrics_adaptive_text_size", TEXT, "Adaptive text size", true
+            "lyrics_adaptive_text_size", INTERNAL, "Adaptive text size", true
     );
 
     public static final Setting<String> INTERLUDE_ICON = enumSetting(
-            "lyric_interlude_icon", TEXT, "Interlude indicator", "note",
+            "lyric_interlude_icon", INTERNAL, "Interlude indicator", "note",
             "dots", "note"
     );
 
+    // Editable from the layout editor's Top controls element; intentionally excluded from the
+    // normal settings panel because the layout editor is the single visual configuration surface.
     public static final Setting<String> LIKED_SONGS_BUTTON = enumSetting(
-            "lyric_liked_songs_button", TEXT, "Add to Liked Songs button", "Off",
+            "lyric_liked_songs_button", INTERNAL, "Add to Liked Songs button", "Off",
             "Off", "Heart", "Star"
+    );
+
+    // Which edge the top chrome cluster (transliteration/translation/like/settings) and the Back
+    // control anchor to. Internal order among the cluster's own icons is unaffected - this only
+    // mirrors which side of the header they sit on (or which vertical rail, in Top mode).
+    // The layout editor is the only place this is positioned; the standard panel intentionally
+    // does not render it as a regular setting row.
+    public static final Setting<String> CHROME_CLUSTER_POSITION = enumSetting(
+            "lyrics_chrome_cluster_position", TEXT, "Top controls position", "Right",
+            "Left", "Right"
     );
 
     static final String LEGACY_SHOW_SAVE_BUTTON = "lyric_show_save_button";
@@ -354,49 +436,107 @@ public final class Settings {
             "lyrics_focus_position_custom_percent", INTERNAL, "Custom focus point",
             50, 0, 100, 5
     );
+
     // Position of the fullscreen track-info readout (artwork + title/artist). Off hides the
     // readout, its metadata, and its artwork gestures; back, config toggles, and the floating
-    // cluster stay. New-feature rule: default Off for all installs, no migration.
+    // cluster stay. New-feature rule: default Off for all installs, no migration. This is a
+    // layout-editor-only control and should not appear in the standard settings panel.
     public static final Setting<String> TRACK_INFO_POSITION = enumSetting(
-            "lyrics_track_info_position", TEXT, "Track info position", "Off",
-            "Off", "Top", "Bottom"
+            "lyrics_track_info_position", INTERNAL, "Track info position", "Off",
+            "Off", "Top", "Bottom", "Header"
+    );
+
+    // What sits behind the readout. Gradient is the original edge scrim, which lets lyrics
+    // show through the dock; Solid fills the dock so nothing reads through it; None draws nothing.
+    // Editable from the layout editor's Track text element.
+    public static final Setting<String> TRACK_INFO_BACKGROUND = enumSetting(
+            "lyrics_track_info_background", INTERNAL, "Track info background", "Gradient",
+            "Gradient", "Solid", "None"
     );
 
     // Readout title/artist size. Applies live; default Normal matches the original readout.
     public static final Setting<String> TRACK_INFO_TEXT_SIZE = enumSetting(
-            "lyrics_track_info_text_size", TEXT, "Track info text size", "Normal",
+            "lyrics_track_info_text_size", INTERNAL, "Track info text size", "Normal",
             "Small", "Normal", "Large", "XLarge", "Custom"
     );
 
-    // Multiplier x100 for the readout's "Custom" text size mode (0.5-2.0 in 0.05 steps).
+    // Multiplier x100 for the readout's "Custom" text size mode (0.5-4.0 in 0.05 steps).
     // 100 = Normal (title 15sp, artist 12sp). Applies live.
     public static final IntegerSetting TRACK_INFO_TEXT_SIZE_CUSTOM = intSetting(
-            "lyrics_track_info_text_size_custom", TEXT, "Custom size",
-            100, 50, 200, 5
+            "lyrics_track_info_text_size_custom", INTERNAL, "Custom size",
+            100, 50, 400, 5
     );
 
     // How long track title/artist text behaves when it does not fit the readout width.
     // Clip = single line with end ellipsis; Wrap = up to two lines with end ellipsis;
     // Scroll = single-line marquee. Applies live to top, bottom, and side readouts.
+    // Editable from the layout editor's Track text element.
     public static final Setting<String> TRACK_INFO_TEXT_OVERFLOW = enumSetting(
-            "lyrics_track_info_text_overflow", TEXT, "Track info overflow", "Wrap",
+            "lyrics_track_info_text_overflow", INTERNAL, "Track info overflow", "Wrap",
             "Clip", "Wrap", "Scroll"
     );
 
     // Readout artwork size (bottom = value, top portrait = value − 24; landscape top stays 54dp
     // for test-build parity; the side panel is container-driven and unaffected). Default Normal.
+    // Custom unlocks TRACK_INFO_ART_SIZE_CUSTOM_DP (set by the layout editor's resize handle).
     public static final Setting<String> TRACK_INFO_ART_SIZE = enumSetting(
-            "lyrics_track_info_art_size", TEXT, "Track info art size", "Normal",
-            "Small", "Normal", "Large"
+            "lyrics_track_info_art_size", INTERNAL, "Track info art size", "Normal",
+            "Small", "Normal", "Large", "Custom"
     );
 
-    // Separate landscape mode from the Off/Top/Bottom readout: when on and the screen is
-    // genuinely wide (landscape with width/height >= 1.2, so near-square foldable screens stay
-    // stacked), the fullscreen lyrics use a two-column layout with an artwork panel on the
-    // left and the lyrics column on the right. The readout overlays stand down while it is
-    // engaged. Takes effect when the lyrics screen is (re)opened.
+    // Bottom-art dp for TRACK_INFO_ART_SIZE == "Custom" - top portrait derives the same
+    // value-minus-24 relationship the fixed presets use. See
+    // TrackInfoReadoutController#readoutArtSizes(String, int).
+    public static final IntegerSetting TRACK_INFO_ART_SIZE_CUSTOM_DP = intSetting(
+            "lyrics_track_info_art_size_custom_dp", INTERNAL, "Custom art size",
+            96, 48, 160, 4
+    );
+
+    // Corner radius (dp) for the readout artwork and its dock/scrim, in every placement
+    // (top/bottom/side). Applies live.
+    public static final IntegerSetting TRACK_INFO_ART_RADIUS = intSetting(
+            "lyrics_track_info_art_radius", INTERNAL, "Track info art corner radius",
+            16, 0, 32, 2
+    );
+
+    // Vertical alignment of the title/artist text block within its row, for Top/Bottom/Header
+    // placements (Side stacks text below the artwork instead of beside it, so this has no effect
+    // there). Default Center matches the readout's original hardcoded behavior.
+    public static final Setting<String> TRACK_INFO_TEXT_ALIGN = enumSetting(
+            "lyrics_track_info_text_align", INTERNAL, "Track info text alignment", "Center",
+            "Top", "Center", "Bottom"
+    );
+
+    // When on, title/artist text size is derived proportionally from the current artwork size
+    // (TRACK_INFO_ART_SIZE / TRACK_INFO_ART_SIZE_CUSTOM_DP) instead of TRACK_INFO_TEXT_SIZE's
+    // manual value - so dragging the layout editor's resize handle scales the text along with the
+    // artwork. See TrackInfoReadoutController#applyTextSize().
+    // Which fields the track info readout renders, independent of position/size. Album is off by
+    // default (it previously had no display path on the lyrics screen at all outside the
+    // landscape two-column left panel). Editable from the layout editor's Track text element.
+    public static final Setting<Boolean> TRACK_INFO_SHOW_TITLE = boolSetting(
+            "lyrics_track_info_show_title", INTERNAL, "Show title", true
+    );
+
+    public static final Setting<Boolean> TRACK_INFO_SHOW_ARTIST = boolSetting(
+            "lyrics_track_info_show_artist", INTERNAL, "Show artist", true
+    );
+
+    public static final Setting<Boolean> TRACK_INFO_SHOW_ALBUM = boolSetting(
+            "lyrics_track_info_show_album", INTERNAL, "Show album", false
+    );
+
+    public static final Setting<Boolean> TRACK_INFO_TEXT_SIZE_ADAPTIVE = boolSetting(
+            "lyrics_track_info_text_size_adaptive", INTERNAL, "Adaptive track info text size", false
+    );
+
+    // Separate wide-screen mode from the Off/Top/Bottom readout: when on and the screen is wide
+    // (width/height >= 1.2) or large and near-square (an unfolded foldable, >= 600dp wide), the
+    // fullscreen lyrics use a two-column layout with an artwork panel on the left and the lyrics
+    // column on the right. The readout overlays stand down while it is engaged. Takes effect when
+    // the lyrics screen is (re)opened; see NativeSpicyShellViewImpl#twoColumnEngaged.
     public static final Setting<Boolean> ADAPTIVE_LANDSCAPE_LAYOUT = boolSetting(
-            "lyrics_adaptive_landscape_layout", TEXT, "Adaptive landscape layout", true
+            "lyrics_adaptive_landscape_layout", INTERNAL, "Two-column layout on wide screens", true
     );
 
     // Media controls for artwork (two-column panel + readout art, same behavior): Off
@@ -404,7 +544,7 @@ public final class Settings {
     // Double tap toggles play/pause directly with a brief icon pulse, skipping the overlay.
     // Applies live, no reopen needed. Stored booleans migrate in SettingsStore.
     public static final Setting<String> PANEL_MEDIA_CONTROLS = enumSetting(
-            "lyrics_panel_media_controls", TEXT, "Panel media controls", "Single tap",
+            "lyrics_panel_media_controls", INTERNAL, "Panel media controls", "Single tap",
             "Off", "Single tap", "Double tap"
     );
 
@@ -431,22 +571,19 @@ public final class Settings {
     // Apple-owned sub-section (R3). Visible only while ANIMATION_STYLE is Apple Music; each key
     // is read only under that style, so switching styles never migrates or resets user values.
     public static final Setting<Boolean> APPLE_FADE_PASSED_LINES = boolSetting(
-            "lyric_apple_fade_passed_lines", APPLE, "Fade passed lines", true
+            "lyric_apple_fade_passed_lines", INTERNAL, "Fade passed lines", true
     );
 
-    public static final Setting<Boolean> APPLE_COMPACT_TEXT = boolSetting(
-            "lyric_apple_compact_text", APPLE, "Compact text size", true
-    );
 
     // Row-scroll cascade. Apple-owned: rendered only inside the Apple sub-section.
     public static final Setting<Boolean> LINE_SLIDE_ANIMATION = boolSetting(
-            "lyric_line_slide_animation", APPLE, "Apple Music-style slide", false
+            "lyric_line_slide_animation", INTERNAL, "Apple Music-style slide", false
     );
 
     // Apple-owned lift motion. This is the only Apple lift entry: WORD_BOUNCE_STYLE deliberately
     // carries no competing "Apple lift" value; the renderer reads this key under Apple Music.
     public static final Setting<Boolean> APPLE_LIFT = boolSetting(
-            "lyric_apple_lift", APPLE, "Apple lift", true
+            "lyric_apple_lift", INTERNAL, "Apple lift", true
     );
 
     // Apple-owned: a one-shot reveal for the first render of a freshly loaded document (opening
@@ -454,39 +591,41 @@ public final class Settings {
     // of appearing instantly. Distinct from LINE_SLIDE_ANIMATION, which is the per-scroll-step
     // cascade; this plays once per document, not on every active-line change.
     public static final Setting<Boolean> LOAD_LIFT_ANIMATION = boolSetting(
-            "lyric_load_lift_animation", APPLE, "Rise in on load", false
+            "lyric_load_lift_animation", INTERNAL, "Rise in on load", true
     );
 
     // Speed multiplier for row cascade and load-lift animations (100 = normal, 50 = half,
     // 200 = double). Applies to all animation styles.
     public static final IntegerSetting APPLE_CASCADE_SPEED = intSetting(
-            "apple_cascade_speed", APPLE, "Slide speed", 100, 50, 200, 5
+            "apple_cascade_speed", INTERNAL, "Slide speed", 100, 50, 200, 5
     );
 
     public static final IntegerSetting APPLE_SPRING_STRENGTH = intSetting(
-            "apple_spring_strength", APPLE, "Spring strength", 100, 50, 200, 5
+            "apple_spring_strength", INTERNAL, "Spring strength", 100, 50, 200, 5
     );
 
-    // One selector owns both the bounce gate and its scope.
+    // One selector owns both the bounce gate and its scope. Editable from the layout editor's
+    // Lyrics text element (hidden there too while Animation style is Apple Music, same as the
+    // settings-panel gate - Apple motion owns that style).
     public static final Setting<String> WORD_BOUNCE = enumSetting(
-            "lyric_word_bounce_mode", ANIMATION, "Word bounce",
+            "lyric_word_bounce_mode", INTERNAL, "Word bounce",
             "Word/syllable synced only", "Off", "Word/syllable synced only", "All synced rows"
     );
 
     public static final Setting<String> WORD_BOUNCE_STYLE = enumSetting(
-            "lyric_word_bounce_style", ANIMATION, "Bounce style",
+            "lyric_word_bounce_style", INTERNAL, "Bounce style",
             "Phrase zoom", "Phrase zoom", "Word zoom", "Phrase lift", "Word lift", "Apple lift"
     );
 
 
     public static final Setting<Boolean> ENABLE_GLOW_BLUR = boolSetting(
-            "lyric_enable_glow_blur", ANIMATION, "Text glow", true
+            "lyric_enable_glow_blur", INTERNAL, "Text glow", true
     );
 
     // Shared distance-blur level (was a bool; true migrates to Slight). Slight is the legacy
     // 1.0/1.8px curve, Heavy the strong 5/8px curve. Apple melt/blur read this same level.
     public static final Setting<String> ENABLE_LINE_BLUR = enumSetting(
-            "lyric_enable_line_blur", ANIMATION, "Blur distant lines", "Off",
+            "lyric_enable_line_blur", INTERNAL, "Blur distant lines", "Off",
             "Off", "Slight", "Heavy"
     );
 
@@ -496,32 +635,41 @@ public final class Settings {
     // exposing the falloff shape's own constants directly. See
     // LyricsFrameRenderer#mobileLineBlurPx.
     public static final IntegerSetting LYRICS_BLUR_INTENSITY = intSetting(
-            "lyrics_blur_intensity", ANIMATION, "Blur intensity", 100, 25, 250, 5
+            "lyrics_blur_intensity", INTERNAL, "Blur intensity", 100, 25, 250, 5
     );
 
     // Direction the karaoke gradient fills each line as it plays: down the line ("Top to bottom")
-    // or word-by-word ("Left to right"). Applies under "Gradient wash" only.
+    // or word-by-word ("Left to right"). Applies under "Gradient wash" only. Editable from the
+    // layout editor's Lyrics text element.
     public static final Setting<String> LINE_SYNC_FILL = enumSetting(
-            "lyric_line_sync_fill", ANIMATION, "Lyric fill direction",
+            "lyric_line_sync_fill", INTERNAL, "Lyric fill direction",
             "Top to bottom",
             "Top to bottom", "Left to right (block)", "Left to right (sentence)"
     );
 
     // --- Background ---
     public static final Setting<String> BACKGROUND_STYLE = enumSetting(
-            "lyric_background_style", BACKGROUND, "Background style",
+            "lyric_background_style", INTERNAL, "Background style",
             LyricsBackgroundStyle.GRADIENT,
             LyricsBackgroundStyle.GRADIENT,
             LyricsBackgroundStyle.STATIC_TEXTURE,
             LyricsBackgroundStyle.ANIMATED_TEXTURE
     );
 
+    // Only meaningful when BACKGROUND_STYLE is ANIMATED_TEXTURE - gates whether the background
+    // reacts to the drums and loudness AudioReactiveController pulls out of what Spotify plays,
+    // independent of turning the animated texture on at all (some people want the flow without the
+    // kick). Off also means that analysis never runs for the background, so it costs nothing unused.
+    public static final Setting<Boolean> BEAT_REACTIVE_BACKGROUND = boolSetting(
+            "lyric_beat_reactive_background", INTERNAL, "Beat-reactive background", false
+    );
+
     public static final Setting<Boolean> FORCE_DARK_BACKGROUND = boolSetting(
-            "lyric_force_dark_background", BACKGROUND, "Force dark background", true
+            "lyric_force_dark_background", INTERNAL, "Force dark background", true
     );
 
     public static final IntegerSetting EXTRA_DARK_BACKGROUND = intSetting(
-            "lyric_extra_dark_background", BACKGROUND, "Darken background", 35, 0, 100, 5
+            "lyric_extra_dark_background", INTERNAL, "Force dark background", 60, 0, 100, 5
     );
 
     // Only meaningful when BACKGROUND_STYLE is ANIMATED_TEXTURE - the AGSL noise shader renders
@@ -530,14 +678,14 @@ public final class Settings {
     // for the whole lyrics session is a real sustained heat source on weaker GPUs. Lower values
     // trade a softer/grainier look for less GPU load; higher values render crisper at more cost.
     public static final IntegerSetting BACKGROUND_RENDER_QUALITY = intSetting(
-            "lyric_background_render_quality", BACKGROUND, "Background render quality", 35, 15, 100, 5
+            "lyric_background_render_quality", INTERNAL, "Background render quality", 35, 15, 100, 5
     );
 
+    // --- Romanization (transliteration controls) ---
     public static final Setting<Boolean> DOWNLOAD_LANGUAGE_MODELS = boolSetting(
             "download_language_models", TRANSLITERATION, "Download language models", false
     );
 
-    // --- Romanization (transliteration controls) ---
     public static final Setting<Boolean> TRANSLITERATION_ENABLED = boolSetting(
             "lyrics_transliteration_enabled", TRANSLITERATION, "Transliterate lyrics", false
     );
@@ -676,6 +824,75 @@ public final class Settings {
             "ai_button_behavior", AI, "Translation button",
             "Generate AI output, then toggle",
             "Generate AI output, then toggle", "Toggle display only"
+    );
+
+    // Lyrics in a picture-in-picture window (see hooks/LyricsPipController): leaving the lyrics
+    // screen (its back button or system back) continues it in PiP instead. Off by default; the
+    // rest of the PiP section applies only while this is on.
+    public static final Setting<Boolean> PIP_ON_CLOSE = boolSetting(
+            "lyrics_pip_on_close", PIP, "Continue in picture-in-picture when leaving lyrics", false
+    );
+
+    // Window shape - see pipShapeRatio().
+    public static final Setting<String> PIP_SHAPE = enumSetting(
+            "lyrics_pip_shape", PIP, "Window shape", "Portrait",
+            "Portrait", "Square", "Tall", "Landscape", "Wide"
+    );
+
+    /** Width and height of a PIP_SHAPE value (the window and its layout share them). */
+    public static int[] pipShapeRatio(String shape) {
+        if ("Square".equals(shape)) return new int[]{1, 1};
+        if ("Tall".equals(shape)) return new int[]{9, 16};
+        if ("Landscape".equals(shape)) return new int[]{4, 3};
+        if ("Wide".equals(shape)) return new int[]{16, 9};
+        return new int[]{3, 4};
+    }
+
+
+    // Previous / play-pause / next in the window's own controls.
+    public static final Setting<Boolean> PIP_CONTROLS = boolSetting(
+            "lyrics_pip_controls", PIP, "Playback controls", true
+    );
+
+    // Where the current line rests: the lyrics screen's focus position, taken as a height on the
+    // window, or the middle of the lyrics area.
+    public static final Setting<String> PIP_FOCUS = enumSetting(
+            "lyrics_pip_focus", PIP, "Current line position", "Same as lyrics screen",
+            "Same as lyrics screen", "Center"
+    );
+
+    // Starting PiP sends Spotify to the background, back to the app used before it.
+    public static final Setting<Boolean> PIP_LEAVE_SPOTIFY = boolSetting(
+            "lyrics_pip_leave_spotify", PIP, "Return to the previous app", true
+    );
+
+    // --- Spotify Connect ---
+    // Ad-free playback: a background WebView logged into open.spotify.com's own web player
+    // (ads stripped client-side), exposed as a Spotify Connect device this app can cast to.
+    // Full flavor only - lite's own native Connect receiver was removed outright (see
+    // FeatureAvailability.connectAvailable()'s javadoc). Stays in ALL for both flavors, same as
+    // TRANSLITERATION_ENABLED/TRANSLATION_ENABLED/LYRICS_FONT - PanelPolicy.unavailable() greys
+    // the row out on Lite rather than hiding it.
+    public static final Setting<Boolean> CONNECT_ENABLED = boolSetting(
+            "connect_enabled", CONNECT, "Enable Spotify Connect receiver", false
+    );
+
+    // When Spotify hands its playback to the web player by itself. "On app start" starts the
+    // player as Spotify opens, moves playback that is already going on the phone at once, and
+    // otherwise hands over the moment playback starts; "On first play" only does the latter.
+    // Playback on another device (a desktop, a speaker) is never taken over.
+    public static final StringSetting CONNECT_AUTO_SWITCH =
+            (StringSetting) enumSetting(
+                    "connect_auto_switch", CONNECT, "Switch to the web player automatically",
+                    "On app start",
+                    "On app start", "On first play", "Off"
+            );
+
+    // After a network change (wifi to wifi, wifi to mobile) the player's connection to
+    // Spotify is gone. On: check it came back, reload the player if not, and have Spotify
+    // select it again if music was playing.
+    public static final Setting<Boolean> CONNECT_NETWORK_RECOVERY = boolSetting(
+            "connect_network_recovery", CONNECT, "Reconnect after network changes", true
     );
 
     // ===================== INTERNAL (fixed defaults, not shown) =====================
@@ -978,5 +1195,55 @@ public final class Settings {
 
     private static Setting<String> internalSetting(String key, String label, String defaultValue) {
         return new StringSetting(key, INTERNAL, label, defaultValue, null);
+    }
+
+    // --- Landscape layout values ---
+
+    /**
+     * Settings whose right value depends on the screen's shape: sizes and positions that fit a
+     * tall screen collide in a wide one (a big top artwork eats most of a landscape height, a
+     * raised focus point sits under the chrome, a chip placement overlaps the side panel).
+     * Everything else - fonts, colours, animation, background - is a taste, not a fit, and stays
+     * shared so it is set once.
+     */
+    public static boolean isOrientationSpecific(Setting<?> setting) {
+        return setting == LYRICS_TEXT_SIZE || setting == LYRICS_TEXT_SIZE_CUSTOM
+                || setting == LINE_SPACING || setting == LINE_SPACING_CUSTOM
+                || setting == LYRICS_FOCUS_POSITION || setting == LYRICS_FOCUS_POSITION_CUSTOM_PERCENT
+                || setting == TRACK_INFO_POSITION
+                || setting == TRACK_INFO_ART_SIZE || setting == TRACK_INFO_ART_SIZE_CUSTOM_DP
+                || setting == TRACK_INFO_TEXT_SIZE || setting == TRACK_INFO_TEXT_SIZE_CUSTOM
+                || setting == SKIP_CHIP_POSITION || setting == FOLLOW_CHIP_POSITION
+                || setting == CHROME_CLUSTER_POSITION
+                // Motion and the readout's look: a wide screen often wants a calmer or different
+                // setup. Each orientation starts from the other's value and then keeps its own.
+                || setting == ANIMATION_STYLE || setting == LOAD_LIFT_ANIMATION
+                || setting == LINE_SLIDE_ANIMATION || setting == APPLE_LIFT
+                || setting == APPLE_FADE_PASSED_LINES
+                || setting == APPLE_CASCADE_SPEED || setting == APPLE_SPRING_STRENGTH
+                || setting == WORD_BOUNCE || setting == WORD_BOUNCE_STYLE
+                || setting == LINE_SYNC_FILL || setting == ENABLE_GLOW_BLUR
+                || setting == ENABLE_LINE_BLUR || setting == LYRICS_BLUR_INTENSITY
+                || setting == TRACK_INFO_BACKGROUND || setting == TRACK_INFO_ART_RADIUS
+                || setting == TRACK_INFO_TEXT_ALIGN || setting == TRACK_INFO_TEXT_OVERFLOW
+                || setting == TRACK_INFO_SHOW_TITLE || setting == TRACK_INFO_SHOW_ARTIST
+                || setting == TRACK_INFO_SHOW_ALBUM || setting == TRACK_INFO_TEXT_SIZE_ADAPTIVE;
+    }
+
+    /**
+     * Where a landscape value of {@code setting} is stored, or null when the shared key applies
+     * (portrait, or a setting that is not orientation-specific). Portrait keeps the plain key, so
+     * existing values carry over; landscape follows portrait until it is changed while landscape.
+     */
+    public static String landscapeKey(android.content.Context context, Setting<?> setting) {
+        if (context == null || !isOrientationSpecific(setting)) return null;
+        try {
+            return context.getResources().getConfiguration().orientation
+                    == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                    ? setting.key + "_ls" : null;
+        } catch (RuntimeException noResources) {
+            // A bare Context (JVM tests, early process start) has no configuration to read.
+            return null;
+        }
     }
 }

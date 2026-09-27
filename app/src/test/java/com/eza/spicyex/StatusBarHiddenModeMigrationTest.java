@@ -27,8 +27,17 @@ public class StatusBarHiddenModeMigrationTest {
     public void portraitOnlyBecomesPortrait() {
         FakePrefs prefs = new FakePrefs();
         prefs.values.put(Settings.LEGACY_STATUS_BAR_HIDDEN_PORTRAIT, true);
+        prefs.values.put(Settings.LEGACY_STATUS_BAR_HIDDEN_LANDSCAPE, false);
         SettingsStore.migrateStatusBarHiddenMode(prefs);
         assertEquals("Portrait", prefs.values.get(Settings.STATUS_BAR_HIDDEN_MODE.key));
+    }
+
+    @Test
+    public void unsetLandscapeKeepsItsHiddenDefault() {
+        FakePrefs prefs = new FakePrefs();
+        prefs.values.put(Settings.LEGACY_STATUS_BAR_HIDDEN_PORTRAIT, true);
+        SettingsStore.migrateStatusBarHiddenMode(prefs);
+        assertEquals("Both", prefs.values.get(Settings.STATUS_BAR_HIDDEN_MODE.key));
     }
 
     @Test

@@ -63,6 +63,26 @@ public class PanelPolicyTest {
     }
 
     @Test
+    public void connectOptionsNestUnderConnectSwitch() {
+        PanelSnapshot off = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.CONNECT_ENABLED, false).build();
+        assertFalse(PanelPolicy.shouldRender(Settings.CONNECT_AUTO_SWITCH, off));
+        assertFalse(PanelPolicy.shouldRender(Settings.CONNECT_NETWORK_RECOVERY, off));
+        PanelSnapshot on = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.CONNECT_ENABLED, true).build();
+        assertTrue(PanelPolicy.shouldRender(Settings.CONNECT_AUTO_SWITCH, on));
+        assertTrue(PanelPolicy.shouldRender(Settings.CONNECT_NETWORK_RECOVERY, on));
+    }
+
+    @Test
+    public void doubleTapMarkNestsUnderDoubleTapLike() {
+        assertFalse(PanelPolicy.shouldRender(Settings.DOUBLE_TAP_LIKE_MARK, PanelSnapshot.builder()
+                .allCapabilities().put(Settings.DOUBLE_TAP_LIKE, false).build()));
+        assertTrue(PanelPolicy.shouldRender(Settings.DOUBLE_TAP_LIKE_MARK, PanelSnapshot.builder()
+                .allCapabilities().put(Settings.DOUBLE_TAP_LIKE, true).build()));
+    }
+
+    @Test
     public void deepseekReasoningNeedsDeepseekProviderAndEnabled() {
         PanelSnapshot wrong = PanelSnapshot.builder().allCapabilities()
                 .put(Settings.AI_ENABLED, true)
@@ -213,19 +233,6 @@ public class PanelPolicyTest {
     }
 
     @Test
-    public void blurIntensityNeedsDistanceBlurActive() {
-        PanelSnapshot blurSlight = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ENABLE_LINE_BLUR, "Slight").build();
-        assertTrue(PanelPolicy.shouldRender(Settings.LYRICS_BLUR_INTENSITY, blurSlight));
-        PanelSnapshot blurHeavy = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ENABLE_LINE_BLUR, "Heavy").build();
-        assertTrue(PanelPolicy.shouldRender(Settings.LYRICS_BLUR_INTENSITY, blurHeavy));
-        PanelSnapshot blurOff = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ENABLE_LINE_BLUR, "Off").build();
-        assertFalse(PanelPolicy.shouldRender(Settings.LYRICS_BLUR_INTENSITY, blurOff));
-    }
-
-    @Test
     public void furiganaDesignRowsNeedFuriganaReadingModeActive() {
         PanelSnapshot furiganaOnly = PanelSnapshot.builder().allCapabilities()
                 .put(Settings.TRANSLITERATION_ENABLED, true)
@@ -255,6 +262,14 @@ public class PanelPolicyTest {
         PanelSnapshot spicy = PanelSnapshot.builder().allCapabilities()
                 .spicySourceEnabled(true).build();
         assertTrue(PanelPolicy.shouldRender(Settings.SPICY_MANUAL_TOKEN, spicy));
+    }
+
+    @Test
+    public void layoutEditorOnlyRowsStayOutOfTheNormalSettingsPanel() {
+        assertFalse(PanelPolicy.shouldRender(Settings.CHROME_CLUSTER_POSITION, full()));
+        assertFalse(PanelPolicy.shouldRender(Settings.FULLSCREEN_CONTROLS, full()));
+        assertFalse(PanelPolicy.shouldRender(Settings.LIKED_SONGS_BUTTON, full()));
+        assertFalse(PanelPolicy.shouldRender(Settings.TRACK_INFO_POSITION, full()));
     }
 
     @Test
@@ -300,9 +315,9 @@ public class PanelPolicyTest {
     }
 
     @Test
-    public void animatedBackgroundOptionNamesItsDeviceRequirement() {
+    public void backgroundStyleAlwaysSelectable() {
         PanelSnapshot oldDevice = PanelSnapshot.builder().build();
-        assertEquals("Android 13+ required", PanelPolicy.optionUnavailableReason(
+        assertEquals("", PanelPolicy.optionUnavailableReason(
                 (Settings.StringSetting) Settings.BACKGROUND_STYLE,
                 "Animated texture", oldDevice, strings()));
         assertEquals("", PanelPolicy.optionUnavailableReason(
@@ -332,7 +347,8 @@ public class PanelPolicyTest {
         assertTrue(PanelPolicy.shouldRebuildSectionAfterChange(Settings.JAPANESE_READING_MODE));
         // UI language takes the full rebuild path (every label changes), not the section path.
         assertFalse(PanelPolicy.shouldRebuildSectionAfterChange(Settings.UI_LANGUAGE));
-        assertFalse(PanelPolicy.shouldRebuildSectionAfterChange(Settings.TAP_SEEK_MODE));
+        // Double tap is shared by seek and like; either choice rewrites the other's row.
+        assertTrue(PanelPolicy.shouldRebuildSectionAfterChange(Settings.TAP_SEEK_MODE));
         assertFalse(PanelPolicy.shouldRebuildSectionAfterChange(Settings.CACHE_SIZE));
     }
 
@@ -380,7 +396,6 @@ public class PanelPolicyTest {
     public void appleSectionRendersOnlyUnderAppleMusicStyle() {
         Settings.Setting<?>[] appleRows = {
                 Settings.APPLE_FADE_PASSED_LINES,
-                Settings.APPLE_COMPACT_TEXT,
                 Settings.LINE_SLIDE_ANIMATION,
                 Settings.APPLE_LIFT
         };

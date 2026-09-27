@@ -32,7 +32,7 @@ public final class ActionIconDrawable extends Drawable {
         GLOBE, POINTER, TIMER, TARGET, BOLD, A_LARGE_SMALL, ROWS_2, CIRCLE_PLAY, PLAY,
         SUN_MEDIUM, ALIGN_VERTICAL_DISTRIBUTE_CENTER, TYPE, ELLIPSIS, WAND_SPARKLES,
         SPARKLE, DROPLETS, IMAGE, WHOLE_WORD, ALIGN_CENTER_VERTICAL, ARROW_RIGHT_LEFT,
-        SETTINGS, HEART, STAR, REFRESH, CIRCLE_CHECK
+        SETTINGS, HEART, STAR, VOLUME_OFF, SEARCH, PICTURE_IN_PICTURE, CIRCLE_CHECK
     }
 
     public static Kind likedSongsKind(String value) {
@@ -61,6 +61,11 @@ public final class ActionIconDrawable extends Drawable {
         paint.setStrokeWidth(2f);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);
+    }
+
+    /** An icon's outline in its 24-unit box, for callers that paint it themselves (shaders). */
+    public static Path pathOf(Kind kind) {
+        return pathFor(kind == null ? Kind.CHECK : kind);
     }
 
     private static Path pathFor(Kind kind) {

@@ -29,11 +29,20 @@ public final class LyricsSkeletonView extends View {
     private LinearGradient shimmer;
     private ValueAnimator animator;
     private float sweep;
+    private int horizontalPaddingPx;
 
     public LyricsSkeletonView(Context context) {
         super(context);
         density = context.getResources().getDisplayMetrics().density;
         barPaint.setColor(0x1FFFFFFF);
+        horizontalPaddingPx = dp(18);
+    }
+
+    public void setHorizontalPaddingPx(int px) {
+        if (px >= 0 && px != horizontalPaddingPx) {
+            horizontalPaddingPx = px;
+            invalidate();
+        }
     }
 
     private int dp(float value) {

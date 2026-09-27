@@ -62,4 +62,10 @@
     <string name="diagnostic_setup_ready">セットアップ: 準備完了</string>
     <string name="diagnostic_setup_warning">セットアップ: 確認が必要</string>
     <string name="diagnostic_setup_failed">セットアップ: 準備未完了</string>
+    <string name="diagnostic_check_hook_runtime">フックランタイム / Xposed API</string>
+    <string name="diagnostic_check_spotify_process">Spotifyメインプロセス</string>
+    <string name="diagnostic_check_internet">インターネット権限</string>
+    <string name="diagnostic_check_features">モジュール機能</string>
+    <string name="diagnostic_check_installation">インストール: %1$s · ルートは未確認</string>
+    <string name="diagnostic_check_hyperglow">HyperGlowブリッジ: %1$s</string>
 </resources>

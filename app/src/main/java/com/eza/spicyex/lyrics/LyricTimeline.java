@@ -122,7 +122,7 @@ public final class LyricTimeline {
     }
 
     private static void applyTimedRows(LyricsDocument doc) {
-        // Spotify-native timing is approximate: never synthesize a dot row from a gap — the
+        // Spotify-native timing is approximate: never synthesize a dot row from a gap - the
         // highlight holds the current line until the next one starts. Authored interlude
         // markers still render as dot rows.
         boolean holdGaps = isSpotifyNativeSource(doc);

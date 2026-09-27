@@ -53,15 +53,15 @@ jobs:
           name: ${{ github.event.inputs.release_name }} ${{ github.event.inputs.version }}
           body: |
             Language model pack for SpicyEX.
-
+            
             **Files included:**
             - jmdict/JmdictFurigana.txt.gz
             - jmdict/JmdictPreferredReadings.txt.gz
             - tika/langdetect-20260320.bin
             - kuromoji/*.bin (8 files)
-
+            
             **SHA256:** ${{ steps.sha256.outputs.sha256 }}
-
+            
             **Usage:**
             ```bash
             ./gradlew :app:assembleDebug \

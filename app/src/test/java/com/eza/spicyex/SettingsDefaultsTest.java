@@ -25,19 +25,19 @@ public class SettingsDefaultsTest {
         assertEquals("custom", Settings.LYRICS_FONT.coerce("custom"));
         assertEquals("spotify", Settings.LYRICS_FONT.coerce("bogus"));
         assertEquals("", Settings.LYRICS_FONT_CUSTOM_PATH.defaultValue);
-        assertEquals(Settings.TEXT, Settings.LYRICS_FONT_CUSTOM_PATH.section);
-        assertEquals("Off", Settings.STATUS_BAR_HIDDEN_MODE.defaultValue);
-        assertEquals(Settings.LYRICS, Settings.STATUS_BAR_HIDDEN_MODE.section);
+        assertEquals(Settings.INTERNAL, Settings.LYRICS_FONT_CUSTOM_PATH.section); // layout editor
+        assertEquals("Landscape", Settings.STATUS_BAR_HIDDEN_MODE.defaultValue);
+        assertEquals(Settings.GENERAL, Settings.STATUS_BAR_HIDDEN_MODE.section);
         assertEquals(java.util.Arrays.asList("Off", "Portrait", "Landscape", "Both"),
                 Settings.STATUS_BAR_HIDDEN_MODE.allowedValues);
         assertEquals("Both", Settings.STATUS_BAR_HIDDEN_MODE.coerce("Both"));
-        assertEquals("Off", Settings.STATUS_BAR_HIDDEN_MODE.coerce("bogus"));
+        assertEquals("Landscape", Settings.STATUS_BAR_HIDDEN_MODE.coerce("bogus"));
         assertEquals(java.util.Arrays.asList("Off", "On demand", "Auto"),
                 Settings.AUTO_SKIP_INTRO_OUTRO.allowedValues);
         assertEquals("Auto", Settings.AUTO_SKIP_INTRO_OUTRO.coerce("Auto"));
         assertEquals("Off", Settings.AUTO_SKIP_INTRO_OUTRO.coerce("bogus"));
         assertFalse(Settings.MINI_PLAYER_LYRICS_ICON.defaultValue);
-        assertFalse(Settings.KARAOKE_ORIGINAL_LYRICS.defaultValue);
+        assertTrue(Settings.KARAOKE_ORIGINAL_LYRICS.defaultValue); // fork default: on
         assertEquals("Single tap", Settings.PANEL_MEDIA_CONTROLS.defaultValue);
         assertEquals(java.util.Arrays.asList("Off", "Single tap", "Double tap"),
                 Settings.PANEL_MEDIA_CONTROLS.allowedValues);
@@ -52,21 +52,10 @@ public class SettingsDefaultsTest {
         assertEquals("Apple Music", Settings.ANIMATION_STYLE.coerce("Apple Music"));
         assertEquals("Gradient wash", Settings.ANIMATION_STYLE.coerce("bogus"));
         assertTrue(Settings.APPLE_FADE_PASSED_LINES.defaultValue);
-        assertTrue(Settings.APPLE_COMPACT_TEXT.defaultValue);
         assertFalse(Settings.LINE_SLIDE_ANIMATION.defaultValue);
         assertTrue(Settings.APPLE_LIFT.defaultValue);
-        assertEquals(Settings.APPLE, Settings.APPLE_LIFT.section);
-        assertFalse(Settings.AUTO_RESUME_FOLLOW.defaultValue);
-        assertEquals(3, (int) Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS.defaultValue);
-        assertEquals(Settings.LYRICS, Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS.section);
-        assertEquals("Auto", Settings.SKIP_CHIP_STYLE.defaultValue);
-        assertEquals("Right", Settings.SKIP_CHIP_POSITION.defaultValue);
-        assertEquals("Right", Settings.FOLLOW_CHIP_POSITION.defaultValue);
-        assertEquals("Auto", Settings.FOLLOW_CHIP_STYLE.defaultValue);
-        assertEquals(Settings.INTERNAL, Settings.SKIP_CHIP_STYLE.section);
-        assertEquals(Settings.INTERNAL, Settings.SKIP_CHIP_POSITION.section);
-        assertEquals(Settings.INTERNAL, Settings.FOLLOW_CHIP_POSITION.section);
-        assertEquals(Settings.INTERNAL, Settings.FOLLOW_CHIP_STYLE.section);
+        assertEquals(Settings.INTERNAL, Settings.APPLE_LIFT.section); // edited in the layout editor
+        assertTrue(Settings.AUTO_RESUME_FOLLOW.defaultValue);
         assertFalse(Settings.HYPERGLOW_ENABLED.defaultValue);
         assertEquals("en", Settings.UI_LANGUAGE.defaultValue);
         // Default stays Google draft until device comparison proves another flow better; adding
@@ -126,6 +115,6 @@ public class SettingsDefaultsTest {
         assertEquals("Heavy", Settings.ENABLE_LINE_BLUR.coerce("Heavy"));
         assertEquals("Off", Settings.ENABLE_LINE_BLUR.coerce("bogus"));
         assertTrue(Settings.FORCE_DARK_BACKGROUND.defaultValue);
-        assertEquals(Integer.valueOf(35), Settings.EXTRA_DARK_BACKGROUND.defaultValue);
+        assertEquals(Integer.valueOf(60), Settings.EXTRA_DARK_BACKGROUND.defaultValue);
     }
 }

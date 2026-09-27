@@ -30,6 +30,9 @@ public class References {
     public static WeakReference<Object> playerStateWrapper = new WeakReference<>(null);
     /** Strong playback snapshots keep background track detection alive while Spotify UI is idle. */
     public static volatile Object playerStateStrong;
+    /** Artist of the most recently read track, for features that need more than the name. */
+    public static volatile String lastTrackUri = "";
+    public static volatile String lastArtistUri = "";
     public static volatile Object playerStateWrapperStrong;
     /**
      * Legacy compatibility mirror of the currently captured Spotify access token. Never
@@ -98,6 +101,9 @@ public class References {
 
                     @SuppressWarnings("unchecked")
                     Map<String, String> md = (Map<String, String>) XpReflect.callMethod(track, "metadata");
+                    if (uri != null && uri.startsWith("spotify:ad:")) {
+                        com.eza.spicyex.hooks.AdBreakInfo.noteMetadata(uri, md);
+                    }
 
                     String title = md.get("title");
                     String artist = md.get("artist_name");
@@ -150,6 +156,18 @@ public class References {
             Log.e("SpotifyPlus", "Error getting track information", e);
             return null;
         }
+    }
+
+    private static String firstNonBlankMeta(Map<String, String> md, String... keys) {
+        if (md == null || keys == null) return null;
+        for (String key : keys) {
+            try {
+                String value = md.get(key);
+                if (value != null && !value.trim().isEmpty()) return value;
+            } catch (Throwable ignored) {
+            }
+        }
+        return null;
     }
 
     private static long previousMs;

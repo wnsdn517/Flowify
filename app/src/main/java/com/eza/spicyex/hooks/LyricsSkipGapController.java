@@ -10,6 +10,8 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
+import android.view.animation.OvershootInterpolator;
+import android.view.animation.PathInterpolator;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -21,13 +23,14 @@ import com.eza.spicyex.SpotifyPlusConfig;
 import com.eza.spicyex.lyrics.SkipGapPolicy;
 import com.eza.spicyex.ui.ActionIconDrawable;
 
-import java.util.function.Supplier;
-
 /**
  * Owns the floating "skip intro" / "skip" / "next track" affordance shown during the gaps before
- * the first synced line, between sections, and after the last one. Stacks just above the
- * "jump to current line" button (see LyricsJumpToCurrentController) when both share the same
- * horizontal anchor, so the pair reads as one group; otherwise each sits at its own baseline.
+ * the first synced line, between sections, and after the last one. Both chips share one
+ * baseline. The skip chip lifts to sit just above the "jump to current line" chip (see
+ * LyricsJumpToCurrentController) only while that chip is actually on screen and the two would
+ * otherwise collide - same anchor, or different anchors whose pills overlap horizontally - and
+ * settles back down to the baseline once the follow chip goes away. The lift is animated, so a
+ * follow chip appearing under a skip chip that is already up reads as pushing it upward.
  *
  * <p>Opens as a labelled pill, because an unexplained double-chevron in the corner of a lyrics
  * screen does not tell anyone what it will do. Left alone it then collapses to the icon so it
@@ -46,6 +49,15 @@ final class LyricsSkipGapController {
     private static final int SIDE_MARGIN_DP = 16;
     /** Vertical distance between the two stacked chips: 40dp chip + 8dp gap. */
     private static final int STACK_OFFSET_DP = 48;
+    /** Chips on different anchors closer than this horizontally count as colliding - wide enough
+     *  that two chips never sit flush side by side, reading as one glued-together blob. */
+    private static final int COLLISION_GAP_DP = 12;
+    /** Quick, so the room is made before the follow chip (held back by the same amount, see
+     *  {@link LyricsJumpToCurrentController}) has grown into it. */
+    private static final long LIFT_DURATION_MS = 300L;
+    private static final long SETTLE_DURATION_MS = 380L;
+    /** Lets the follow chip start its own exit before the skip chip drops into its place. */
+    private static final long SETTLE_DELAY_MS = 70L;
 
     private final SpotifyPlusConfig config;
     private final LinearLayout pill;
@@ -53,9 +65,8 @@ final class LyricsSkipGapController {
     private final FrameLayout.LayoutParams lp;
     private final Runnable onTap;
     private final Runnable collapse = this::collapseToIcon;
-    /** The jump-to-current chip's current horizontal anchor - stacking only applies when this
-     *  matches {@link #position}. */
-    private final Supplier<String> jumpPositionSupplier;
+    /** The follow chip this one stacks above while both are showing. */
+    private final LyricsJumpToCurrentController jump;
 
     private String style = Settings.SKIP_CHIP_STYLE.defaultValue;
     private String position = Settings.SKIP_CHIP_POSITION.defaultValue;
@@ -66,26 +77,27 @@ final class LyricsSkipGapController {
     // still visible, decline to reset it, and leave a half-faded collapsed circle on screen.
     private boolean visible;
     private ValueAnimator widthAnimator;
-    private int bottomMarginDp = 24 + STACK_OFFSET_DP;
+    private ValueAnimator liftAnimator;
+    private float liftTarget;
     /** Set only by {@link #showForEditing()}, so {@link #restoreAfterEditing()} never hides a
      *  chip a real skip gap put up on its own. */
     private boolean editingForcedVisible;
 
     private LyricsSkipGapController(SpotifyPlusConfig config, LinearLayout pill, TextView label,
-            FrameLayout.LayoutParams lp, Runnable onTap, Supplier<String> jumpPositionSupplier) {
+            FrameLayout.LayoutParams lp, Runnable onTap, LyricsJumpToCurrentController jump) {
         this.config = config;
         this.pill = pill;
         this.label = label;
         this.lp = lp;
         this.onTap = onTap;
-        this.jumpPositionSupplier = jumpPositionSupplier;
+        this.jump = jump;
     }
 
     static LyricsSkipGapController attach(
             Activity activity,
             FrameLayout parent,
             SpotifyPlusConfig config,
-            Supplier<String> jumpPositionSupplier,
+            LyricsJumpToCurrentController jump,
             Runnable onClick
     ) {
         float density = activity.getResources().getDisplayMetrics().density;
@@ -123,14 +135,28 @@ final class LyricsSkipGapController {
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(ICON_SIZE_DP), Gravity.BOTTOM | Gravity.END);
+        // Same default baseline as the follow chip until the readout pushes the real one.
+        lp.bottomMargin = dp(24);
         parent.addView(pill, lp);
 
         LyricsSkipGapController controller = new LyricsSkipGapController(
-                config, pill, label, lp, onClick, jumpPositionSupplier);
+                config, pill, label, lp, onClick, jump);
         pill.setOnClickListener(v -> {
             if (controller.onTap != null) controller.onTap.run();
             controller.hide();
         });
+        if (jump != null) {
+            jump.setStackListener(() -> controller.updateStack(true));
+            // Answering "am I moving up?" lets the follow chip hold its entrance until there
+            // is room, instead of the two crossing mid-animation.
+            // Width changes (a label collapsing to its icon, a new label) can open or close a
+            // horizontal collision between chips on different anchors.
+            View.OnLayoutChangeListener relayout = (v, l, t, r, b, ol, ot, or, ob) -> {
+                if (r - l != or - ol) controller.updateStack(true);
+            };
+            jump.view().addOnLayoutChangeListener(relayout);
+            pill.addOnLayoutChangeListener(relayout);
+        }
         controller.onPreferenceChanged();
         return controller;
     }
@@ -145,18 +171,92 @@ final class LyricsSkipGapController {
         String nextPosition = config.get(Settings.SKIP_CHIP_POSITION);
         position = nextPosition == null ? Settings.SKIP_CHIP_POSITION.defaultValue : nextPosition;
         applyPosition();
-
-        // Ensure bottom margins are re-calculated based on the new position constraint.
-        // We use the baseline bottom margin value derived from its current state.
-        int jumpMargin = bottomMarginDp - (isStacked() ? STACK_OFFSET_DP : 0);
-        setBottomMarginDp(Math.max(24, jumpMargin));
+        updateStack(true);
     }
 
-    /** True when this chip and the jump-to-current chip share the same horizontal anchor, so they
-     *  stack vertically instead of each sitting at its own baseline. */
-    private boolean isStacked() {
-        String jumpPosition = jumpPositionSupplier == null ? null : jumpPositionSupplier.get();
-        return position.equals(jumpPosition);
+    /** True when the follow chip is on screen and would collide with this one at the shared
+     *  baseline: same anchor, or different anchors whose pills overlap horizontally. */
+    private boolean shouldStack() {
+        if (jump == null || !jump.isVisible()) return false;
+        String jumpPosition = jump.position();
+        if (position.equals(jumpPosition)) return true;
+        View parent = (View) pill.getParent();
+        int parentWidth = parent == null ? 0 : parent.getWidth();
+        if (parentWidth <= 0) return false;
+        int[] mine = span(position, predictedWidth(pill, lp), parentWidth);
+        View jumpView = jump.view();
+        int[] theirs = span(jumpPosition,
+                predictedWidth(jumpView, jumpView.getLayoutParams()), parentWidth);
+        int gap = dp(COLLISION_GAP_DP);
+        return mine[0] < theirs[1] + gap && theirs[0] < mine[1] + gap;
+    }
+
+    /** Horizontal extent [left, right) a chip of the given width takes at an anchor. Layout
+     *  direction is ignored: both chips mirror together, and Center is symmetric. */
+    private static int[] span(String anchor, int width, int parentWidth) {
+        int left;
+        if ("Left".equals(anchor)) left = dp(SIDE_MARGIN_DP);
+        else if ("Center".equals(anchor)) left = (parentWidth - width) / 2;
+        else left = parentWidth - dp(SIDE_MARGIN_DP) - width;
+        return new int[]{left, left + width};
+    }
+
+    /** The chip's width as it will be laid out: a fixed (collapsed/animating) width if set,
+     *  otherwise its wrap width - measured, so a chip that is still GONE can be judged too. */
+    private static int predictedWidth(View view, ViewGroup.LayoutParams params) {
+        if (params != null && params.width > 0) return params.width;
+        // The laid-out width is only trusted when no layout is pending: a chip that just
+        // expanded from its icon (or got a new label) still reports its old width until the
+        // next pass, which made the check miss a collision until the chips visibly overlapped.
+        if (view.getVisibility() == View.VISIBLE && view.getWidth() > 0
+                && !view.isLayoutRequested()) {
+            return view.getWidth();
+        }
+        view.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(dp(ICON_SIZE_DP), View.MeasureSpec.EXACTLY));
+        return view.getMeasuredWidth();
+    }
+
+    /**
+     * Moves the chip to its stacked or baseline height. Rising (the follow chip arriving under
+     * it) springs up with a small overshoot, as if pushed; settling (the follow chip gone) glides
+     * down with a slight landing bounce after a short beat, so it drops into the space being
+     * vacated rather than through a chip that is still leaving. A hidden chip just jumps there.
+     */
+    boolean updateStack(boolean animate) {
+        float target = shouldStack() ? -dp(STACK_OFFSET_DP) : 0f;
+        if (liftAnimator != null && target == liftTarget) return false;
+        liftTarget = target;
+        cancelLiftAnimation();
+        float current = pill.getTranslationY();
+        if (current == target) return false;
+        if (!animate || !visible || pill.getVisibility() != View.VISIBLE) {
+            pill.setTranslationY(target);
+            return false;
+        }
+        boolean rising = target < current;
+        ValueAnimator animator = ValueAnimator.ofFloat(current, target);
+        animator.setDuration(rising ? LIFT_DURATION_MS : SETTLE_DURATION_MS);
+        animator.setStartDelay(rising ? 0L : SETTLE_DELAY_MS);
+        animator.setInterpolator(rising
+                ? new OvershootInterpolator(1.4f)
+                : new PathInterpolator(0.3f, 0.8f, 0.35f, 1.1f));
+        animator.addUpdateListener(a -> pill.setTranslationY((Float) a.getAnimatedValue()));
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator a) {
+                if (liftAnimator == a) liftAnimator = null;
+            }
+        });
+        liftAnimator = animator;
+        animator.start();
+        return rising;
+    }
+
+    private void cancelLiftAnimation() {
+        ValueAnimator animator = liftAnimator;
+        liftAnimator = null;
+        if (animator != null) animator.cancel();
     }
 
     private void applyPosition() {
@@ -184,14 +284,12 @@ final class LyricsSkipGapController {
         if (changed) pill.setLayoutParams(lp);
     }
 
-    /** Keeps the stack above the bottom track-info readout; mirrors the jump chip margin. */
-    void setBottomMarginDp(int jumpMarginDp) {
-        // Only stack vertically when both chips share the same horizontal anchor. Otherwise the
-        // skip chip stays pinned to its own baseline rather than floating in space.
-        int target = isStacked() ? jumpMarginDp + STACK_OFFSET_DP : jumpMarginDp;
-        if (target == bottomMarginDp && lp.bottomMargin == dp(target)) return;
-        bottomMarginDp = target;
-        lp.bottomMargin = dp(target);
+    /** Keeps the chip above the bottom track-info readout, on the follow chip's baseline; any
+     *  stacking above that chip is a translation on top (see {@link #updateStack}). */
+    void setBottomMarginDp(int baselineDp) {
+        int target = dp(baselineDp);
+        if (lp.bottomMargin == target) return;
+        lp.bottomMargin = target;
         pill.setLayoutParams(lp);
     }
 
@@ -229,6 +327,10 @@ final class LyricsSkipGapController {
         shownLabel = text;
         if (appearing) {
             pill.animate().cancel();
+            // Appears straight at whichever height is free now; only later changes move it.
+            cancelLiftAnimation();
+            liftTarget = shouldStack() ? -dp(STACK_OFFSET_DP) : 0f;
+            pill.setTranslationY(liftTarget);
             pill.setVisibility(View.VISIBLE);
             pill.setAlpha(0f);
             pill.setScaleX(0.82f);
@@ -236,6 +338,8 @@ final class LyricsSkipGapController {
             pill.animate().alpha(0.92f).scaleX(1f).scaleY(1f).setDuration(220L).start();
         }
         applyStyle(text, appearing);
+        // A new, wider label can run into the follow chip: judge it now, before layout draws it.
+        if (!appearing) updateStack(true);
     }
 
     private void applyStyle(String text, boolean appearing) {

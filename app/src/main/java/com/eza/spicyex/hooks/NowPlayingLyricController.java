@@ -13,6 +13,7 @@ import com.eza.spicyex.SpotifyTrack;
 import com.eza.spicyex.lyrics.AppliedLine;
 import com.eza.spicyex.lyrics.ArtworkLyricsOverlayView;
 import com.eza.spicyex.lyrics.BackgroundLine;
+import com.eza.spicyex.lyrics.ArtworkLyricsOverlayView;
 import com.eza.spicyex.lyrics.LiveLyricCardView;
 import com.eza.spicyex.lyrics.LyricTimeline;
 import com.eza.spicyex.lyrics.LyricsDocument;
@@ -370,45 +371,6 @@ final class NowPlayingLyricController {
                 lineChanged);
     }
 
-    /**
-     * The fullscreen surface mounts lead and background rows separately. The compact card has
-     * room for one row, so keep any simultaneously active parenthetical/background lyric in that
-     * row instead of silently dropping it. The projection deliberately has no word list: its
-     * karaoke fill is therefore driven by the projected line's own start/end window.
-     */
-    private AppliedLine projectMiniLine(AppliedLine lead, long positionMs) {
-        if (lead == null || lead.sourceLine == null || lead.sourceLine.backgroundLines == null) return lead;
-        StringBuilder text = new StringBuilder(lead.text == null ? "" : lead.text);
-        StringBuilder romanized = new StringBuilder(lead.romanizedText == null ? "" : lead.romanizedText);
-        StringBuilder translated = new StringBuilder(lead.translatedText == null ? "" : lead.translatedText);
-        StringBuilder key = new StringBuilder();
-        for (BackgroundLine background : lead.sourceLine.backgroundLines) {
-            if (background == null || positionMs < background.startMs || positionMs >= background.endMs
-                    || isBlank(background.text)) continue;
-            if (key.length() > 0) key.append('');
-            key.append(background.startMs).append(':').append(background.endMs).append(':').append(background.text);
-            appendMiniPart(text, background.text);
-            appendMiniPart(romanized, background.romanizedText);
-            appendMiniPart(translated, background.translatedText);
-        }
-        String backgroundKey = key.toString();
-        if (backgroundKey.isEmpty()) return lead;
-        if (miniProjectedSource == lead && backgroundKey.equals(miniProjectedBackgroundKey)) {
-            return miniProjectedLine;
-        }
-        AppliedLine projected = new AppliedLine();
-        projected.text = text.toString();
-        projected.romanizedText = romanized.toString();
-        projected.translatedText = translated.toString();
-        projected.startMs = lead.startMs;
-        projected.endMs = Math.max(projected.startMs + 1, lead.endMs);
-        projected.totalMs = projected.endMs - projected.startMs;
-        projected.oppositeAligned = lead.oppositeAligned;
-        miniProjectedSource = lead;
-        miniProjectedBackgroundKey = backgroundKey;
-        miniProjectedLine = projected;
-        return projected;
-    }
 
     private static void appendMiniPart(StringBuilder target, String value) {
         if (isBlank(value)) return;
@@ -736,6 +698,48 @@ final class NowPlayingLyricController {
         lastIdx = Integer.MIN_VALUE;
         clearMiniProjection();
     }
+
+    /**
+     * The fullscreen surface mounts lead and background rows separately. The compact card has
+     * room for one row, so keep any simultaneously active parenthetical/background lyric in that
+     * row instead of silently dropping it. The projection deliberately has no word list: its
+     * karaoke fill is therefore driven by the projected line's own start/end window.
+     */
+    private AppliedLine projectMiniLine(AppliedLine lead, long positionMs) {
+        if (lead == null || lead.sourceLine == null || lead.sourceLine.backgroundLines == null) return lead;
+        StringBuilder text = new StringBuilder(lead.text == null ? "" : lead.text);
+        StringBuilder romanized = new StringBuilder(lead.romanizedText == null ? "" : lead.romanizedText);
+        StringBuilder translated = new StringBuilder(lead.translatedText == null ? "" : lead.translatedText);
+        StringBuilder key = new StringBuilder();
+        for (BackgroundLine background : lead.sourceLine.backgroundLines) {
+            if (background == null || positionMs < background.startMs || positionMs >= background.endMs
+                    || isBlank(background.text)) continue;
+            if (key.length() > 0) key.append('\u001f');
+            key.append(background.startMs).append(':').append(background.endMs).append(':').append(background.text);
+            appendMiniPart(text, background.text);
+            appendMiniPart(romanized, background.romanizedText);
+            appendMiniPart(translated, background.translatedText);
+        }
+        String backgroundKey = key.toString();
+        if (backgroundKey.isEmpty()) return lead;
+        if (miniProjectedSource == lead && backgroundKey.equals(miniProjectedBackgroundKey)) {
+            return miniProjectedLine;
+        }
+        AppliedLine projected = new AppliedLine();
+        projected.text = text.toString();
+        projected.romanizedText = romanized.toString();
+        projected.translatedText = translated.toString();
+        projected.startMs = lead.startMs;
+        projected.endMs = Math.max(projected.startMs + 1, lead.endMs);
+        projected.totalMs = projected.endMs - projected.startMs;
+        projected.oppositeAligned = lead.oppositeAligned;
+        miniProjectedSource = lead;
+        miniProjectedBackgroundKey = backgroundKey;
+        miniProjectedLine = projected;
+        return projected;
+    }
+
+
 
     private SpotifyTrack currentTrackThrottled(long nowMs) {
         if (!throttledTrackInitialized || nowMs - throttledTrackAtMs >= 250L) {

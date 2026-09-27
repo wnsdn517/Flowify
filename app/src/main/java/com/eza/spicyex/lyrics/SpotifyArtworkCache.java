@@ -81,6 +81,11 @@ public final class SpotifyArtworkCache {
                 }
                 normalized = "spotify:image:" + normalized.substring(start, end);
             }
+            // imageId may already be a full https URL (ad creatives, remote playback) —
+            // compare directly in that case too.
+            if (imageId.startsWith("http")) {
+                if (normalized.equals(imageId)) return true;
+            }
             return normalized.equals("spotify:image:"+imageId)
                     || normalized.equals("https://i.scdn.co/image/"+imageId)
                     || normalized.equals(imageId);

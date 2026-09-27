@@ -45,7 +45,10 @@ public final class PanelStyle {
     private static final Map<String, Kind> SECTION_ICONS = new HashMap<>();
 
     static {
+        SECTION_ICONS.put("general", Kind.SETTINGS);
         SECTION_ICONS.put("lyrics", Kind.AUDIO_LINES);
+        SECTION_ICONS.put("gestures", Kind.POINTER);
+        SECTION_ICONS.put("ads", Kind.VOLUME_OFF);
         SECTION_ICONS.put("transliteration", Kind.BOOK_OPEN_TEXT);
         SECTION_ICONS.put("translation", Kind.LANGUAGES);
         SECTION_ICONS.put("now_playing", Kind.DISC_3);
@@ -54,6 +57,8 @@ public final class PanelStyle {
         // No Apple-mark glyph in Lucide (brand icons are out); the effects wand reads as motion.
         SECTION_ICONS.put("apple_music", Kind.WAND_SPARKLES);
         SECTION_ICONS.put("ai", Kind.SPARKLES);
+        SECTION_ICONS.put("pip", Kind.PICTURE_IN_PICTURE);
+        SECTION_ICONS.put("connect", Kind.GLOBE);
         SECTION_ICONS.put("debug", Kind.ACTIVITY);
     }
 

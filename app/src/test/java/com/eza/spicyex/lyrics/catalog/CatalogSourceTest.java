@@ -44,13 +44,10 @@ public class CatalogSourceTest {
     }
 
     @Test
-    public void directMusixmatchHasNoRoute() {
-        assertNull(CatalogSource.inferSourceId("musixmatch", "Musixmatch"));
+    public void directMusixmatchIsItsOwnSource() {
+        assertEquals(SourceId.MUSIXMATCH, CatalogSource.inferSourceId("musixmatch", "Musixmatch"));
         assertNull(CatalogSource.inferSourceId("unknown", null));
         assertNull(CatalogSource.inferSourceId(null, null));
-        for (SourceId source : SourceId.values()) {
-            assertTrue(!"musixmatch".equals(source.id));
-        }
     }
 
     @Test

@@ -18,6 +18,21 @@ import com.eza.spicyex.lyrics.CacheClearKind;
  * fullscreen surface uses.
  */
 public interface LyricsHost {
+    /** Gates AudioReactiveController's analysis to when something on screen uses it. */
+    void setAudioReactiveListening(boolean enabled);
+
+    /** 0..1 loudness of the playing audio; tells playing from silence. */
+    float currentAudioLevel();
+
+    /** 0..1 kick-drum envelope for the audio heard now: the beat. */
+    float currentAudioBeat();
+
+    /** 0..1 snare/clap envelope for the audio heard now. */
+    float currentAudioAccent();
+
+    /** Log-spaced band levels, 0..1 each, for the instrumental visualizer. */
+    float[] currentAudioSpectrum();
+
     SpotifyTrack getCurrentTrackSafely();
 
     boolean isPlayerActuallyPlaying();
@@ -42,6 +57,10 @@ public interface LyricsHost {
     boolean toggleSpotifySaved(String mode, SpotifyTrack expected);
 
     void markExplicitLyricsExit(Activity activity);
+
+
+    /** Settings.PIP_ON_CLOSE: true when closing the lyrics screen opened PiP instead. */
+    boolean openLyricsPipOnClose(Activity activity);
 
     // Re-arm the "keep lyrics activity open across track changes" window. The shell calls this
     // periodically while mounted so the suppression window never lapses mid-session; it auto-

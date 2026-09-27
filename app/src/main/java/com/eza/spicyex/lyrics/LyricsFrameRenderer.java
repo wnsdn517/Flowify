@@ -517,6 +517,7 @@ public final class LyricsFrameRenderer {
         return lineSpan > 0 && wordSpan * 100L < lineSpan * 15L;
     }
 
+
     private void resetNearbySyllables(AppliedLine line, int index, int activeIndex,
                                       LyricsAnimationApplier.StyleSink sink,
                                       boolean motionEnabled,
@@ -614,7 +615,50 @@ public final class LyricsFrameRenderer {
         return slowness * LyricAnimations.easeSinOut(Math.min(1f, progress * 2.5f));
     }
 
+    /** Visual line of the word being sung (the last one started), or -1. */
+    private static int sungVisualLine(GlowFlexbox flex, AppliedLine line, long positionMs) {
+        SyllableSegment current = null;
+        for (SyllableSegment segment : line.words) {
+            if (segment == null) continue;
+            if (segment.startMs <= positionMs) current = segment;
+            else break;
+        }
+        if (current == null) current = line.words.get(0);
+        View view = LyricsSyllableViewState.wordView(current);
+        return view == null ? -1 : flex.visualLineOf(view);
+    }
+
     private static final long VISUAL_LINE_STAGGER_MS = 110L;
+
+    /** When singing reaches the first word of one visual line. */
+    private static long visualLineStartMs(GlowFlexbox flex, AppliedLine line, int visualLine) {
+        long start = Long.MAX_VALUE;
+        if (visualLine >= 0) {
+            for (SyllableSegment segment : line.words) {
+                if (segment == null) continue;
+                View view = LyricsSyllableViewState.wordView(segment);
+                if (view != null && flex.visualLineOf(view) == visualLine) start = Math.min(start, segment.startMs);
+            }
+        }
+        return start == Long.MAX_VALUE ? line.startMs : start;
+    }
+
+    /** 0..1 through the words on one visual line. */
+    private static float visualLineProgress(GlowFlexbox flex, AppliedLine line, int visualLine,
+                                            long positionMs) {
+        if (visualLine < 0) return 0f;
+        long start = Long.MAX_VALUE;
+        long end = Long.MIN_VALUE;
+        for (SyllableSegment segment : line.words) {
+            if (segment == null) continue;
+            View view = LyricsSyllableViewState.wordView(segment);
+            if (view == null || flex.visualLineOf(view) != visualLine) continue;
+            start = Math.min(start, segment.startMs);
+            end = Math.max(end, segment.endMs);
+        }
+        if (start == Long.MAX_VALUE || end <= start) return 0f;
+        return LyricAnimations.clamp01((positionMs - start) / (float) (end - start));
+    }
 
     /** Space a zoomed line always keeps from the screen edge. */
     private float scaleEdgeMarginPx() {

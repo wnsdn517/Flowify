@@ -1,5 +1,7 @@
 package com.eza.spicyex.lyrics;
 
+import android.animation.ArgbEvaluator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.graphics.Color;
 import android.net.Uri;
@@ -42,8 +44,10 @@ public final class LyricsAmbientController {
     private final Activity activity;
     private final OkHttpClient http;
     private final SpotifyPlusConfig config;
+    private static final long PAGE_BACKGROUND_TRANSITION_MS = 500L;
 
     private final MeshGradientDrawable pageBackground;
+    private final ArgbEvaluator argbEvaluator = new ArgbEvaluator();
     private AmbientBackgroundLayer animatedBackground;
     private FrameLayout animatedParent;
     private boolean animatedForceDark;
@@ -64,6 +68,7 @@ public final class LyricsAmbientController {
     private String currentTrackUri = "";
     private boolean playing = true;
     private int[] currentPageColors;
+    private ValueAnimator pageColorAnimator;
 
     public LyricsAmbientController(Activity activity, OkHttpClient http, SpotifyPlusConfig config) {
         this.activity = activity;
@@ -112,6 +117,7 @@ public final class LyricsAmbientController {
         active = false;
         animationPaused = false;
         cancelArtwork();
+        if (pageColorAnimator != null) pageColorAnimator.cancel();
         if (animatedBackground != null) animatedBackground.release();
         appliedArtImageId = "";
     }
@@ -123,6 +129,23 @@ public final class LyricsAmbientController {
         artWork = null;
         inFlightArtCall = null;
         inFlightArtImageId = "";
+    }
+
+    /** Real audio level (0..1) from AudioReactiveController - see NativeSpicyLyricsHook. */
+    public void updateAudioLevel(float level0to1) {
+        AmbientBackgroundLayer layer = animatedBackground;
+        if (layer != null) layer.setAudioLevel(level0to1);
+    }
+
+    /** Snare/clap envelope (0..1), the second drum layer next to the kick in updateAudioLevel. */
+    public void updateAudioAccent(float accent0to1) {
+        AmbientBackgroundLayer layer = animatedBackground;
+        if (layer != null) layer.setAudioAccent(accent0to1);
+    }
+
+    public void updateAudioEnergy(float loudness0to1) {
+        AmbientBackgroundLayer layer = animatedBackground;
+        if (layer != null) layer.setAudioEnergy(loudness0to1);
     }
 
     /** Apply the "Animated background" setting live: show+resume or hide+pause the layer. */
@@ -138,14 +161,11 @@ public final class LyricsAmbientController {
         boolean enabled = LyricsBackgroundStyle.usesTexture(normalized);
         boolean animated = LyricsBackgroundStyle.isAnimated(normalized);
         textureEnabled = enabled;
-        applyExtraDark(enabled && forceDark, extraDark);
+        // Force dark is only the switch for the darkness slider: 0 keeps the artwork's own colors,
+        // 100 is black. There is no extra darkening baked in underneath it any more.
+        applyExtraDark(forceDark, extraDark);
         if (animatedParent != null && enabled && animatedBackground == null) {
-            createAnimatedLayer(animatedParent, forceDark, animated);
-        } else if (forceDark != animatedForceDark) {
-            if (animatedBackground instanceof AmbientArtworkBackgroundView) {
-                ((AmbientArtworkBackgroundView) animatedBackground).setForceDark(forceDark);
-            }
-            animatedForceDark = forceDark;
+            createAnimatedLayer(animatedParent, false, animated);
         }
         if (animatedBackground instanceof AmbientArtworkBackgroundView) {
             ((AmbientArtworkBackgroundView) animatedBackground).setDarkening(backgroundBrightness, extraDarkFilter);
@@ -170,10 +190,10 @@ public final class LyricsAmbientController {
     public void attachAnimatedLayer(FrameLayout parent, String style, boolean forceDark, int extraDark) {
         animatedParent = parent;
         textureEnabled = LyricsBackgroundStyle.usesTexture(style);
-        applyExtraDark(textureEnabled && forceDark, extraDark);
+        applyExtraDark(forceDark, extraDark);
         if (!FeatureAvailability.animatedBackgroundAvailable()) return;
         if (parent == null || !LyricsBackgroundStyle.usesTexture(style)) return;
-        createAnimatedLayer(parent, forceDark, LyricsBackgroundStyle.isAnimated(style));
+        createAnimatedLayer(parent, false, LyricsBackgroundStyle.isAnimated(style));
     }
 
     private float readRenderScale() {
@@ -205,6 +225,7 @@ public final class LyricsAmbientController {
         // Guarded here as well as at the call sites: a pref persisted on a newer device (backup
         // restore, shared prefs copy) must not resurrect the layer on hardware that cannot run it.
         if (parent == null || !FeatureAvailability.animatedBackgroundAvailable()) return;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
         try {
             AmbientArtworkBackgroundView background = new AmbientArtworkBackgroundView(activity, forceDark);
             background.setDarkening(backgroundBrightness, extraDarkFilter);
@@ -227,8 +248,8 @@ public final class LyricsAmbientController {
 
     public void updateForTrack(SpotifyTrack track, RunningState runningState) {
         int seed = LyricVisuals.parseSpotifyExtractedColor(track == null ? "" : track.color);
-        boolean forceDark = config == null || config.get(Settings.FORCE_DARK_BACKGROUND);
-        int[] colors = LyricVisuals.spicyColorBackgroundColors(seed, forceDark);
+        // The artwork's own palette; darkness is the Force dark slider alone (applyExtraDark).
+        int[] colors = LyricVisuals.spicyColorBackgroundColors(seed, false);
         animatePageBackgroundColors(colors);
         applyAnimatedPalette(colors);
         updateAnimatedBackgroundArt(track, runningState);
@@ -269,6 +290,7 @@ public final class LyricsAmbientController {
             });
         });
     }
+
 
     private void updateAnimatedBackgroundArt(SpotifyTrack track, RunningState runningState) {
         currentTrackUri = track == null ? "" : safe(track.uri);

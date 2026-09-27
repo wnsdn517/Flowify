@@ -25,119 +25,34 @@ public final class SettingsUiSchema {
     /** Panel section order, first to last. DEBUG is rendered separately; INTERNAL never renders. */
     public static List<Settings.Section> orderedSections() {
         return Collections.unmodifiableList(Arrays.asList(
+                Settings.GENERAL,
                 Settings.LYRICS,
+                Settings.GESTURES,
                 Settings.LYRICS_SOURCES,
                 Settings.NOW_PLAYING,
                 Settings.LYRICS_SCREEN,
                 Settings.APPLE,
                 Settings.TRANSLITERATION,
                 Settings.TRANSLATION,
-                Settings.AI));
+                Settings.AI,
+                Settings.ADS,
+                Settings.PIP,
+                Settings.CONNECT));
     }
 
-    /**
-     * Every renderable setting in panel row order. Grouped by section in the same order as
-     * {@link #orderedSections()}, so the panel can filter this list per section and keep both
-     * the grouping and the intra-section order explicit.
-     */
-    private static final List<Settings.Setting<?>> ORDERED = Collections.unmodifiableList(Arrays.asList(
-            // Behavior
-            Settings.UI_LANGUAGE,
-            Settings.TAP_SEEK_MODE,
-            Settings.STAY_IN_LYRICS,
-            Settings.AUTO_RESUME_FOLLOW,
-            Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS,
-            Settings.AUTO_SKIP_INTRO_OUTRO,
-            Settings.MINI_PLAYER_LYRICS_ICON,
-            Settings.STATUS_BAR_HIDDEN_MODE,
-            Settings.LONG_PRESS_SHARE,
-            Settings.SYNC_OFFSET_MS,
-            Settings.HYPERGLOW_ENABLED,
-            // Lyrics sources
-            Settings.LYRICS_SOURCE_MODE,
-            Settings.LYRICS_SOURCE_OVERRIDE,
-            Settings.SPICY_MANUAL_TOKEN,
-            Settings.LYRICS_SOURCE_ORDER,
-            Settings.KARAOKE_ORIGINAL_LYRICS,
-            Settings.CACHE_SIZE,
-            // Now playing card
-            Settings.LIVE_CARD_TAP_MODE,
-            Settings.LIVE_CARD_TAP_TARGET,
-            Settings.LIVE_CARD_WEIGHT,
-            Settings.LIVE_CARD_TEXT_SIZE,
-            Settings.LIVE_CARD_TEXT_SIZE_CUSTOM,
-            Settings.LIVE_CARD_SECONDARY_MODE,
-            Settings.LIVE_CARD_ANIMATION,
-            Settings.LIVE_CARD_GLOW,
-            Settings.LIVE_CARD_LINE_SYNC_FILL,
-            Settings.LIVE_CARD_OVERFLOW,
-            Settings.LIVE_CARD_SCROLL_SCOPE,
-            Settings.LIVE_CARD_TRANSITION,
-            // Lyrics screen
-            Settings.ADAPTIVE_SECTIONING,
-            Settings.LINE_SPACING,
-            Settings.LINE_SPACING_CUSTOM,
-            Settings.LYRICS_WEIGHT,
-            Settings.LYRICS_FONT,
-            Settings.LYRICS_FONT_CUSTOM_PATH,
-            Settings.LYRICS_TEXT_SIZE,
-            Settings.LYRICS_TEXT_SIZE_CUSTOM,
-            Settings.LYRICS_ADAPTIVE_TEXT_SIZE,
-            Settings.INTERLUDE_ICON,
-            Settings.LIKED_SONGS_BUTTON,
-            Settings.FULLSCREEN_CONTROLS,
-            Settings.TRACK_INFO_POSITION,
-            Settings.TRACK_INFO_TEXT_SIZE,
-            Settings.TRACK_INFO_TEXT_SIZE_CUSTOM,
-            Settings.TRACK_INFO_TEXT_OVERFLOW,
-            Settings.TRACK_INFO_ART_SIZE,
-            Settings.ADAPTIVE_LANDSCAPE_LAYOUT,
-            Settings.PANEL_MEDIA_CONTROLS,
-            Settings.ANIMATION_STYLE,
-            Settings.TRANSITION_FEEL,
-            Settings.WORD_BOUNCE,
-            Settings.WORD_BOUNCE_STYLE,
-            Settings.ENABLE_GLOW_BLUR,
-            Settings.ENABLE_LINE_BLUR,
-            Settings.LYRICS_BLUR_INTENSITY,
-            Settings.LINE_SYNC_FILL,
-            Settings.BACKGROUND_STYLE,
-            Settings.FORCE_DARK_BACKGROUND,
-            Settings.EXTRA_DARK_BACKGROUND,
-            Settings.BACKGROUND_RENDER_QUALITY,
-            // Apple Music (dedicated section; renders only while the Animation style is Apple Music)
-            Settings.APPLE_FADE_PASSED_LINES,
-            Settings.APPLE_COMPACT_TEXT,
-            Settings.LINE_SLIDE_ANIMATION,
-            Settings.APPLE_LIFT,
-            Settings.LOAD_LIFT_ANIMATION,
-            Settings.APPLE_CASCADE_SPEED,
-            Settings.APPLE_SPRING_STRENGTH,
-            // Reading & transliteration
-            Settings.DOWNLOAD_LANGUAGE_MODELS,
-            Settings.TRANSLITERATION_ENABLED,
-            Settings.ALIGNED_PER_WORD_ROMAJI,
-            Settings.JAPANESE_READING_MODE,
-            Settings.FURIGANA_BRIGHTNESS,
-            Settings.FURIGANA_POSITION_PERCENT,
-            Settings.CHINESE_MODE,
-            Settings.KOREAN_ROMANIZATION,
-            Settings.CHINESE_TONES,
-            Settings.CYRILLIC_MODE,
-            Settings.CYRILLIC_KEEP_SIGNS,
-            // Translation
-            Settings.TRANSLATION_ENABLED,
-            Settings.TRANSLATION_TARGET,
-            Settings.TRANSLATION_BRIGHTNESS,
-            // AI
-            Settings.AI_ENABLED,
-            Settings.AI_PROVIDER,
-            Settings.AI_DEEPSEEK_REASONING,
-            Settings.AI_TRANSLATION_MODE,
-            Settings.AI_TRANSLATION_PIPELINE,
-            Settings.AI_PRONUNCIATION_MODE,
-            Settings.AI_PRONUNCIATION_SOURCE,
-            Settings.AI_BUTTON_BEHAVIOR));
+    /** Every renderable setting, in panel row order. Rebuilt from the actual settings registry so
+     *  schema drift cannot silently break the panel contract. */
+    private static final List<Settings.Setting<?>> ORDERED = buildOrdered();
+
+    private static List<Settings.Setting<?>> buildOrdered() {
+        List<Settings.Setting<?>> rows = new ArrayList<>();
+        for (Settings.Setting<?> setting : Settings.ALL) {
+            if (setting.section != Settings.INTERNAL) {
+                rows.add(setting);
+            }
+        }
+        return Collections.unmodifiableList(rows);
+    }
 
     /** Every renderable setting, in panel row order. */
     public static List<Settings.Setting<?>> orderedSettings() {

@@ -110,4 +110,45 @@ public class ArtGestureArbiterTest {
         assertEquals(0f, arbiter.dragDxPx(), 0.001f);
         assertEquals(ArtGestureArbiter.Output.NONE, arbiter.onUp());
     }
+
+    @Test
+    public void guardedQuickTapStillCountsButASlideDoesNot() {
+        ArtGestureArbiter arbiter = arbiter();
+        arbiter.setGuard(true, 80f);
+        // Judged by distance, not time: an instant tap in place is still a tap.
+        arbiter.onDown(nowMs);
+        assertEquals(ArtGestureArbiter.Output.REVEAL, arbiter.onUp());
+
+        // A finger that slides past slop (mostly vertically) and comes back is not.
+        nowMs += DOUBLE_TAP_MS + 1L;
+        arbiter.onDown(nowMs);
+        arbiter.onMove(0f, SLOP * 3f);
+        arbiter.onMove(0f, 0f);
+        assertEquals(ArtGestureArbiter.Output.NONE, arbiter.onUp());
+        assertFalse(arbiter.isDoubleTapCandidate(nowMs + 50L));
+    }
+
+    @Test
+    public void guardedSwipeNeedsLongerTravel() {
+        ArtGestureArbiter arbiter = arbiter();
+        arbiter.setGuard(true, 80f);
+        arbiter.onDown(nowMs);
+        arbiter.onMove(-50f, 0f);
+        assertEquals(ArtGestureArbiter.Output.SPRING_BACK, arbiter.onUp());
+
+        arbiter.onDown(nowMs);
+        arbiter.onMove(-90f, 0f);
+        assertEquals(ArtGestureArbiter.Output.COMMIT_NEXT, arbiter.onUp());
+    }
+
+    @Test
+    public void guardedDiagonalGrazeIsNotASwipe() {
+        ArtGestureArbiter arbiter = arbiter();
+        arbiter.setGuard(true, 80f);
+        arbiter.onDown(nowMs);
+        // Horizontal barely wins: unguarded this would drag, guarded it is a scroll-ish graze.
+        assertEquals(ArtGestureArbiter.Output.NONE, arbiter.onMove(-40f, 32f));
+        assertEquals(ArtGestureArbiter.Output.NONE, arbiter.onMove(-200f, 32f));
+        assertEquals(ArtGestureArbiter.Output.NONE, arbiter.onUp());
+    }
 }

@@ -10,7 +10,7 @@ package com.eza.spicyex.lyrics;
  * nasalization, ㄴ/ㄹ lateralization, and post-obstruent tensification (제23항). It is NOT a
  * full G2P: morphology-sensitive tensification (compounds, -(으)ㄹ futures) is not derived —
  * compound cases stay hardcoded and ㄹ-future cases go through the display bigram layer.
- * The "follow spelling" mode ({@link SpicyRomanizer#romanizeKorean}) stays the default.
+ * The "follow spelling" mode ({@link SpicyRomanizer#romanizeKorean}) stays the defaㅂult.
  */
 final class SpicyKoreanG2P {
     private SpicyKoreanG2P() {

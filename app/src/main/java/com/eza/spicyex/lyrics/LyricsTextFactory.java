@@ -15,6 +15,7 @@ import android.widget.TextView;
 import com.eza.spicyex.Settings;
 import com.eza.spicyex.SpotifyPlusConfig;
 
+import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +45,7 @@ public final class LyricsTextFactory {
         Typeface resolved = loadSpotifyFont(bold ? "spotify_mix_ui_title_extrabold" : "spotify_mix_ui_regular");
         if (resolved == null) {
             try {
-                resolved = Typeface.createFromAsset(activity.getAssets(),
+                resolved = moduleFont(
                         bold ? "fonts/sf-pro-display-bold.ttf" : "fonts/spotifymix-medium.ttf");
             } catch (Throwable t) {
                 resolved = bold ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT;
@@ -90,7 +91,7 @@ public final class LyricsTextFactory {
             try {
                 // Apple family end to end: SF medium (BlinkMacSystemFont) for Regular, SF Pro
                 // Display bold for Medium/Bold — never a Spotify face under the "apple" label.
-                resolved = Typeface.createFromAsset(activity.getAssets(),
+                resolved = moduleFont(
                         "Regular".equals(weight) ? "fonts/lyrics_medium.ttf" : "fonts/sf-pro-display-bold.ttf");
             } catch (Throwable t) {
                 resolved = "Regular".equals(weight) ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD;
@@ -139,7 +140,7 @@ public final class LyricsTextFactory {
         Typeface resolved = loadSpotifyFont(font);
         if (resolved == null) {
             try {
-                resolved = Typeface.createFromAsset(activity.getAssets(),
+                resolved = moduleFont(
                         "Regular".equals(weight) ? "fonts/spotifymix-medium.ttf" : "fonts/sf-pro-display-bold.ttf");
             } catch (Throwable t) {
                 resolved = "Regular".equals(weight) ? Typeface.DEFAULT : Typeface.DEFAULT_BOLD;
@@ -268,6 +269,20 @@ public final class LyricsTextFactory {
     }
 
     /** Load a font resource from the host (Spotify) package by name, e.g. "spotify_mix_ui_bold". */
+    /** A font bundled in the module's assets. The host activity's assets carry the module's
+     *  only while it is added to them - an activity whose resources were rebuilt (a
+     *  picture-in-picture host changing windows) lost it, and the lyrics silently fell back to a
+     *  system face - so the module's own resources are the fallback. Throws when both fail. */
+    private Typeface moduleFont(String path) {
+        try {
+            return Typeface.createFromAsset(activity.getAssets(), path);
+        } catch (RuntimeException hostMissing) {
+            android.content.res.Resources module = com.eza.spicyex.xposed.XpRes.moduleResources(activity);
+            if (module == null) throw hostMissing;
+            return Typeface.createFromAsset(module.getAssets(), path);
+        }
+    }
+
     private Typeface loadSpotifyFont(String name) {
         try {
             android.content.res.Resources res = activity.getResources();

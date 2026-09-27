@@ -65,8 +65,8 @@ import static com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri;
  *
  * <p>The card is drawn in its own fixed 1080x1350 pixel space (never device dp, so text is the
  * same size on every phone). It comes in four designs - Glass, Classic, Minimal, Polaroid - over
- * one of two backdrops: the blurred artwork (the lyrics screen's own look) or the artwork's
- * colours as a gradient. Lyrics are fitted
+ * one of three backdrops: the blurred artwork (the lyrics screen's own look), the artwork's
+ * colours as a gradient, or the artist's photo, fetched from Spotify's Web API. Lyrics are fitted
  * by shrinking to a floor size; a selection that still would not fit is refused rather than
  * overflowing, and the card says so.
  *
@@ -94,7 +94,7 @@ final class LyricsShareCardController {
     private static final String PREF_CODE = "share_card_spotify_code";
 
     enum Design { GLASS, CLASSIC, MINIMAL, POLAROID, POSTER, VINYL, TICKET, SPOTLIGHT }
-    enum Backdrop { BLUR, COLOR }
+    enum Backdrop { BLUR, COLOR, ARTIST }
 
     /** Renders the lyrics screen's own background at a given size. */
     interface BackgroundSnapshot {
@@ -120,6 +120,7 @@ final class LyricsShareCardController {
     private static final int THUMB_H_DP = 72;
     private static final String PREF_ALIGN = "share_card_text_align";
     private static final String PREF_POS = "share_card_text_pos";
+    private static final java.util.Map<String, Bitmap> ARTIST_IMAGES = new java.util.LinkedHashMap<>();
     /** Spotify Code images by "uri|dark" - bars white on black, or black on white for paper. */
     private static final java.util.Map<String, Bitmap> SPOTIFY_CODES = new java.util.LinkedHashMap<>();
 
@@ -213,9 +214,12 @@ final class LyricsShareCardController {
     private LyricsDocument document;
     /** The lyric lines on the card, by document index: any lines, not only a run of them. */
     private final java.util.TreeSet<Integer> picked = new java.util.TreeSet<>();
+    /** Whether the card on screen has lyric lines; see render(). */
+    private boolean shownWithQuotes;
     private boolean showTranslation = true;
     private SpotifyTrack track;
     private Bitmap artwork;
+    private Bitmap artistImage;
     private ViewGroup root;
     private Design design;
     private Backdrop backdrop;
@@ -307,6 +311,7 @@ final class LyricsShareCardController {
     private void show() {
         if (activity == null || root == null || track == null) return;
         dismiss();
+        artistImage = cachedArtist(track);
         lyricsBackground = null;
         fitCache.clear();
         codePlayed = false;
@@ -320,25 +325,19 @@ final class LyricsShareCardController {
         // From the long press on, the lyrics underneath hold still: their blurred rows keep the
         // blur they have instead of re-rendering it every frame under the opening sheet.
         reportSheet(true, false);
-        BackgroundSnapshot snapshot = backgroundSnapshot;
-        if (snapshot != null) {
-            // Off the main thread; the card redraws with it as soon as it is ready.
-            RENDER.execute(() -> {
-                Bitmap frame = snapshot.render(W, H);
-                main.post(() -> {
-                    if (overlay == null || frame == null) return;
-                    lyricsBackground = frame;
-                    if (backdrop == Backdrop.COLOR) {
-                        render(Transition.FADE);
-                        renderThumbs();
-                    }
-                });
-            });
-        }
+        // The lyrics background is a full-size render of its own (5-6 MB): only drawn when it
+        // is the chosen backdrop - then before the card, which needs it - or once picked.
+        if (backdrop == Backdrop.COLOR) requestLyricsBackground();
         render(Transition.FADE);
-        renderThumbs();
+        // Eight small cards for the design strip: after the sheet has risen, so they don't
+        // compete with the card and the opening animation for the CPU (and the GC).
+        View thumbHost = overlay;
+        thumbHost.postDelayed(() -> {
+            if (overlay == thumbHost) renderThumbs();
+        }, THUMBS_AFTER_OPEN_MS);
+        if (backdrop == Backdrop.ARTIST && artistImage == null) fetchArtistImage();
         if (spotifyCode) fetchSpotifyCode();
-        if (document != null && !picked.isEmpty()) {
+        if (document != null && !picked.isEmpty() && hintPasses() > 0) {
             View teaseHost = overlay;
             teaseHost.postDelayed(() -> {
                 if (overlay == teaseHost) teaseNextLine();
@@ -360,6 +359,38 @@ final class LyricsShareCardController {
                 }
             });
         }
+    }
+
+    private static final long THUMBS_AFTER_OPEN_MS = 520L;
+    private boolean lyricsBackgroundPending;
+
+    /** Freezes the lyrics screen's background for the "lyrics background" backdrop, off the
+     *  main thread; the card and the strip redraw with it once it is there. */
+    private void requestLyricsBackground() {
+        BackgroundSnapshot snapshot = backgroundSnapshot;
+        if (snapshot == null || lyricsBackground != null || lyricsBackgroundPending) return;
+        lyricsBackgroundPending = true;
+        View host = overlay;
+        RENDER.execute(() -> {
+            Bitmap frame;
+            try {
+                frame = snapshot.render(W, H);
+            } catch (Throwable error) {
+                XpLog.log(TAG + " lyrics background failed: " + error);
+                frame = null;
+            }
+            Bitmap done = frame;
+            main.post(() -> {
+                if (overlay != host) return;
+                lyricsBackgroundPending = false;
+                if (done == null) return;
+                lyricsBackground = done;
+                if (backdrop == Backdrop.COLOR) {
+                    render(Transition.FADE);
+                    renderThumbs();
+                }
+            });
+        });
     }
 
     /** Words that landed before the first card: handed over to its text when it comes. */
@@ -856,8 +887,11 @@ final class LyricsShareCardController {
     }
 
     /**
-     * Gesture hint: the next lyric peeks up from the bottom of the card as if about to be pulled
-     * in, the card lifts a touch to make room, then both settle back - "swipe up to add".
+     * Gesture hint, shown as a demonstration rather than a nudge: a chip under the card says
+     * what to do ("Swipe up on the card to add the next line", with that line underneath), and a
+     * finger dot presses on the card and drags it up, the card following, twice. The first few
+     * times the sheet opens the demonstration plays in full; after that one pass is enough of a
+     * reminder. A touch on the card ends it at once.
      */
     private void teaseNextLine() {
         if (document == null || cardHost == null || !(cardHost.getParent() instanceof FrameLayout)) return;
@@ -869,35 +903,51 @@ final class LyricsShareCardController {
         if (!selectionFits(candidate)) return;
         if (!(overlay instanceof FrameLayout)) return;
         FrameLayout host = (FrameLayout) overlay;
+        int passes = consumeHintPasses();
+        if (passes <= 0) return;
 
-        // A chip under the card (outside it, where the hint text sits): the next line, with an
-        // arrow pointing up into the card.
+        // The chip under the card, where the one-line hint sits: what to do, then the line.
         LinearLayout chip = new LinearLayout(activity);
         chip.setGravity(Gravity.CENTER_VERTICAL);
-        chip.setPadding(dp(12), dp(7), dp(16), dp(7));
-        android.graphics.drawable.GradientDrawable bg = glass(dp(18), 0, 50);
-        bg.setColor(Color.argb(190, 22, 22, 26));
+        chip.setPadding(dp(14), dp(9), dp(18), dp(9));
+        android.graphics.drawable.GradientDrawable bg = glass(dp(20), 0, 50);
+        bg.setColor(Color.argb(205, 22, 22, 26));
         chip.setBackground(bg);
         chip.setElevation(dp(30));
         ImageView arrow = new ImageView(activity);
         arrow.setImageDrawable(new LineIcon(LineIcon.Kind.ARROW_UP, Color.WHITE));
-        LinearLayout.LayoutParams arrowLp = new LinearLayout.LayoutParams(dp(15), dp(15));
-        arrowLp.rightMargin = dp(8);
+        LinearLayout.LayoutParams arrowLp = new LinearLayout.LayoutParams(dp(18), dp(18));
+        arrowLp.rightMargin = dp(10);
         chip.addView(arrow, arrowLp);
-        TextView text = new TextView(activity);
-        text.setText(safe(document.appliedLines.get(next).text));
-        text.setTextColor(Color.WHITE);
-        text.setTextSize(13);
-        text.setTypeface(Typeface.DEFAULT_BOLD);
-        text.setSingleLine(true);
-        text.setEllipsize(TextUtils.TruncateAt.END);
-        text.setMaxWidth(Math.max(dp(100), cardHost.getWidth() - dp(60)));
-        chip.addView(text);
+        LinearLayout texts = new LinearLayout(activity);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        int maxText = Math.max(dp(120), cardHost.getWidth() - dp(70));
+        TextView instruction = new TextView(activity);
+        instruction.setText(s("hint_swipe_up", "Swipe up on the card to add the next line"));
+        instruction.setTextColor(Color.WHITE);
+        instruction.setTextSize(14);
+        instruction.setTypeface(Typeface.DEFAULT_BOLD);
+        instruction.setMaxWidth(maxText);
+        texts.addView(instruction);
+        TextView preview = new TextView(activity);
+        preview.setText("\u201C" + safe(document.appliedLines.get(next).text) + "\u201D");
+        preview.setTextColor(Color.argb(170, 255, 255, 255));
+        preview.setTextSize(12);
+        preview.setSingleLine(true);
+        preview.setEllipsize(TextUtils.TruncateAt.END);
+        preview.setMaxWidth(maxText);
+        LinearLayout.LayoutParams previewLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        previewLp.topMargin = dp(2);
+        texts.addView(preview, previewLp);
+        chip.addView(texts);
         int[] hostAt = new int[2];
         int[] cardAt = new int[2];
         host.getLocationOnScreen(hostAt);
         cardHost.getLocationOnScreen(cardAt);
-        float cardBottom = cardAt[1] - hostAt[1] + cardHost.getHeight() - cardHost.getTranslationY();
+        float cardTop = cardAt[1] - hostAt[1] - cardHost.getTranslationY();
+        float cardBottom = cardTop + cardHost.getHeight();
+        float cardCenterX = cardAt[0] - hostAt[0] + cardHost.getWidth() / 2f;
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
@@ -905,94 +955,149 @@ final class LyricsShareCardController {
         host.addView(chip, lp);
         teasePill = chip;
 
+        // The finger: a soft dot with a ring, pressing on the lower part of the card.
+        View finger = new View(activity);
+        android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
+        dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        dot.setColor(Color.argb(110, 255, 255, 255));
+        dot.setStroke(dp(2), Color.argb(230, 255, 255, 255));
+        finger.setBackground(dot);
+        finger.setElevation(dp(32));
+        int fingerSize = dp(46);
+        FrameLayout.LayoutParams fingerLp = new FrameLayout.LayoutParams(fingerSize, fingerSize,
+                Gravity.TOP | Gravity.START);
+        float fingerStartY = cardBottom - cardHost.getHeight() * 0.22f - fingerSize / 2f;
+        fingerLp.leftMargin = Math.round(cardCenterX - fingerSize / 2f);
+        fingerLp.topMargin = Math.round(fingerStartY);
+        host.addView(finger, fingerLp);
+        finger.setAlpha(0f);
+        teaseFinger = finger;
+
         View card = cardHost;
         card.setPivotX(card.getWidth() / 2f);
         card.setPivotY(card.getHeight());
         card.setCameraDistance(8000f * activity.getResources().getDisplayMetrics().density);
-        float lift = dp(20);
-        float tug = dp(4);
+        float lift = dp(26);
         float tilt = 4f;
+        float travel = Math.min(dp(130), cardHost.getHeight() * 0.35f);
         chip.setAlpha(0f);
         TextView hintText = hint;
-        // One clock for the card and the chip: the card lifts (tipping back a touch, as if being
-        // pulled up), gives an extra small tug, then is let go and springs home with a damped
-        // bounce; the chip rises in under it, beckons, and is drawn up into the card.
+        // Each pass: the finger lands and presses (0-280ms), drags up with the card following
+        // (280-1000), lets go - the card springs home, the finger fades (1000-1350) - and rests.
+        final float pass = 1650f;
+        final float total = passes * pass + 450f;
         android.animation.ValueAnimator clock = android.animation.ValueAnimator.ofFloat(0f, 1f);
-        long total = 1750L;
-        clock.setDuration(total);
+        clock.setDuration((long) total);
         clock.setInterpolator(null);
         clock.addUpdateListener(a -> {
             float t = a.getAnimatedFraction() * total;
-            float y;
-            float rot;
-            if (t < 480f) {
-                float p = 1f - (float) Math.pow(1f - t / 480f, 3);
-                y = -lift * p;
-                rot = tilt * p;
-            } else if (t < 1000f) {
-                float k = (float) Math.sin(Math.PI * (t - 480f) / 520f);
-                y = -lift - tug * k;
-                rot = tilt + 1.5f * k;
-            } else {
-                float u = t - 1000f;
-                float spring = (float) (Math.exp(-u / 120f) * Math.cos(u / 68f));
+            // The chip: in over the first 350ms, out over the last 350ms.
+            float chipIn = Math.min(1f, t / 350f);
+            float chipOut = Math.max(0f, Math.min(1f, (t - (total - 350f)) / 350f));
+            float chipEase = 1f - (float) Math.pow(1f - chipIn, 3);
+            chip.setAlpha(chipIn * (1f - chipOut));
+            chip.setTranslationY(dp(14) * (1f - chipEase) - dp(10) * chipOut);
+            if (hintText != null) hintText.setAlpha(1f - Math.min(1f, t / 200f) * (1f - chipOut));
+
+            float local = t % pass;
+            boolean active = t < passes * pass;
+            float y = 0f;
+            float rot = 0f;
+            float fingerAlpha = 0f;
+            float fingerScale = 1f;
+            float fingerY = 0f;
+            if (active && local < 280f) {
+                float p = local / 280f;
+                fingerAlpha = p;
+                fingerScale = 1.25f - 0.35f * p; // lands, then presses in
+            } else if (active && local < 1000f) {
+                float p = (local - 280f) / 720f;
+                float e = p < 0.5f ? 4f * p * p * p : 1f - (float) Math.pow(-2f * p + 2f, 3) / 2f;
+                fingerAlpha = 1f;
+                fingerScale = 0.9f;
+                fingerY = -travel * e;
+                y = -lift * e;
+                rot = tilt * e;
+                arrow.setTranslationY(-dp(3) * (float) Math.sin(Math.PI * p * 2f));
+            } else if (active && local < 1350f) {
+                float u = local - 1000f;
+                float p = u / 350f;
+                fingerAlpha = 1f - p;
+                fingerScale = 0.9f + 0.3f * p;
+                fingerY = -travel - dp(10) * p;
+                float spring = (float) (Math.exp(-u / 110f) * Math.cos(u / 62f));
                 y = -lift * spring;
                 rot = tilt * spring;
+                arrow.setTranslationY(0f);
             }
+            finger.setAlpha(fingerAlpha);
+            finger.setScaleX(fingerScale);
+            finger.setScaleY(fingerScale);
+            finger.setTranslationY(fingerY);
             card.setTranslationY(y);
             card.setRotationX(rot);
             float scale = 1f - 0.012f * Math.min(1f, Math.abs(y) / lift);
             card.setScaleX(scale);
             card.setScaleY(scale);
-            // The chip.
-            if (t < 120f) {
-                chip.setAlpha(0f);
-            } else if (t < 620f) {
-                float p = (t - 120f) / 500f;
-                float e = 1f - (float) Math.pow(1f - p, 3);
-                chip.setAlpha(Math.min(1f, p * 1.6f));
-                chip.setTranslationY(dp(18) * (1f - e));
-                float cs = 0.9f + 0.1f * e;
-                chip.setScaleX(cs);
-                chip.setScaleY(cs);
-            } else if (t < 1000f) {
-                chip.setAlpha(1f);
-                chip.setTranslationY(0f);
-                chip.setScaleX(1f);
-                chip.setScaleY(1f);
-                // The arrow beckons upward.
-                arrow.setTranslationY(-dp(3) * (float) Math.sin(Math.PI * (t - 620f) / 190f) * (t < 1000f ? 1f : 0f));
-            } else {
-                float p = Math.min(1f, (t - 1000f) / 380f);
-                float e = p * p;
-                arrow.setTranslationY(0f);
-                chip.setTranslationY(-dp(16) * e);
-                float cs = 1f - 0.15f * e;
-                chip.setScaleX(cs);
-                chip.setScaleY(cs);
-                chip.setAlpha(1f - p);
-            }
-            if (hintText != null) {
-                float hidden = t < 1000f ? Math.min(1f, t / 200f) : Math.max(0f, 1f - (t - 1150f) / 300f);
-                hintText.setAlpha(1f - Math.max(0f, Math.min(1f, hidden)));
-            }
         });
         clock.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(android.animation.Animator animation) {
                 if (teasePill == chip) teasePill = null;
+                if (teaseFinger == finger) teaseFinger = null;
                 if (teaseClock == animation) teaseClock = null;
                 card.setTranslationY(0f);
                 card.setRotationX(0f);
                 card.setScaleX(1f);
                 card.setScaleY(1f);
                 if (chip.getParent() instanceof ViewGroup) ((ViewGroup) chip.getParent()).removeView(chip);
+                if (finger.getParent() instanceof ViewGroup) ((ViewGroup) finger.getParent()).removeView(finger);
                 if (hintText != null) hintText.setAlpha(1f);
             }
         });
         teaseClock = clock;
         clock.start();
     }
+
+    /** "Share sheet gesture hint": a full demonstration (two passes) the first few times and one
+     *  pass after that, the full one every time, or none. Does not count this showing. */
+    private int hintPasses() {
+        String mode;
+        try {
+            mode = com.eza.spicyex.SpotifyPlusConfig.from(activity)
+                    .get(com.eza.spicyex.Settings.SHARE_GESTURE_HINT);
+        } catch (Throwable ignored) {
+            mode = "First few times";
+        }
+        if ("Off".equals(mode)) return 0;
+        if ("Every time".equals(mode)) return 2;
+        return hintShownCount() < 3 ? 2 : 1;
+    }
+
+    /** {@link #hintPasses} for the hint about to play, counting it as shown. */
+    private int consumeHintPasses() {
+        int passes = hintPasses();
+        if (passes <= 0) return 0;
+        try {
+            hintPrefs().edit().putInt("swipe_up_shown", hintShownCount() + 1).apply();
+        } catch (Throwable ignored) {
+        }
+        return passes;
+    }
+
+    private int hintShownCount() {
+        try {
+            return hintPrefs().getInt("swipe_up_shown", 0);
+        } catch (Throwable ignored) {
+            return 0;
+        }
+    }
+
+    private android.content.SharedPreferences hintPrefs() {
+        return activity.getSharedPreferences("spicyex_share_hint", android.content.Context.MODE_PRIVATE);
+    }
+
+    private View teaseFinger;
 
     /** The swipe-up hint on screen, if any: a touch on the card ends it early. */
     private View teasePill;
@@ -1006,6 +1111,13 @@ final class LyricsShareCardController {
             clock.cancel();
         }
         if (teasePill == chip) teasePill = null;
+        View finger = teaseFinger;
+        teaseFinger = null;
+        if (finger != null) {
+            finger.animate().alpha(0f).setDuration(140).withEndAction(() -> {
+                if (finger.getParent() instanceof ViewGroup) ((ViewGroup) finger.getParent()).removeView(finger);
+            }).start();
+        }
         if (cardHost != null) {
             cardHost.animate().translationY(0f).rotationX(0f).scaleX(1f).scaleY(1f).setDuration(260)
                     .setInterpolator(new PathInterpolator(0.2f, 0.9f, 0.2f, 1f)).start();
@@ -1076,9 +1188,11 @@ final class LyricsShareCardController {
             teaseClock = null;
         }
         teasePill = null;
+        teaseFinger = null;
         // Full-size bitmaps kept only for the open sheet: the frozen lyrics background and the
         // shareable card (drawn at most twice, 5-6 MB each) go with it.
         lyricsBackground = null;
+        lyricsBackgroundPending = false;
         currentRecipe = null;
         pendingHandOff = null;
         currentFlight = null;
@@ -1388,16 +1502,29 @@ final class LyricsShareCardController {
         divLp.setMargins(dp(16), dp(4), dp(16), dp(12));
         content.addView(divider, divLp);
 
-        // Share targets: copy link, save and the system sheet.
+        // Share targets, as in Spotify's own sheet: the story apps that are installed (with their
+        // own icons), then copy link, save and the system sheet.
         HorizontalScrollView targetsScroll = new HorizontalScrollView(activity);
         targetsScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout targets = new LinearLayout(activity);
         targets.setPadding(dp(8), 0, dp(8), 0);
+        if (canShareTo(StoryTarget.INSTAGRAM)) {
+            targets.addView(appShareTarget(StoryTarget.INSTAGRAM.pkg,
+                    s("instagram_story", "Instagram Stories"), v -> shareToStory(StoryTarget.INSTAGRAM)));
+        }
+        if (canShareTo(StoryTarget.FACEBOOK)) {
+            targets.addView(appShareTarget(StoryTarget.FACEBOOK.pkg,
+                    s("facebook_story", "Facebook Stories"), v -> shareToStory(StoryTarget.FACEBOOK)));
+        }
+        if (canSendToSpotifyChat()) {
+            targets.addView(appShareTarget(activity.getPackageName(),
+                    s("spotify_messages", "Spotify Messages"), v -> sendToSpotifyChat()));
+        }
         if (!isBlank(webLink(track))) {
             targets.addView(shareTarget(null, LineIcon.Kind.LINK, s("copy_link", "Copy link"), v -> copyLink()));
         }
         targets.addView(shareTarget(null, LineIcon.Kind.DOWNLOAD, s("save", "Save"), v -> saveOnly()));
-        // Installed chat apps, found off the main thread, join after the copy/save targets.
+        // Installed chat apps, found off the main thread, join after the story targets.
         int directAt = targets.getChildCount();
         targets.addView(shareTarget(null, LineIcon.Kind.MORE, s("more", "More"), v -> shareCard(null)));
         targetsScroll.addView(targets);
@@ -1459,14 +1586,17 @@ final class LyricsShareCardController {
         LinearLayout page = new LinearLayout(activity);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setGravity(Gravity.CENTER_HORIZONTAL);
-        String[] backdropLabels = {s("backdrop_blur", "Blurred artwork"), s("backdrop_lyrics", "Lyrics background")};
+        String[] backdropLabels = {s("backdrop_blur", "Blurred artwork"), s("backdrop_lyrics", "Lyrics background"),
+                s("backdrop_artist", "Artist photo")};
         LinearLayout backdrops = segmented(backdropLabels, backdropChips, backdrop.ordinal(), index -> {
             Backdrop next = Backdrop.values()[index];
             if (next == backdrop) return;
             backdrop = next;
             prefs.edit().putString(PREF_BACKDROP, backdrop.name()).apply();
+            if (backdrop == Backdrop.COLOR) requestLyricsBackground();
             render(Transition.FADE);
             renderThumbs();
+            if (backdrop == Backdrop.ARTIST && artistImage == null) fetchArtistImage();
         });
         page.addView(centredScroll(backdrops));
 
@@ -1880,11 +2010,7 @@ final class LyricsShareCardController {
     private void togglePicked(int index, View row) {
         java.util.TreeSet<Integer> next = new java.util.TreeSet<>(picked);
         if (next.contains(index)) {
-            // The card always keeps one line.
-            if (next.size() <= 1) {
-                nudge(row);
-                return;
-            }
+            // The last line may go too: the card is then the song's own card, title and art.
             next.remove(index);
         } else {
             next.add(index);
@@ -2114,7 +2240,7 @@ final class LyricsShareCardController {
         TextStyle style = textStyle;
         Backdrop b = backdrop;
         Bitmap art = artwork;
-        Bitmap artist = null;
+        Bitmap artist = artistImage;
         Bitmap lyricsBg = lyricsBackground;
         SpotifyTrack t = track;
         float scale = thumbScale();
@@ -2266,6 +2392,25 @@ final class LyricsShareCardController {
         } catch (Throwable error) {
             return null;
         }
+    }
+
+    /** An app's share button whose icon loads off the main thread (an adaptive icon load is
+     *  several ms each - too much for the sheet's opening frames) and fades in. */
+    private View appShareTarget(String pkg, String label, View.OnClickListener onClick) {
+        View item = shareTarget(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT), null,
+                label, onClick);
+        ImageView icon = (ImageView) ((ViewGroup) item).getChildAt(0);
+        THUMBS.execute(() -> {
+            android.graphics.drawable.Drawable drawable = appIcon(pkg);
+            if (drawable == null) return;
+            main.post(() -> {
+                if (!icon.isAttachedToWindow() && icon.getParent() == null) return;
+                icon.setImageDrawable(drawable);
+                icon.setAlpha(0f);
+                icon.animate().alpha(1f).setDuration(160).start();
+            });
+        });
+        return item;
     }
 
     /** A round button (an app's own icon, or a line icon on glass) over its label. */
@@ -2765,7 +2910,7 @@ final class LyricsShareCardController {
         TextStyle style = textStyle;
         Backdrop b = backdrop;
         Bitmap art = artwork;
-        Bitmap artist = null;
+        Bitmap artist = artistImage;
         Bitmap lyricsBg = lyricsBackground;
         SpotifyTrack t = track;
         float thumbScale = thumbScale();
@@ -2908,10 +3053,11 @@ final class LyricsShareCardController {
         Bitmap code = layoutCode(d);
         boolean wantCode = spotifyCode;
         Bitmap art = artwork;
-        Bitmap artist = null;
+        Bitmap artist = artistImage;
         Bitmap lyricsBg = lyricsBackground;
         SpotifyTrack t = track;
         float thumbScale = thumbScale();
+        float previewScale = cardWidthPx > 0 ? Math.min(1f, cardWidthPx / (float) W) : 1f;
         CodeSlot slot = codeSlot(d, !quotes.isEmpty());
         // The image that is shared: drawn only when it is actually shared or saved - every
         // render used to copy and redraw a full-size card for it, most of them never used.
@@ -2928,8 +3074,8 @@ final class LyricsShareCardController {
             CodeArt codeArt;
             try {
                 // The code's slot is left empty: the preview draws the code over it, animated.
-                base = renderCard(d, style, b, code, art, artist, lyricsBg, quotes, translations,
-                        safe(t.title), safe(t.artist), false, false);
+                base = renderPreviewBase(d, style, b, code, art, artist, lyricsBg, quotes, translations,
+                        safe(t.title), safe(t.artist), previewScale);
                 pieces = quotePieces(d, style, quotes, translations, code != null, ids);
                 codeArt = code == null || code == PENDING_CODE ? null : codeArt(code, slot.paper);
                 thumb = renderCardScaled(d, style, b, art, artist, lyricsBg, quotes, translations,
@@ -2947,7 +3093,10 @@ final class LyricsShareCardController {
                 Runnable apply = () -> {
                     if (token != generation || cardHost == null) return;
                     // Only the text may change in place; a code that came or went swaps the card.
-                    if (textOnly && currentCard != null && code == currentCode) {
+                    // With or without a lyric is a different layout (the code's slot moves).
+                    boolean sameShape = shownWithQuotes == !quotes.isEmpty();
+                    shownWithQuotes = !quotes.isEmpty();
+                    if (textOnly && sameShape && currentCard != null && code == currentCode) {
                         swapText(base, pieces, transition);
                     } else {
                         swapCard(base, pieces, textOnly ? Transition.FADE : transition, code, codeArt, slot);
@@ -3766,6 +3915,24 @@ final class LyricsShareCardController {
      * The lyric text a design sets on the card, drawn on its own so the preview can animate it
      * separately from the card (see swapText). Same boxes and sizes as the full card.
      */
+    /** The card under the preview's live text and code, drawn at the size it is shown. */
+    private static Bitmap renderPreviewBase(Design design, TextStyle style, Backdrop backdrop, Bitmap code,
+                                            Bitmap art, Bitmap artist, Bitmap lyricsBg,
+                                            List<String> quotes, List<String> translations,
+                                            String title, String artistName, float scale) {
+        if (scale >= 0.999f) {
+            return renderCard(design, style, backdrop, code, art, artist, lyricsBg, quotes, translations,
+                    title, artistName, false, false);
+        }
+        Bitmap bitmap = Bitmap.createBitmap(Math.max(1, Math.round(W * scale)),
+                Math.max(1, Math.round(H * scale)), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        canvas.scale(scale, scale);
+        drawCard(canvas, design, style, backdrop, code, art, artist, lyricsBg, quotes, translations,
+                title, artistName, false, false, true);
+        return bitmap;
+    }
+
     private static void drawQuoteText(Canvas canvas, Design design, TextStyle style, List<String> quotes,
                                       List<String> translations, boolean withCode) {
         if (quotes == null || quotes.isEmpty()) return;
@@ -3915,10 +4082,10 @@ final class LyricsShareCardController {
                 break;
             }
             case POSTER: {
-                // Poster: the artwork full-bleed across the top, melting into
+                // Poster: the artwork (or the artist photo) full-bleed across the top, melting into
                 // a solid colour taken from it; the lyric sits on the join, anchored to the title.
-                Bitmap hero = art;
-                int ground = extractGradient(art)[1];
+                Bitmap hero = backdrop == Backdrop.ARTIST && artist != null ? artist : art;
+                int ground = extractGradient(art != null ? art : artist)[1];
                 Paint fill = new Paint();
                 fill.setColor(ground);
                 canvas.drawRect(0, 0, W, H, fill);
@@ -4335,14 +4502,24 @@ final class LyricsShareCardController {
             canvas.drawRect(full, vignette);
             return;
         }
-        if (backdrop == Backdrop.COLOR || art == null) {
+        if (backdrop == Backdrop.COLOR || art == null && artist == null) {
             int[] gradient = extractGradient(art);
             Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
             bg.setShader(new LinearGradient(0, 0, W, H, gradient[0], gradient[1], Shader.TileMode.CLAMP));
             canvas.drawRect(full, bg);
+        } else if (backdrop == Backdrop.ARTIST && artist != null) {
+            // The photo itself, sharp (it used to be shrunk and re-enlarged, which read as a
+            // blown-up thumbnail); darkened toward the bottom so the text stays legible.
+            canvas.drawBitmap(artist, centreCrop(artist, W / (float) H), full,
+                    new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG));
+            Paint shade = new Paint();
+            shade.setShader(new LinearGradient(0, 0, 0, H,
+                    Color.argb(90, 0, 0, 0), Color.argb(215, 0, 0, 0), Shader.TileMode.CLAMP));
+            canvas.drawRect(full, shade);
+            return;
         } else {
             // The lyrics screen's look: artwork dissolved into soft colour fields.
-            Bitmap blurred = cachedBlur(art);
+            Bitmap blurred = cachedBlur(art != null ? art : artist);
             Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
             ColorMatrix saturate = new ColorMatrix();
             saturate.setSaturation(1.5f);
@@ -4822,6 +4999,158 @@ final class LyricsShareCardController {
         });
     }
 
+    // ---------------------------------------------------------------- artist photo
+
+    private static Bitmap cachedArtist(SpotifyTrack track) {
+        synchronized (ARTIST_IMAGES) {
+            return ARTIST_IMAGES.get(trackIdFromUri(track == null ? "" : track.uri));
+        }
+    }
+
+    /**
+     * The track's first artist, then their photo. The artist comes from Spotify's own track
+     * metadata ({@code artist_uri}, read with the player state); the photo from Spotify's public
+     * oEmbed endpoint, which needs no token. The Web API route (with Spotify's captured token)
+     * stays as a fallback when the metadata had no artist. Every step logs, so a missing photo
+     * says why.
+     */
+    private void fetchArtistImage() {
+        SpotifyTrack t = track;
+        String trackId = trackIdFromUri(t == null ? "" : t.uri);
+        if (trackId.isEmpty()) return;
+        String trackUri = safe(t.uri);
+        String metaArtist = trackUri.equals(com.eza.spicyex.References.lastTrackUri)
+                ? com.eza.spicyex.References.lastArtistUri : "";
+        NETWORK.execute(() -> {
+            Bitmap image = null;
+            try {
+                String artistId = metaArtist.startsWith("spotify:artist:")
+                        ? metaArtist.substring("spotify:artist:".length()) : null;
+                if (artistId == null) {
+                    XpLog.log(TAG + " artist: no artist_uri in metadata, trying Web API");
+                    SpotifyTokenState.Authorized auth = SpotifyTokenStore.authorization(System.currentTimeMillis());
+                    if (auth == null) {
+                        XpLog.log(TAG + " artist: no Web API token either");
+                    } else {
+                        org.json.JSONObject trackJson = getJson(
+                                "https://api.spotify.com/v1/tracks/" + trackId, auth.token());
+                        artistId = trackJson == null ? null
+                                : trackJson.getJSONArray("artists").getJSONObject(0).optString("id", null);
+                    }
+                }
+                if (artistId != null) {
+                    org.json.JSONObject embed = getJson("https://open.spotify.com/oembed?url="
+                            + Uri.encode("https://open.spotify.com/artist/" + artistId), null);
+                    String url = embed == null ? null : embed.optString("thumbnail_url", null);
+                    // oEmbed hands out a small rendition; ask the CDN for the largest one.
+                    if (url != null) image = downloadLargest(url);
+                    // Still small (an artist without its own large photo, or an image kind the
+                    // size codes don't cover): the Web API lists every size - take the biggest.
+                    if (image == null || image.getWidth() < 600) {
+                        Bitmap viaApi = artistImageFromWebApi(artistId);
+                        if (viaApi != null && (image == null || viaApi.getWidth() > image.getWidth())) {
+                            image = viaApi;
+                        }
+                    }
+                    XpLog.log(TAG + " artist: id=" + artistId + " image="
+                            + (image == null ? "none" : image.getWidth() + "px"));
+                }
+            } catch (Throwable error) {
+                XpLog.log(TAG + " artist image failed: " + error);
+            }
+            Bitmap result = image;
+            if (result != null) {
+                synchronized (ARTIST_IMAGES) {
+                    ARTIST_IMAGES.put(trackId, result);
+                    while (ARTIST_IMAGES.size() > 2) {
+                        ARTIST_IMAGES.remove(ARTIST_IMAGES.keySet().iterator().next());
+                    }
+                }
+            }
+            main.post(() -> {
+                if (track != t || overlay == null) return;
+                if (result == null) {
+                    Toast.makeText(activity, s("artist_unavailable", "Artist photo unavailable"),
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                artistImage = result;
+                if (backdrop == Backdrop.ARTIST) {
+                    render(Transition.FADE);
+                    renderThumbs();
+                }
+            });
+        });
+    }
+
+    /**
+     * Spotify CDN image ids start with a size code. oEmbed returns the 320px artist rendition, but
+     * some artists come back as the 160px one, or - without a photo of their own - as a 300px or
+     * 64px album cover. Each is swapped for the largest code of its kind; the original is kept
+     * when the larger one does not exist.
+     */
+    private static Bitmap downloadLargest(String url) {
+        String[][] upgrades = {
+                {"ab67616100005174", "ab6761610000e5eb"},
+                {"ab6761610000f178", "ab6761610000e5eb"},
+                {"ab67616d00001e02", "ab67616d0000b273"},
+                {"ab67616d00004851", "ab67616d0000b273"},
+        };
+        for (String[] pair : upgrades) {
+            if (url.contains(pair[0])) {
+                Bitmap big = downloadBitmap(url.replace(pair[0], pair[1]));
+                if (big != null) return big;
+            }
+        }
+        return downloadBitmap(url);
+    }
+
+    private static Bitmap downloadBitmap(String url) {
+        try (Response response = NativeRuntime.HTTP.newCall(
+                new Request.Builder().url(url).get().build()).execute()) {
+            if (!response.isSuccessful() || response.body() == null) return null;
+            return BitmapFactory.decodeStream(response.body().byteStream());
+        } catch (Throwable error) {
+            return null;
+        }
+    }
+
+    /** The artist's largest image from the Web API, with Spotify's own captured token. */
+    private static Bitmap artistImageFromWebApi(String artistId) {
+        try {
+            SpotifyTokenState.Authorized auth = SpotifyTokenStore.authorization(System.currentTimeMillis());
+            if (auth == null) return null;
+            org.json.JSONObject artist = getJson("https://api.spotify.com/v1/artists/" + artistId, auth.token());
+            org.json.JSONArray images = artist == null ? null : artist.optJSONArray("images");
+            if (images == null || images.length() == 0) return null;
+            String best = null;
+            int bestWidth = -1;
+            for (int i = 0; i < images.length(); i++) {
+                org.json.JSONObject img = images.getJSONObject(i);
+                int w = img.optInt("width", 0);
+                if (w > bestWidth) {
+                    bestWidth = w;
+                    best = img.optString("url", null);
+                }
+            }
+            return best == null ? null : downloadLargest(best);
+        } catch (Throwable error) {
+            return null;
+        }
+    }
+
+    private static org.json.JSONObject getJson(String url, String token) throws Exception {
+        Request.Builder builder = new Request.Builder().url(url).get();
+        if (token != null) builder.header("Authorization", "Bearer " + token);
+        try (Response response = NativeRuntime.HTTP.newCall(builder.build()).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                XpLog.log(TAG + " http " + response.code() + " " + url.replaceAll("\\?.*", ""));
+                return null;
+            }
+            return new org.json.JSONObject(response.body().string());
+        }
+    }
+
     // ---------------------------------------------------------------- share / save
 
     /** The shared card, drawn once however often it is shared or saved. */
@@ -4832,6 +5161,7 @@ final class LyricsShareCardController {
 
         private final Maker make;
         private Bitmap square;
+        private Bitmap rounded;
 
         CardRecipe(Maker make) {
             this.make = make;
@@ -4841,6 +5171,12 @@ final class LyricsShareCardController {
         synchronized Bitmap get() throws Exception {
             if (square == null) square = make.make(false);
             return square;
+        }
+
+        /** A story sticker: the card's own rounded shape, floating on the story's background. */
+        synchronized Bitmap sticker() throws Exception {
+            if (rounded == null) rounded = make.make(true);
+            return rounded;
         }
     }
 
@@ -4985,6 +5321,108 @@ final class LyricsShareCardController {
         return out;
     }
 
+    // ---------------------------------------------------------------- stories
+
+    /**
+     * Story targets, sent the way Spotify's own share sheet sends them (read from its
+     * InstagramStories / FacebookStories destinations): the card goes in as a movable sticker
+     * over a two-colour background, with the song's link as the story's attribution and, for
+     * Instagram, the track as the music sticker's entity. Running inside Spotify, the module
+     * signs the request with Spotify's own Facebook App ID - the one those apps check the
+     * attribution link against.
+     */
+    enum StoryTarget {
+        INSTAGRAM("com.instagram.android", "com.instagram.share.ADD_TO_STORY"),
+        FACEBOOK("com.facebook.katana", "com.facebook.stories.ADD_TO_STORY");
+
+        final String pkg;
+        final String action;
+
+        StoryTarget(String pkg, String action) {
+            this.pkg = pkg;
+            this.action = action;
+        }
+    }
+
+    private Intent storyIntent(StoryTarget target) {
+        Intent intent = new Intent(target.action);
+        intent.setPackage(target.pkg);
+        intent.setType("image/png");
+        return intent;
+    }
+
+    private boolean canShareTo(StoryTarget target) {
+        try {
+            return activity.getPackageManager().resolveActivity(storyIntent(target), 0) != null;
+        } catch (Throwable error) {
+            return false;
+        }
+    }
+
+    private void shareToStory(StoryTarget target) {
+        CardRecipe recipe = currentRecipe;
+        SpotifyTrack t = track;
+        Bitmap art = artwork;
+        if (recipe == null || t == null) return;
+        RENDER.execute(() -> {
+            try {
+                Bitmap card = recipe.sticker();
+                Uri sticker = shareableUri(card);
+                if (sticker == null) sticker = saveToGallery(card);
+                if (sticker == null) throw new IllegalStateException("no uri for the card");
+                int[] colors = extractGradient(art);
+                Intent intent = storyIntent(target);
+                intent.putExtra("interactive_asset_uri", sticker);
+                intent.putExtra("top_background_color", hexColor(colors[0]));
+                intent.putExtra("bottom_background_color", hexColor(colors[1]));
+                String link = webLink(t);
+                if (!isBlank(link)) intent.putExtra("content_url", link);
+                String appId = facebookAppId();
+                if (target == StoryTarget.INSTAGRAM) {
+                    intent.putExtra("source_application", appId);
+                    String uri = safe(t.uri);
+                    if (uri.startsWith("spotify:track:")) {
+                        intent.putExtra("com.instagram.sharedSticker.entityURI", uri);
+                    }
+                } else {
+                    intent.putExtra("com.facebook.platform.extra.APPLICATION_ID", appId);
+                }
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                activity.grantUriPermission(target.pkg, sticker, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                main.post(() -> {
+                    try {
+                        activity.startActivity(intent);
+                        dismiss();
+                    } catch (Throwable error) {
+                        XpLog.log(TAG + " story share failed: " + error);
+                        Toast.makeText(activity, s("story_failed", "Could not open the app"),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (Throwable error) {
+                XpLog.log(TAG + " story share failed: " + error);
+                main.post(() -> Toast.makeText(activity, s("story_failed", "Could not open the app"),
+                        Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private static String hexColor(int color) {
+        return String.format(java.util.Locale.ROOT, "#%06X", color & 0xFFFFFF);
+    }
+
+    /** Spotify's own Facebook App ID, from its manifest - as its share destinations read it. */
+    private String facebookAppId() {
+        try {
+            android.content.pm.ApplicationInfo info = activity.getPackageManager().getApplicationInfo(
+                    activity.getPackageName(), android.content.pm.PackageManager.GET_META_DATA);
+            Object id = info.metaData == null ? null : info.metaData.get("com.facebook.sdk.ApplicationId");
+            return id == null ? "" : String.valueOf(id);
+        } catch (Throwable error) {
+            return "";
+        }
+    }
+
     /**
      * The card as a file behind Spotify's own share FileProvider ({@code <package>.share}, cache
      * path {@code shareablesdir/}), so a story share leaves nothing in the gallery. Null when the
@@ -5008,6 +5446,68 @@ final class LyricsShareCardController {
         // androidx FileProvider's path form: content://<authority>/<path name>/<file>.
         return new Uri.Builder().scheme("content").authority(authority)
                 .appendPath("shareables-cache").appendPath(name).build();
+    }
+
+    // ---------------------------------------------------------------- Spotify Messages
+
+    /** Spotify's own share sheet reaches its Messages through this route (its "send to" chat
+     *  picker for one entity), built exactly as Spotify builds it: the entity uri, encoded. It is
+     *  a string route, so unlike the share sheet's obfuscated classes it holds across builds - but
+     *  Spotify takes it from its internal navigator only: as a link (even from its own process)
+     *  it is dropped. Its Messages inbox route does open as a link. */
+    private static final String CHAT_LIST_ROUTE = "spotify:chat-list";
+
+    private boolean canSendToSpotifyChat() {
+        String uri = track == null ? null : safe(track.uri);
+        return uri != null && (uri.startsWith("spotify:track:") || uri.startsWith("spotify:episode:"));
+    }
+
+    /**
+     * A Spotify chat message is text (a song link in it shows as the song), not an image: the
+     * lyric, the song and its link go on the clipboard, and Spotify's Messages open to paste them
+     * into a chat.
+     */
+    private void sendToSpotifyChat() {
+        SpotifyTrack t = track;
+        if (t == null) return;
+        String quote = TextUtils.join("\n", collectQuotes(selection()));
+        String link = webLink(t);
+        String text = (isBlank(quote) ? "" : "\"" + quote + "\"\n")
+                + safe(t.title) + " - " + safe(t.artist)
+                + (isBlank(link) ? "" : "\n" + link);
+        boolean copied = false;
+        try {
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager)
+                    activity.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Spotify", text));
+                copied = true;
+            }
+        } catch (Throwable error) {
+            XpLog.log(TAG + " clipboard failed: " + error);
+        }
+        if (!openSpotifyRoute(CHAT_LIST_ROUTE)) {
+            Toast.makeText(activity, s("story_failed", "Could not open the app"), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (copied) {
+            Toast.makeText(activity, s("message_quote_copied", "Copied - paste it into a chat"),
+                    Toast.LENGTH_LONG).show();
+        }
+        dismiss();
+    }
+
+    private boolean openSpotifyRoute(String route) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(route));
+            intent.setPackage(activity.getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            activity.startActivity(intent);
+            return true;
+        } catch (Throwable error) {
+            XpLog.log(TAG + " route " + route + " failed: " + error);
+            return false;
+        }
     }
 
     private void copyLink() {
@@ -5037,18 +5537,11 @@ final class LyricsShareCardController {
                 : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         Uri item = context.getContentResolver().insert(collection, values);
         if (item == null) return null;
-        boolean written = false;
         try (OutputStream out = context.getContentResolver().openOutputStream(item)) {
-            written = out != null && card.compress(Bitmap.CompressFormat.PNG, 100, out);
+            if (out == null) return null;
+            card.compress(Bitmap.CompressFormat.PNG, 100, out);
         } catch (Throwable error) {
             XpLog.log(TAG + " write failed: " + error);
-        }
-        if (!written) {
-            // A failed write must not leave a pending, empty entry in the gallery.
-            try {
-                context.getContentResolver().delete(item, null, null);
-            } catch (Throwable ignored) {
-            }
             return null;
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

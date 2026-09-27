@@ -4,6 +4,27 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Spotify Connect (full flavor only - see FeatureAvailability.connectAvailable()): the
+         background WebView player's own wake/wifi locks, its mediaPlayback foreground service,
+         the tap-to-start notification when a background start is refused, and the boot receiver
+         that keeps it warm across restarts. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- The embedded Spotify web player needs its WebView attached to a real, on-screen window -
+         Widevine EME rejects protected-content playback for a WebView that only exists inside a
+         headless Service with no window/surface at all. This is a special permission Android
+         requires the user to grant manually via Settings (Settings.canDrawOverlays /
+         ACTION_MANAGE_OVERLAY_PERMISSION); it cannot be granted at install time. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+
+    <!-- The sign-in screen hands the user back to Spotify once they're signed in. -->
+    <queries>
+        <package android:name="com.spotify.music"/>
+    </queries>
 
     <!-- Pure Xposed/LSPosed module: no launcher activity, no IPC. Settings live entirely inside the
          Spotify hook (the ⚙ panel writes Spotify-side prefs the hook reads directly), so this works
@@ -18,6 +39,40 @@
             android:label="@string/app_name"
             android:description="@string/module_description"
             android:supportsRtl="true">
+
+        <!-- exported=true: our own code inside Spotify's process is attributed to Spotify's own
+             UID (Xposed injection changes whose bytecode runs, not which process/UID it runs as),
+             a different UID than this app's - exported=false would refuse every real call.
+             Forwards commands to WebPlayerService (full flavor only), running as this app's UID. -->
+        <receiver
+                android:name="com.eza.spicyex.player.PlayerWarmReceiver"
+                android:exported="true"/>
+
+        <!-- BOOT_COMPLETED is one of the few background service starts Android explicitly
+             exempts, regardless of this app's own foreground state (which it otherwise has no
+             everyday way to satisfy - see BootWarmReceiver's javadoc). Re-warms the web player
+             at boot if Connect was last known enabled, so Spotify's later warm-up broadcast
+             usually finds it already running instead of needing another background start. -->
+        <receiver
+                android:name="com.eza.spicyex.player.BootWarmReceiver"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
+
+          <service
+               android:name="com.eza.spicyex.player.WebPlayerService"
+               android:exported="true"
+               android:foregroundServiceType="mediaPlayback"
+               android:process=":player"/>
+          <activity
+               android:name="com.eza.spicyex.player.WebLoginActivity"
+               android:exported="true"
+               android:process=":player"
+               android:launchMode="singleTask"
+               android:excludeFromRecents="true"
+               android:label="Spotify sign in"/>
     </application>
 
 </manifest>

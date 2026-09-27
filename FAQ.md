@@ -11,9 +11,8 @@ Google Play. Older, beta, ReVanced, or modified builds may not work.
 
 - Translation, transliteration, romanization, dictionaries, extra fonts, and the
 	renderer are included in the single APK.
-- The now-playing card, settings, and HyperGlow bridge are included as well.
-- Language models (Japanese/Chinese dictionaries, language detection) are downloaded
-	on demand from Settings instead of being bundled.
+- The now-playing card, settings, HyperGlow bridge, and Spotify Connect support
+	are included as well.
 
 ### Which LSPosed scope?
 

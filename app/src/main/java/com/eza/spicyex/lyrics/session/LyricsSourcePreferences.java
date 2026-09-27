@@ -13,7 +13,7 @@ import java.util.Locale;
 public final class LyricsSourcePreferences {
     public enum Source {
         APPLE_MUSIC("apple"), SPICY("spicy"), SPOTIFY("spotify"), AMLL("amll"), LRCLIB("lrclib"),
-        QQ("qq"), NETEASE("netease");
+        QQ("qq"), NETEASE("netease"), MUSIXMATCH("musixmatch");
         public final String id;
         Source(String id) { this.id = id; }
         public static Source parse(String value) {
@@ -53,7 +53,7 @@ public final class LyricsSourcePreferences {
     private static final int MAX_OVERRIDES = 200;
     private static final List<Source> DEFAULT_ORDER = Collections.unmodifiableList(
             java.util.Arrays.asList(Source.APPLE_MUSIC, Source.SPICY, Source.SPOTIFY, Source.AMLL,
-                    Source.LRCLIB, Source.QQ, Source.NETEASE));
+                    Source.LRCLIB, Source.QQ, Source.NETEASE, Source.MUSIXMATCH));
 
     private LyricsSourcePreferences() {}
 
@@ -91,7 +91,7 @@ public final class LyricsSourcePreferences {
     /** Network search sources are opt-in; established ID-based sources retain their defaults. */
     public static boolean enabledByDefault(Source source) {
         return source != null && source != Source.SPICY
-                && source != Source.QQ && source != Source.NETEASE;
+                && source != Source.QQ && source != Source.NETEASE && source != Source.MUSIXMATCH;
     }
 
     public static void setSourceEnabled(Context context, Source source, boolean enabled) {

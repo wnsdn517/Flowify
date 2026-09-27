@@ -31,8 +31,6 @@ public final class SettingsStore implements TypedStore {
         migrateLikedSongsButton(prefs);
         migrateLineBlurLevel(prefs);
         migratePanelMediaControls(prefs);
-        migrateRemovedAppleCjkWrapFix(prefs);
-        migrateRemovedFollowChipToggles(prefs);
         migrateStatusBarHiddenMode(prefs);
     }
 
@@ -64,31 +62,25 @@ public final class SettingsStore implements TypedStore {
         prefs.edit().putString(Settings.PANEL_MEDIA_CONTROLS.key, on ? "Single tap" : "Off").apply();
     }
 
-    static final String REMOVED_APPLE_CJK_WRAP_FIX_KEY = "lyric_apple_cjk_wrap_fix";
-
-    static synchronized void migrateRemovedAppleCjkWrapFix(SharedPreferences prefs) {
-        if (!prefs.contains(REMOVED_APPLE_CJK_WRAP_FIX_KEY)) return;
-        prefs.edit().remove(REMOVED_APPLE_CJK_WRAP_FIX_KEY).apply();
-    }
-
-    static final String REMOVED_FOLLOW_CHIP_ANIMATION_KEY = "lyric_follow_chip_animation";
-    static final String REMOVED_FOLLOW_CHIP_PROGRESS_KEY = "lyric_follow_chip_progress";
-
-    static synchronized void migrateRemovedFollowChipToggles(SharedPreferences prefs) {
-        SharedPreferences.Editor editor = null;
-        if (prefs.contains(REMOVED_FOLLOW_CHIP_ANIMATION_KEY)) {
-            editor = prefs.edit().remove(REMOVED_FOLLOW_CHIP_ANIMATION_KEY);
-        }
-        if (prefs.contains(REMOVED_FOLLOW_CHIP_PROGRESS_KEY)) {
-            editor = (editor != null ? editor : prefs.edit()).remove(REMOVED_FOLLOW_CHIP_PROGRESS_KEY);
-        }
-        if (editor != null) editor.apply();
-    }
-
     /**
      * Bool-to-enum migration for the blur level: stored {@code true} keeps the legacy look as
      * {@code Slight}, {@code false} becomes {@code Off}. Already-migrated strings pass through.
      */
+    /** The old "Auto-mute ads" switch becomes the Mute choice of the ad mode. */
+    static synchronized void migrateAdMode(SharedPreferences prefs) {
+        if (!prefs.contains(Settings.LEGACY_AUTO_MUTE_ADS)) return;
+        boolean muted = false;
+        try {
+            muted = prefs.getBoolean(Settings.LEGACY_AUTO_MUTE_ADS, false);
+        } catch (ClassCastException ignored) {
+        }
+        SharedPreferences.Editor editor = prefs.edit().remove(Settings.LEGACY_AUTO_MUTE_ADS);
+        if (muted && !prefs.contains(Settings.AD_MODE.key)) {
+            editor.putString(Settings.AD_MODE.key, Settings.AD_MODE_MUTE);
+        }
+        editor.apply();
+    }
+
     static synchronized void migrateLineBlurLevel(SharedPreferences prefs) {
         if (!prefs.contains(Settings.ENABLE_LINE_BLUR.key)) return;
         Object raw = prefs.getAll().get(Settings.ENABLE_LINE_BLUR.key);
@@ -107,8 +99,9 @@ public final class SettingsStore implements TypedStore {
         boolean hasLandscape = prefs.contains(Settings.LEGACY_STATUS_BAR_HIDDEN_LANDSCAPE);
         if (!hasPortrait && !hasLandscape) return;
         Map<String, ?> values = prefs.getAll();
+        // An unset key meant that row's default: portrait shown, landscape hidden.
         boolean portrait = hasPortrait && Boolean.TRUE.equals(values.get(Settings.LEGACY_STATUS_BAR_HIDDEN_PORTRAIT));
-        boolean landscape = hasLandscape && Boolean.TRUE.equals(values.get(Settings.LEGACY_STATUS_BAR_HIDDEN_LANDSCAPE));
+        boolean landscape = !hasLandscape || Boolean.TRUE.equals(values.get(Settings.LEGACY_STATUS_BAR_HIDDEN_LANDSCAPE));
         SharedPreferences.Editor editor = prefs.edit();
         if (hasPortrait) editor.remove(Settings.LEGACY_STATUS_BAR_HIDDEN_PORTRAIT);
         if (hasLandscape) editor.remove(Settings.LEGACY_STATUS_BAR_HIDDEN_LANDSCAPE);
@@ -116,7 +109,7 @@ public final class SettingsStore implements TypedStore {
             editor.apply();
             return;
         }
-        String mode = Settings.STATUS_BAR_HIDDEN_MODE.defaultValue;
+        String mode = "Off";
         if (portrait && landscape) {
             mode = "Both";
         } else if (portrait) {
@@ -129,19 +122,24 @@ public final class SettingsStore implements TypedStore {
 
     public <T> T get(Settings.Setting<T> setting) {
         try {
-            Object value;
-            if (setting instanceof Settings.BooleanSetting) {
-                value = prefs.getBoolean(setting.key, (Boolean) setting.defaultValue);
-            } else if (setting instanceof Settings.StringSetting) {
-                value = prefs.getString(setting.key, (String) setting.defaultValue);
-            } else if (setting instanceof Settings.IntegerSetting) {
-                value = prefs.getInt(setting.key, (Integer) setting.defaultValue);
-            } else {
-                value = prefs.getAll().get(setting.key);
-            }
-            return setting.coerce(value);
+            String landscapeKey = Settings.landscapeKey(context, setting);
+            String key = landscapeKey != null && prefs.contains(landscapeKey)
+                    ? landscapeKey : setting.key;
+            return setting.coerce(readRaw(key, setting));
         } catch (ClassCastException | IllegalArgumentException invalidStoredValue) {
             return setting.defaultValue;
+        }
+    }
+
+    private Object readRaw(String key, Settings.Setting<?> setting) {
+        if (setting instanceof Settings.BooleanSetting) {
+            return prefs.getBoolean(key, (Boolean) setting.defaultValue);
+        } else if (setting instanceof Settings.StringSetting) {
+            return prefs.getString(key, (String) setting.defaultValue);
+        } else if (setting instanceof Settings.IntegerSetting) {
+            return prefs.getInt(key, (Integer) setting.defaultValue);
+        } else {
+            return prefs.getAll().get(key);
         }
     }
 
@@ -155,29 +153,36 @@ public final class SettingsStore implements TypedStore {
             // The row is intentionally a tap-to-download action rather than a persisted toggle.
             return;
         }
-        prefs.edit().putBoolean(setting.key, value).apply();
+        prefs.edit().putBoolean(storageKey(setting), value).apply();
     }
 
     @Override
     public void putString(Settings.StringSetting setting, String value) {
-        prefs.edit().putString(setting.key, value).apply();
+        prefs.edit().putString(storageKey(setting), value).apply();
     }
 
     @Override
     public void putInt(Settings.IntegerSetting setting, int value) {
-        prefs.edit().putInt(setting.key, value).apply();
+        prefs.edit().putInt(storageKey(setting), value).apply();
+    }
+
+    /** Landscape edits of a layout-fit setting land on its landscape key; see Settings. */
+    private String storageKey(Settings.Setting<?> setting) {
+        String landscapeKey = Settings.landscapeKey(context, setting);
+        return landscapeKey != null ? landscapeKey : setting.key;
     }
 
     public <T> void put(Settings.Setting<T> setting, T value) {
+        String key = storageKey(setting);
         SharedPreferences.Editor editor = prefs.edit();
         if (value instanceof Boolean) {
-            editor.putBoolean(setting.key, (Boolean) value);
+            editor.putBoolean(key, (Boolean) value);
         } else if (value instanceof String) {
-            editor.putString(setting.key, (String) value);
+            editor.putString(key, (String) value);
         } else if (value instanceof Integer) {
-            editor.putInt(setting.key, (Integer) value);
+            editor.putInt(key, (Integer) value);
         } else if (value instanceof Long) {
-            editor.putLong(setting.key, (Long) value);
+            editor.putLong(key, (Long) value);
         }
         editor.apply();
     }

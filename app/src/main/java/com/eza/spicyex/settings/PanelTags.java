@@ -18,6 +18,8 @@ public final class PanelTags {
     public static final String ROW_VALUE = "row:value";
     /** AI dynamic block inside the AI card; ordinary AI settings rows use a row tag. */
     public static final String AI_DYNAMIC = "card:ai:dynamic";
+    /** Connect sign-in and status rows, shown only while CONNECT_ENABLED is on. */
+    public static final String CONNECT_DYNAMIC = "card:connect:dynamic";
 
     private PanelTags() {
     }

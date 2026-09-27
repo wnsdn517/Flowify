@@ -294,7 +294,7 @@ public final class LyricsRenderConfig {
                 appleStyle,
                 appleLift,
                 appleStyle && get(cfg, Settings.APPLE_FADE_PASSED_LINES),
-                appleStyle && get(cfg, Settings.APPLE_COMPACT_TEXT),
+                false,
                 get(cfg, Settings.ENABLE_GLOW_BLUR),
                 !"Off".equals(lineBlurLevel),
                 "Heavy".equals(lineBlurLevel),

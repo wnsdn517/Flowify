@@ -67,6 +67,8 @@ public class LyricCachesTest {
 
         assertFalse(LyricCaches.soundArtifactKey("digest-a", rr)
                 .equals(LyricCaches.soundArtifactKey("digest-a", vn)));
+        assertEquals(LyricCaches.soundArtifactKey("digest-a", rr),
+                LyricCaches.soundArtifactKey("digest-a", rr));
         assertFalse(LyricCaches.soundArtifactKey("digest-a", rr)
                 .equals(LyricCaches.soundArtifactKey("digest-b", rr)));
     }
@@ -87,6 +89,19 @@ public class LyricCachesTest {
         assertFalse(ProcessedLyricsCache.recordMatches(stored, "digest-a", vn));
         assertFalse(ProcessedLyricsCache.recordMatches(stored, "digest-b", rr));
         assertFalse(ProcessedLyricsCache.recordMatches(null, "digest-a", rr));
+    }
+
+    @Test
+    public void translationTargetChangeLeavesTheSoundKeyIntact() {
+        String english = LyricCaches.meaningArtifactKey("digest-a",
+                LayerConfigIds.meaning(true, "google_unofficial", "en", "auto", "auto", "google_draft"));
+        String spanish = LyricCaches.meaningArtifactKey("digest-a",
+                LayerConfigIds.meaning(true, "google_unofficial", "es", "auto", "auto", "google_draft"));
+
+        String soundConfig = LayerConfigIds.sound(true, RomanizationOptions.DEFAULTS.cacheKey(), "hin", 3);
+        assertTrue(!english.equals(spanish));
+        assertEquals(LyricCaches.soundArtifactKey("digest-a", soundConfig),
+                LyricCaches.soundArtifactKey("digest-a", soundConfig));
     }
 
     @Test

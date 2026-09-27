@@ -20,6 +20,7 @@ public final class PanelSnapshot {
     private final boolean transliterationAvailable;
     private final boolean languageModelReady;
     private final boolean appleFontAvailable;
+    private final boolean connectAvailable;
     private final boolean animatedBackgroundAvailable;
     private final boolean spicySourceEnabled;
     private final boolean aiOffered;
@@ -30,6 +31,7 @@ public final class PanelSnapshot {
         this.transliterationAvailable = builder.transliterationAvailable;
         this.languageModelReady = builder.languageModelReady;
         this.appleFontAvailable = builder.appleFontAvailable;
+        this.connectAvailable = builder.connectAvailable;
         this.animatedBackgroundAvailable = builder.animatedBackgroundAvailable;
         this.spicySourceEnabled = builder.spicySourceEnabled;
         this.aiOffered = builder.aiOffered;
@@ -64,6 +66,10 @@ public final class PanelSnapshot {
         return appleFontAvailable;
     }
 
+    public boolean connectAvailable() {
+        return connectAvailable;
+    }
+
     public boolean animatedBackgroundAvailable() {
         return animatedBackgroundAvailable;
     }
@@ -87,6 +93,7 @@ public final class PanelSnapshot {
         private boolean transliterationAvailable;
         private boolean languageModelReady;
         private boolean appleFontAvailable;
+        private boolean connectAvailable;
         private boolean animatedBackgroundAvailable;
         private boolean spicySourceEnabled;
         private boolean aiOffered;
@@ -116,6 +123,11 @@ public final class PanelSnapshot {
             return this;
         }
 
+        public Builder connectAvailable(boolean value) {
+            connectAvailable = value;
+            return this;
+        }
+
         public Builder animatedBackgroundAvailable(boolean value) {
             animatedBackgroundAvailable = value;
             return this;
@@ -137,6 +149,7 @@ public final class PanelSnapshot {
             transliterationAvailable = true;
             languageModelReady = true;
             appleFontAvailable = true;
+            connectAvailable = true;
             animatedBackgroundAvailable = true;
             aiOffered = true;
             return this;

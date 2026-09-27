@@ -36,6 +36,16 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
     private final NowPlayingInjector nowPlayingInjector = new NowPlayingInjector(this);
     private final LyricsActivityTakeoverHook activityTakeoverHook =
             new LyricsActivityTakeoverHook(this, nowPlayingInjector);
+    private final LyricsPipController pipController = new LyricsPipController(this);
+    private volatile float audioReactiveLevel;
+    private volatile float audioBeat;
+    private volatile float[] audioSpectrum = new float[AudioReactiveController.BANDS];
+    private final AudioReactiveController audioReactiveController =
+            new AudioReactiveController((loudness, beat, spectrum) -> {
+                audioReactiveLevel = loudness;
+                audioBeat = beat;
+                audioSpectrum = spectrum;
+            });
     private final PlaybackBridge playbackBridge = new PlaybackBridge();
     private final LyricsFetchCoordinator lyricsFetchCoordinator =
             new LyricsFetchCoordinator(
@@ -74,7 +84,8 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
         ).hook();
         playbackBridge.install(lpparm, symbols);
         activityTakeoverHook.hook();
-        String processName = Application.getProcessName();
+        pipController.hook(lpparm.classLoader());
+        String processName = processName();
         XpLog.log(TAG + " bridge init package=" + lpparm.packageName()
                 + " appProcess=" + processName);
         if (lpparm.packageName().equals(processName)) {
@@ -88,6 +99,19 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             bridgeCoordinator = new SpicyLyricBridgeCoordinator(
                     lyricsSessionManager, applicationContext);
             bridgeCoordinator.start();
+            // Ad muting runs process-wide, not per screen: it applies to local playback
+            // everywhere while changing only Spotify's ad AudioTrack.
+            new AdMuteController(this, applicationContext).start();
+            ActivityResultBridge.install();
+            // Installs only the AudioTrack#play hook, which is cheap. The Visualizer it can
+            // trigger stays off until the lyrics screen asks for it - see setListeningEnabled.
+            audioReactiveController.start();
+            SpotifyConnectHook.init(applicationContext);
+            SpotifyConnectHook.installPickerButton();
+            // Connect auto-start + auto-connect fire on Spotify's first resumed activity, not
+            // here: at process start Spotify isn't foreground yet, and only a foreground sender
+            // can get the player's foreground service past Android 12+'s background-start ban.
+            SpotifyConnectHook.armAutoStart(applicationContext);
             // Debug builds only, and inert until the arm file exists. See AgentCommandChannel.
             AgentCommandChannel.start(this, applicationContext);
             Diagnostics.event("bootstrap", "hook_ready",
@@ -99,8 +123,20 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
         }
     }
 
+    private static String processName() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            return Application.getProcessName();
+        }
+        return "unknown";
+    }
+
     public void markExplicitLyricsExit(Activity activity) {
         activityTakeoverHook.markExplicitLyricsExit(activity);
+    }
+
+    @Override
+    public boolean openLyricsPipOnClose(Activity activity) {
+        return pipController.openOnClose(activity);
     }
 
     void launchNativeLyricsFullscreen(Activity activity) {
@@ -177,6 +213,14 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
         return playbackBridge.isPlayerActuallyPlaying();
     }
 
+    boolean isPlaybackRemote() {
+        return playbackBridge.playbackIsRemote();
+    }
+
+    boolean isPlayerStatePaused() {
+        return playbackBridge.isPlayerStatePaused();
+    }
+
     @Override
     public LyricsSessionManager.SessionSubscription subscribeLyricsSession(
             LyricsSessionManager.Listener listener) {
@@ -203,6 +247,34 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
     @Override
     public void restoreLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind layer) {
         lyricsSessionManager.restoreLayer(layer);
+    }
+
+    /** 0..1 loudness of what Spotify is playing (AudioReactiveController); 0 while not listening. */
+    @Override
+    public float currentAudioLevel() {
+        return audioReactiveLevel;
+    }
+
+    @Override
+    public float currentAudioBeat() {
+        // Read live from the beat timeline, not the ~30Hz analysis callback: kicks are ~10ms
+        // events and the frame loop wants the value for the audio being heard this frame.
+        return audioReactiveController.beatNow();
+    }
+
+    @Override
+    public float currentAudioAccent() {
+        return audioReactiveController.accentNow();
+    }
+
+    @Override
+    public float[] currentAudioSpectrum() {
+        return audioSpectrum;
+    }
+
+    @Override
+    public void setAudioReactiveListening(boolean enabled) {
+        audioReactiveController.setListeningEnabled(enabled);
     }
 
     @Override

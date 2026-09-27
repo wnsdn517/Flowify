@@ -47,6 +47,17 @@ public final class SettingRowFactory {
 
         String labelFor(Settings.StringSetting setting, String value);
 
+        /** A small note under a switch (what turning it on would change), or null. */
+        default String switchNote(Settings.BooleanSetting setting) {
+            return null;
+        }
+
+        /** A selector row's summary for its stored value; the option's label unless the host
+         *  knows better (a value another setting has overridden, for instance). */
+        default String selectorSummary(Settings.StringSetting setting, String value) {
+            return labelFor(setting, value);
+        }
+
         boolean unavailable(Settings.Setting<?> setting);
 
         String unavailableSummary(Settings.Setting<?> setting);
@@ -108,10 +119,33 @@ public final class SettingRowFactory {
                 unavailable ? host.unavailableSummary(setting) : summary);
         style.applyRowLead(row, setting.key);
         if (!unavailable) value.setTextColor(PanelStyle.COL_ACCENT);
+        if (setting == Settings.PIP_SHAPE) addShapePreview(row, setting, value);
         row.addView(style.kindView(Kind.CHEVRON_RIGHT, PanelStyle.COL_SECTION, 18),
                 new LinearLayout.LayoutParams(style.dp(24), style.dp(30)));
         row.setEnabled(!unavailable);
         if (!unavailable) row.setOnClickListener(v -> host.openSelector(setting, values, value));
+    }
+
+    /** The chosen window shape, drawn: follows the value as it changes (the summary is rewritten
+     *  in place when an option is picked, so that is what it listens to). */
+    private void addShapePreview(LinearLayout row, Settings.StringSetting setting, TextView value) {
+        PanelStyle style = host.style();
+        android.widget.ImageView shape = new android.widget.ImageView(style.context());
+        shape.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        Runnable update = () -> {
+            int[] ratio = Settings.pipShapeRatio(host.store().get(setting));
+            shape.setImageDrawable(new com.eza.spicyex.ui.AspectRectDrawable(
+                    ratio[0] / (float) ratio[1], PanelStyle.COL_ACCENT, style.density()));
+        };
+        update.run();
+        value.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
+            @Override public void afterTextChanged(android.text.Editable s) { update.run(); }
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(style.dp(30), style.dp(30));
+        lp.rightMargin = style.dp(4);
+        row.addView(shape, lp);
     }
 
     public void stepperRow(LinearLayout content, final Settings.IntegerSetting setting) {
@@ -174,16 +208,19 @@ public final class SettingRowFactory {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
     }
 
-    public void actionRow(LinearLayout content, Kind lead, String label, View.OnClickListener listener) {
+    /** @return the label, for rows whose text follows some later-known state */
+    public TextView actionRow(LinearLayout content, Kind lead, String label, View.OnClickListener listener) {
         PanelStyle style = host.style();
         LinearLayout row = style.newRow(content);
         if (lead != null) row.addView(style.kindView(lead, PanelStyle.COL_ACCENT, 19), style.leadParams());
-        row.addView(style.text(label, 16, PanelStyle.COL_ACCENT, false),
-                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        TextView text = style.text(label, 16, PanelStyle.COL_ACCENT, false);
+        row.addView(text, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         row.setOnClickListener(listener);
+        return text;
     }
 
-    public void infoRow(LinearLayout content, String label, String value) {
+    /** @return the value view, for rows whose value is only known later */
+    public TextView infoRow(LinearLayout content, String label, String value) {
         PanelStyle style = host.style();
         LinearLayout row = style.newRow(content);
         row.addView(style.text(label, 14, PanelStyle.COL_SUMMARY, false),
@@ -191,6 +228,7 @@ public final class SettingRowFactory {
         TextView val = style.text(value == null ? "" : value, 14, PanelStyle.COL_TITLE, false);
         val.setGravity(android.view.Gravity.RIGHT | android.view.Gravity.CENTER_VERTICAL);
         row.addView(val, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        return val;
     }
 
     /** AI-provided row: label + accent value, optional icon actions and a chevron. */

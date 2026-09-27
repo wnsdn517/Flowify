@@ -29,6 +29,8 @@ final class NativeRuntime {
             .connectTimeout(HTTP_CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(HTTP_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(HTTP_WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            // Watches how each lyrics provider answers, for the settings' "turn it off?" advice.
+            .addInterceptor(com.eza.spicyex.lyrics.ProviderHealth.interceptor())
             .build();
     static final java.util.concurrent.ScheduledThreadPoolExecutor LYRICS_IO = new java.util.concurrent.ScheduledThreadPoolExecutor(2);
     static {

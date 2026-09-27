@@ -169,6 +169,10 @@ public final class LyricsSurfaceRowPlanner {
     }
 
     private static void ensureAlignedWordsForSentenceSync(AppliedLine line, SurfacePolicy policy) {
+        // A compact-card projection may contain a lead line followed by background mini-lines.
+        // Those newlines are layout rows, not word boundaries; synthesising words here would
+        // flatten them back into one horizontal word strip.
+        if (line != null && line.text != null && line.text.indexOf('\n') >= 0) return;
         boolean needsAttachedRomanization = policy.attachTransliterationToWords && policy.showRomanization
                 && line != null && line.readingRenderPlan != null
                 && !line.readingRenderPlan.timedReadingUnits.isEmpty();

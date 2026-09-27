@@ -876,7 +876,7 @@ final class LyricsSessionManager {
             return;
         }
         java.util.concurrent.atomic.AtomicInteger remaining =
-                new java.util.concurrent.atomic.AtomicInteger(2);
+                new java.util.concurrent.atomic.AtomicInteger(3);
         java.util.concurrent.atomic.AtomicBoolean anySuccess =
                 new java.util.concurrent.atomic.AtomicBoolean(false);
         LyricsHost.CatalogActionCallback one = (success, detail) -> {
@@ -888,6 +888,7 @@ final class LyricsSessionManager {
         };
         refreshCatalogSource(CatalogSource.SourceId.QQ, one);
         refreshCatalogSource(CatalogSource.SourceId.NETEASE, one);
+        refreshCatalogSource(CatalogSource.SourceId.MUSIXMATCH, one);
     }
 
     /**

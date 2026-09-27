@@ -59,7 +59,7 @@ JAVA_HOME=/path/to/jdk21 ./gradlew :app:assembleDebug
 JAVA_HOME=/path/to/jdk21 ./gradlew :app:testDebugUnitTest
 ```
 
-The single APK includes transliteration, translation, language dictionaries and extra fonts.
+The single APK includes transliteration, translation, language dictionaries, extra fonts, and Spotify Connect support.
 
 Language models (kuromoji, CharSoup, JMdict) are not in the APK; they are
 delivered as a separate pack that the app downloads from Settings. Create the
