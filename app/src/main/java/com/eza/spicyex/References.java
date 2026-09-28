@@ -98,6 +98,9 @@ public class References {
 
                     @SuppressWarnings("unchecked")
                     Map<String, String> md = (Map<String, String>) XpReflect.callMethod(track, "metadata");
+                    if (uri != null && uri.startsWith("spotify:ad:")) {
+                        com.eza.spicyex.hooks.AdBreakInfo.noteMetadata(uri, md);
+                    }
 
                     String title = md.get("title");
                     String artist = md.get("artist_name");

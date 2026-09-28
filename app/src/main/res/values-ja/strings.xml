@@ -460,4 +460,19 @@
     <string name="settings_option_lyrics_pip_shape_wide">ワイド (16:9)</string>
     <string name="settings_label_lyrics_pip_enabled">PiPボタンを表示</string>
     <string name="settings_search_lyrics_pip_enabled">pip ボタン, 歌詞を小窓で表示</string>
+    <string name="lyrics_ad_break_left" formatted="false">広告 残り %1$s</string>
+    <string name="lyrics_ad_music">広告の代わりに音楽を再生中 · 広告の後に歌詞が戻ります</string>
+    <string name="lyrics_ad_muted">広告の音声をミュート中 · 広告の後に歌詞が戻ります</string>
+    <string name="lyrics_ad_resume">広告の後に歌詞が戻ります</string>
+    <string name="lyrics_ad_title">広告</string>
+    <string name="settings_label_ad_mode">広告の再生中</string>
+    <string name="settings_label_ad_music_theme">広告音楽のスタイル</string>
+    <string name="settings_option_ambient">アンビエント</string>
+    <string name="settings_option_bossa_nova">ボサノバ</string>
+    <string name="settings_option_cafe_jazz">カフェジャズ</string>
+    <string name="settings_option_lofi">ローファイ</string>
+    <string name="settings_option_play_music_instead">音楽に置き換え</string>
+    <string name="settings_option_random">ランダム</string>
+    <string name="settings_section_ad_free">広告なしで聴く</string>
+    <string name="settings_option_mute">ミュート</string>
 </resources>

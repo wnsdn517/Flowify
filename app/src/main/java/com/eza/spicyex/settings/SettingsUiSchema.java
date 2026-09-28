@@ -32,7 +32,8 @@ public final class SettingsUiSchema {
                 Settings.TRANSLITERATION,
                 Settings.TRANSLATION,
                 Settings.AI,
-                Settings.PIP));
+                Settings.PIP,
+                Settings.AD_FREE));
     }
 
     /**
@@ -100,7 +101,10 @@ public final class SettingsUiSchema {
             Settings.PIP_SHAPE,
             Settings.PIP_CONTROLS,
             Settings.PIP_FOCUS,
-            Settings.PIP_LEAVE_SPOTIFY));
+            Settings.PIP_LEAVE_SPOTIFY,
+            // Ad-free listening
+            Settings.AD_MODE,
+            Settings.AD_MUSIC_THEME));
 
     /** Every renderable setting, in panel row order. */
     public static List<Settings.Setting<?>> orderedSettings() {

@@ -479,4 +479,22 @@
     <string name="settings_option_lyrics_pip_shape_wide">와이드 (16:9)</string>
     <string name="settings_label_lyrics_pip_enabled">PiP 버튼 표시</string>
     <string name="settings_search_lyrics_pip_enabled">pip 버튼, 가사 작은 창</string>
+    <string name="lyrics_ad_break_left" formatted="false">광고 %1$s 남음</string>
+    <string name="lyrics_ad_music">광고 대신 음악 재생 중 · 광고가 끝나면 가사가 다시 표시됩니다</string>
+    <string name="lyrics_ad_muted">광고 소리 음소거됨 · 광고가 끝나면 가사가 다시 표시됩니다</string>
+    <string name="lyrics_ad_position" formatted="false">%2$d개 중 %1$d번째</string>
+    <string name="lyrics_ad_resume">광고가 끝나면 가사가 다시 표시됩니다</string>
+    <string name="lyrics_ad_title">광고</string>
+    <string name="settings_label_ad_mode">광고 재생 시</string>
+    <string name="settings_label_ad_music_theme">광고 음악 스타일</string>
+    <string name="settings_option_ambient">앰비언트</string>
+    <string name="settings_option_bossa_nova">보사노바</string>
+    <string name="settings_option_cafe_jazz">카페 재즈</string>
+    <string name="settings_option_lofi">로파이</string>
+    <string name="settings_option_play_music_instead">음악으로 대체</string>
+    <string name="settings_option_random">무작위</string>
+    <string name="settings_search_ad_mode">광고 차단, 광고 음소거, 광고 스킵, 광고 대신 음악</string>
+    <string name="settings_search_ad_music_theme">광고 중 음악, 로파이, 재즈, 보사노바</string>
+    <string name="settings_section_ad_free">광고 없이 듣기</string>
+    <string name="settings_option_mute">음소거</string>
 </resources>

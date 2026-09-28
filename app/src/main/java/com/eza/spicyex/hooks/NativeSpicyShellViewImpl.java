@@ -1798,6 +1798,38 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return throttledTrack;
     }
 
+    // Matches AdMuteController's own detection - Spotify's ad tracks use this URI scheme.
+    private static boolean isAdTrack(SpotifyTrack track) {
+        return track != null && track.uri != null && track.uri.startsWith("spotify:ad:");
+    }
+
+    /** "1 of 3 · 0:37" under the ad card: where this ad sits in the break and how long the
+     *  whole break has left (this ad's own time left when Spotify has not said). */
+    private void updateAdCard(SpotifyTrack track, long positionMs) {
+        StringBuilder text = new StringBuilder();
+        AdBreakInfo info = AdBreakInfo.current(track.uri);
+        if (info != null && info.known()) {
+            text.append(com.eza.spicyex.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
+                    .get("lyrics_ad_position", "%1$d of %2$d")
+                    .replace("%1$d", String.valueOf(info.index))
+                    .replace("%2$d", String.valueOf(info.count)));
+        }
+        long breakLeftMs = AdBreakInfo.breakRemainingMs();
+        long adLeftMs = track.duration > 0 && positionMs >= 0 ? track.duration - positionMs : -1L;
+        boolean wholeBreak = breakLeftMs >= 0 || (info != null && info.isLast());
+        long leftMs = breakLeftMs >= 0 ? Math.max(breakLeftMs, adLeftMs) : adLeftMs;
+        if (leftMs >= 0) {
+            long left = Math.max(0L, (leftMs + 999L) / 1000L);
+            String clock = (left / 60) + ":" + (left % 60 < 10 ? "0" : "") + (left % 60);
+            if (text.length() > 0) text.append("  ·  ");
+            text.append(wholeBreak
+                    ? com.eza.spicyex.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
+                            .get("lyrics_ad_break_left", "%1$s left in the break").replace("%1$s", clock)
+                    : clock);
+        }
+        emptyStateController.updateAdProgress(text.toString());
+    }
+
     /** Both session publications and polling adopt the track before mounting its document. */
     private boolean adoptTrack(SpotifyTrack track) {
         if (track == null) return false;
@@ -1859,12 +1891,34 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             host.markLyricsKeepAlive(activity);
         }
 
+        // Ad break: Spotify models it as an ordinary track under a spotify:ad: URI. Its own title
+        // and artwork (whatever the ad creative provides) still show through the per-track update
+        // below; in place of lyrics it gets the ad card, and the skip-gap chip stays hidden since
+        // seeking within an ad means nothing (AdMuteController mutes it on the same signal).
+        boolean adTrack = isAdTrack(track);
+        if (adTrack) skipGapController.hide();
         String uri = safe(track.uri);
         if (adoptTrack(track)) {
-            beginLoadingTransition(trackIdFromUri(uri));
-            loadLyrics(track, trackIdFromUri(uri));
+            if (adTrack) {
+                cancelSongChangeTransitions();
+                loadingTrackId = "";
+                songChangeHadSkeleton = false;
+                if (lyricRequest != null) lyricRequest.close();
+                rowMountController.reset();
+                followState.resetActive();
+                emptyStateController.showAdState(lyricsScroll, lyricsColumn);
+            } else {
+                beginLoadingTransition(trackIdFromUri(uri));
+                loadLyrics(track, trackIdFromUri(uri));
+            }
         }
         long pos = playbackClock.getPosition(track, playingNow);
+        if (adTrack) {
+            AdBreakInfo.notePaused(!playingNow);
+            updateAdCard(track, pos);
+        } else {
+            AdBreakInfo.noteBreakOver();
+        }
 
         String trackTitle = emptyFallback(track.title, "Unknown title");
         String trackArtist = emptyFallback(track.artist, "Unknown artist");
@@ -5424,6 +5478,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private void updateToggleVisuals() {
+        // An ad has nothing to read or translate: the toggles would otherwise keep the previous
+        // song's state into the ad. (Not while an ordinary song loads: hiding them then would
+        // shift the other buttons on every track change.)
+        if (isAdTrack(currentTrackThrottled())) {
+            romanToggle.setVisibility(View.GONE);
+            translationToggle.setVisibility(View.GONE);
+            updateToggleSpinners();
+            return;
+        }
         boolean jp = documentHasJapanese();
         boolean cn = documentHasChinese();
         boolean romanizable = documentHasRomanizableScript();

@@ -90,6 +90,9 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             bridgeCoordinator = new SpicyLyricBridgeCoordinator(
                     lyricsSessionManager, applicationContext);
             bridgeCoordinator.start();
+            // Ad muting runs process-wide, not per screen: it applies to local playback
+            // everywhere while changing only Spotify's ad AudioTrack.
+            new AdMuteController(this, applicationContext).start();
             // Debug builds only, and inert until the arm file exists. See AgentCommandChannel.
             AgentCommandChannel.start(this, applicationContext);
             ActivityResultBridge.install();
@@ -100,6 +103,14 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             Diagnostics.event("bootstrap", "hook_ready",
                     Diagnostics.context("result", "secondary_process"));
         }
+    }
+
+    boolean isPlaybackRemote() {
+        return playbackBridge.playbackIsRemote();
+    }
+
+    boolean isPlayerStatePaused() {
+        return playbackBridge.isPlayerStatePaused();
     }
 
     public void markExplicitLyricsExit(Activity activity) {

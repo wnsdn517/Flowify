@@ -29,6 +29,8 @@ public final class Settings {
     public static final Section BACKGROUND = LYRICS_SCREEN;
     public static final Section AI = new Section("AI", "ai");
     public static final Section PIP = new Section("Picture-in-picture", "pip");
+    /** Ad handling and the Spotify Connect web player: both are ways to listen without ads. */
+    public static final Section AD_FREE = new Section("Ad-free listening", "ad_free");
     public static final Section DEBUG = new Section("About & Diagnostics", "debug");
     public static final Section DISPLAY = TEXT;
     public static final Section INTERNAL = new Section("Internal", "internal");
@@ -790,6 +792,25 @@ public final class Settings {
     public static final Setting<Boolean> PIP_LEAVE_SPOTIFY = boolSetting(
             "lyrics_pip_leave_spotify", PIP, "Return to the previous app", true
     );
+
+    // --- Ad-free listening ---
+    // What to do while a spotify:ad: track plays - see AdMuteController. Mute silences only
+    // Spotify's own AudioTrack (the phone's media volume is untouched); music additionally fades
+    // in soft generated instrumental music for the length of the ad break.
+    public static final String AD_MODE_OFF = "Off";
+    public static final String AD_MODE_MUTE = "Mute";
+    public static final String AD_MODE_MUSIC = "Play music instead";
+    public static final Setting<String> AD_MODE = enumSetting(
+            "ad_mode", AD_FREE, "Ads", AD_MODE_OFF,
+            AD_MODE_OFF, AD_MODE_MUTE, AD_MODE_MUSIC
+    );
+    // Style of the music that replaces ads (AD_MODE_MUSIC); Random picks one per ad break.
+    public static final Setting<String> AD_MUSIC_THEME = enumSetting(
+            "ad_music_theme", AD_FREE, "Ad music style", "Random",
+            "Random", "Lofi", "Cafe jazz", "Bossa nova", "Ambient"
+    );
+    /** Pre-AD_MODE boolean; read once by SettingsStore#migrateAdMode. */
+    public static final String LEGACY_AUTO_MUTE_ADS = "auto_mute_ads";
 
     // ===================== INTERNAL (fixed defaults, not shown) =====================
 

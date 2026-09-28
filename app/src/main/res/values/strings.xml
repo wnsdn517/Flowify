@@ -573,4 +573,22 @@
     <string name="settings_option_lyrics_pip_shape_wide">Wide (16:9)</string>
     <string name="settings_label_lyrics_pip_enabled">Show picture-in-picture button</string>
     <string name="settings_search_lyrics_pip_enabled">pip button, minimize lyrics, floating lyrics</string>
+    <string name="lyrics_ad_break_left" formatted="false">%1$s left in the break</string>
+    <string name="lyrics_ad_music">Playing music instead · lyrics resume after the ad</string>
+    <string name="lyrics_ad_muted">Ad audio muted · lyrics resume after the ad</string>
+    <string name="lyrics_ad_position" formatted="false">%1$d of %2$d</string>
+    <string name="lyrics_ad_resume">Lyrics resume after the ad</string>
+    <string name="lyrics_ad_title">Advertisement</string>
+    <string name="settings_label_ad_mode">Ads</string>
+    <string name="settings_label_ad_music_theme">Ad music style</string>
+    <string name="settings_option_ambient">Ambient</string>
+    <string name="settings_option_bossa_nova">Bossa nova</string>
+    <string name="settings_option_cafe_jazz">Cafe jazz</string>
+    <string name="settings_option_lofi">Lo-fi</string>
+    <string name="settings_option_play_music_instead">Play music instead</string>
+    <string name="settings_option_random">Random</string>
+    <string name="settings_search_ad_mode">block ads, mute ads, skip ads, replace ads with music</string>
+    <string name="settings_search_ad_music_theme">music during ads, lofi, jazz, bossa nova, ambient</string>
+    <string name="settings_section_ad_free">Ad-free listening</string>
+    <string name="settings_option_mute">Mute</string>
 </resources>

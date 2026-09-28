@@ -32,6 +32,15 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 final class PlaybackBridge {
     private static final Pattern DIGITS = Pattern.compile("\\d+");
 
+    /** Fired synchronously, right after References.playerState/playerStateStrong are updated,
+     *  every time Spotify's own state machine builds a new PlayerState - e.g. AdMuteController
+     *  uses this for near-instant ad-track detection instead of a slower poll. */
+    private static volatile Runnable stateUpdateListener;
+
+    static void setStateUpdateListener(Runnable listener) {
+        stateUpdateListener = listener;
+    }
+
     private volatile boolean isPlaying;
     private volatile long mediaPositionMs = -1;
     private volatile long mediaPositionUpdatedAtElapsedMs = 0;
@@ -42,6 +51,7 @@ final class PlaybackBridge {
     void install(XpPackage lpparm, SpotifySymbolResolver symbols) {
         hookPlayerStateBridge(lpparm, symbols);
         installMediaSessionHook();
+        AdBreakInfo.installHooks();
     }
 
     private void hookPlayerStateBridge(XpPackage lpparm, SpotifySymbolResolver symbols) {
@@ -57,6 +67,15 @@ final class PlaybackBridge {
                         if (state == null) return;
                         References.playerStateStrong = state;
                         References.playerState = new WeakReference<>(state);
+                        Runnable listener = stateUpdateListener;
+                        if (listener != null) {
+                            try {
+                                listener.run();
+                            } catch (Throwable t) {
+                                XpLog.log(NativeSpicyLyricsHook.TAG
+                                        + " state update listener failed: " + t);
+                            }
+                        }
                     });
             XpLog.log(NativeSpicyLyricsHook.TAG + " player state builder hook installed");
         } catch (Throwable t) {
@@ -359,6 +378,36 @@ final class PlaybackBridge {
         return found.isEmpty() ? NO_PAUSED_ACCESSORS : found.toArray(new Method[0]);
     }
 
+
+    /** True only when Spotify's own PlayerState says paused. Unlike isPlayerActuallyPlaying this
+     *  ignores the media session, which does not always report ads as playing. */
+    boolean isPlayerStatePaused() {
+        try {
+            Object state = References.playerState == null ? null : References.playerState.get();
+            if (state == null) return false;
+            for (Method paused : pausedAccessors(state.getClass())) {
+                try {
+                    Object result = paused.invoke(state);
+                    if (result instanceof Boolean && (Boolean) result) return true;
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    /** Playback is on another Connect device (Spotify's session is then a remote one). */
+    boolean playbackIsRemote() {
+        try {
+            MediaController controller = transportController();
+            if (controller == null) return false;
+            MediaController.PlaybackInfo info = controller.getPlaybackInfo();
+            return info != null && info.getPlaybackType() == MediaController.PlaybackInfo.PLAYBACK_TYPE_REMOTE;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
 
     /**
      * Spotify's own PlayerState decides when it can be read: playing and not paused. The media
