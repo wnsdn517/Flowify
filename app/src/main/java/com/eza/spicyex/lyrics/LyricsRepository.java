@@ -166,6 +166,7 @@ public final class LyricsRepository {
             case LRCLIB: return "LRCLIB";
             case QQ: return "QQ Music";
             case NETEASE: return "NetEase";
+            case MUSIXMATCH: return "Musixmatch";
             default: return "Auto";
         }
     }
@@ -288,6 +289,19 @@ public final class LyricsRepository {
 
                         @Override public void onError(String error) {
                             callback.onError("NetEase source unavailable: " + safe(error));
+                        }
+                    });
+            return;
+        }
+        if ("Musixmatch".equals(source)) {
+            new MusixmatchAdapter(http, parser, ioScheduler).fetch(context, track, generation,
+                    karaokeOriginalLyrics, new ResultCallback() {
+                        @Override public void onSuccess(LyricsDocument document) {
+                            callback.onSuccess(document);
+                        }
+
+                        @Override public void onError(String error) {
+                            callback.onError("Musixmatch source unavailable: " + safe(error));
                         }
                     });
             return;
@@ -1554,6 +1568,7 @@ public final class LyricsRepository {
         LyricsDocument parseNeteaseWordLyrics(Context context, SpotifyTrack track, String body);
         LyricsDocument parseQqMusicLyrics(Context context, SpotifyTrack track, String body);
         LyricsDocument parseQqWordLyrics(Context context, SpotifyTrack track, String rawResponse);
+        LyricsDocument parseMusixmatchLyrics(Context context, SpotifyTrack track, String body);
     }
 
     public interface NativeLyricsProvider {

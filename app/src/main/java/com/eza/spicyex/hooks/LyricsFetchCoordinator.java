@@ -235,6 +235,8 @@ final class LyricsFetchCoordinator {
                 return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.QQ;
             case NETEASE:
                 return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.NETEASE;
+            case MUSIXMATCH:
+                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.MUSIXMATCH;
             default:
                 return null;
         }
