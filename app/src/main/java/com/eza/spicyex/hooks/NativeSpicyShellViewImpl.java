@@ -466,6 +466,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
         refreshLikedButton(currentTrackThrottled());
         applyRenderConfigChanges("preference changed", false);
+        beatReactiveBackground = config.get(Settings.BEAT_REACTIVE_BACKGROUND);
+        refreshAudioListening();
         ambientController.applySettings(renderConfig.backgroundStyle, renderConfig.forceDarkBackground,
                 renderConfig.extraDarkBackground);
         if (trackInfoController != null) trackInfoController.onPreferenceChanged();
@@ -1738,6 +1740,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         unregisterPreferenceListener();
         toggleSpinnerController.reset();
         shellLifecycle.stop();
+        if (audioListeningActive) {
+            audioListeningActive = false;
+            host.setAudioReactiveListening(false);
+        }
         frameScheduler.stop();
         clearRowCascade();
         clearLoadEntrance();
@@ -1875,7 +1881,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
         SpotifyTrack track = currentTrackThrottled();
         boolean playingNow = host.isPlayerActuallyPlaying();
+        refreshAudioListening();
         ambientController.setPlaying(playingNow);
+        ambientController.updateAudioLevel(beatReactiveBackground ? host.currentAudioBeat() : 0f);
+        ambientController.updateAudioAccent(beatReactiveBackground ? host.currentAudioAccent() : 0f);
+        ambientController.updateAudioEnergy(beatReactiveBackground ? host.currentAudioLevel() : 0f);
         updateJumpToCurrentVisibility();
         updateToggleSpinners();
         if (track == null) {
@@ -2348,6 +2358,25 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 resolveFocusAnchorFraction(), isLandscape() ? 0 : lyricsSideInsetPx);
     }
 
+    /** Mirrors Settings.BEAT_REACTIVE_BACKGROUND; also gates whether the Visualizer is ever
+     *  attached, so the feature costs nothing at all while off. */
+    private boolean beatReactiveBackground;
+    /** The instrumental screen's visualizer is up and needs the audio analysis. */
+    private boolean instrumentalShown;
+    // Tracks what we've actually told host.setAudioReactiveListening(...), so refreshAudioListening()
+    // only calls it (and touches the Visualizer) on real transitions, not every frame.
+    private boolean audioListeningActive;
+
+    /** Visualizer listening: on while Beat-reactive background or the instrumental visualizer
+     *  wants it. Only calls into the host on an actual transition, not every frame. */
+    private void refreshAudioListening() {
+        boolean wanted = running && (beatReactiveBackground || instrumentalShown);
+        if (wanted != audioListeningActive) {
+            audioListeningActive = wanted;
+            host.setAudioReactiveListening(wanted);
+        }
+    }
+
     private void showError(String error) {
         songChangeHadSkeleton = false;
         document = null;
@@ -2359,7 +2388,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // An instrumental track has no lyrics to show and never will, so it gets its own note
         // rather than a lookup error.
         if (com.eza.spicyex.lyrics.InstrumentalTracks.isInstrumental(host.getCurrentTrackSafely())) {
-            emptyStateController.showInstrumental(lyricsColumn);
+            instrumentalShown = true;
+            emptyStateController.showInstrumental(lyricsColumn, host::currentAudioSpectrum);
             status.setText(uiText("lyrics_instrumental", "Instrumental"));
             return;
         }
@@ -2383,6 +2413,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private void renderDocument(boolean prepareDocument) {
+        instrumentalShown = false;
         dbg("NativeSpicyShellView.renderDocument", "doc=" + (document == null ? "null" : document.fetchSource + "/" + document.type + "/" + document.lines.size()));
         updateToggleVisuals();
         ensureLyricsColumnScaffold();
