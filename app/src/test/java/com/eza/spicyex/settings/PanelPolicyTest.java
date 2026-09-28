@@ -37,6 +37,19 @@ public class PanelPolicyTest {
         assertTrue(PanelPolicy.shouldRebuildSectionAfterChange(Settings.PIP_ENABLED));
     }
 
+    @Test
+    public void pipOnCloseAloneAlsoShowsTheWindowOptions() {
+        PanelSnapshot off = PanelSnapshot.builder().build();
+        assertTrue(PanelPolicy.shouldRender(Settings.PIP_ON_CLOSE, off));
+
+        PanelSnapshot onClose = PanelSnapshot.builder().put(Settings.PIP_ON_CLOSE, true).build();
+        assertTrue(PanelPolicy.shouldRender(Settings.PIP_SHAPE, onClose));
+        assertTrue(PanelPolicy.shouldRender(Settings.PIP_CONTROLS, onClose));
+        assertTrue(PanelPolicy.shouldRender(Settings.PIP_FOCUS, onClose));
+        assertTrue(PanelPolicy.shouldRender(Settings.PIP_LEAVE_SPOTIFY, onClose));
+        assertTrue(PanelPolicy.shouldRebuildSectionAfterChange(Settings.PIP_ON_CLOSE));
+    }
+
     // --- AI nesting (migrated) ---
 
     @Test

@@ -772,10 +772,16 @@ public final class Settings {
             "Generate AI output, then toggle", "Toggle display only"
     );
 
-    // The explicit button opens lyrics in PiP. Closing or backing out keeps its normal behavior.
-    // Off by default; the rest of the PiP section applies only while this is on.
+    // The explicit button opens lyrics in PiP. Closing or backing out keeps its normal behavior
+    // unless PIP_ON_CLOSE is on too. Off by default; the rest of the PiP section applies only
+    // while this or PIP_ON_CLOSE is on.
     public static final Setting<Boolean> PIP_ENABLED = boolSetting(
             "lyrics_pip_enabled", PIP, "Show picture-in-picture button", false
+    );
+    // Leaving the lyrics screen (its close button or system back) continues it in PiP instead,
+    // with or without the button above. Off by default.
+    public static final Setting<Boolean> PIP_ON_CLOSE = boolSetting(
+            "lyrics_pip_on_close", PIP, "Continue in picture-in-picture when leaving lyrics", false
     );
 
     // Window shape - see pipShapeRatio().

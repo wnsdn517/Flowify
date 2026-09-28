@@ -1343,6 +1343,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 "Left".equals(config.get(Settings.CHROME_CLUSTER_POSITION)),
                 () -> {
                     if (consumeLayoutEditorBack()) return;
+                    if (host.openLyricsPipOnClose(activity)) return;
                     host.markExplicitLyricsExit(activity);
                     activity.finish();
                 },
