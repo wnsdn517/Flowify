@@ -65,7 +65,7 @@ import java.util.Set;
  * layout stays visually stable unless device screenshots verify a change.
  */
 public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs.Host,
-        SourceOrderEditor.Host {
+        SourceOrderEditor.Host, com.eza.spicyex.settings.CacheManager.Host {
     // Static: survives panel re-opens within the process, so the panel never re-opens fully collapsed.
     private static final Set<String> expandedSections = new java.util.HashSet<>();
 
@@ -81,6 +81,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     private final SettingRowFactory rows;
     private final PanelDialogs dialogs;
     private final SourceOrderEditor sources;
+    private final com.eza.spicyex.settings.CacheManager cache;
     private final java.util.function.BooleanSupplier isHalfSize;
     private final Runnable onToggleSize;
     private final Runnable onClose;
@@ -136,6 +137,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         this.rows = new SettingRowFactory(this);
         this.dialogs = new PanelDialogs(this);
         this.sources = new SourceOrderEditor(this);
+        this.cache = new com.eza.spicyex.settings.CacheManager(this);
         this.isHalfSize = isHalfSize;
         this.onToggleSize = onToggleSize;
         this.onClose = onClose;
@@ -192,12 +194,350 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
 
         renderHeader(content);
+        buildSearch(content);
         sectionsContainer = new LinearLayout(context);
         sectionsContainer.setOrientation(LinearLayout.VERTICAL);
         content.addView(sectionsContainer, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         renderSections(sectionsContainer);
         return scroll;
+    }
+
+    // --- Search ---
+
+    private LinearLayout searchBar;
+    private android.widget.EditText searchField;
+    private LinearLayout searchResults;
+    private volatile com.eza.spicyex.settings.SettingsSearch searchIndex;
+
+    /** A result that opens a Layout Editor rather than a panel row. */
+    private static final class EditorTarget {
+        final int mode;
+        final Settings.Setting<?> setting;
+
+        EditorTarget(int mode, Settings.Setting<?> setting) {
+            this.mode = mode;
+            this.setting = setting;
+        }
+    }
+
+    /**
+     * The search field above the section list. Typing swaps the list for results (see
+     * {@link com.eza.spicyex.settings.SettingsSearch} for how they are found: any language,
+     * typos, other words for the same idea); tapping one opens its section, scrolls to the row
+     * and marks it, or opens the editor for what only the Layout Editor edits.
+     */
+    private void buildSearch(LinearLayout content) {
+        searchBar = new LinearLayout(context);
+        searchBar.setOrientation(LinearLayout.HORIZONTAL);
+        searchBar.setGravity(Gravity.CENTER_VERTICAL);
+        searchBar.setPadding(style.dp(12), 0, style.dp(4), 0);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setCornerRadius(style.dp(14));
+        bg.setColor(0x14FFFFFF);
+        searchBar.setBackground(bg);
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(style.dp(18), style.dp(18));
+        iconLp.rightMargin = style.dp(8);
+        searchBar.addView(style.kindView(Kind.SEARCH, PanelStyle.COL_SUMMARY, 18), iconLp);
+        searchField = new android.widget.EditText(context);
+        searchField.setSingleLine(true);
+        searchField.setHint(uiStrings.get("settings_search_hint", "Search settings"));
+        searchField.setTextColor(PanelStyle.COL_TITLE);
+        searchField.setHintTextColor(PanelStyle.COL_SUMMARY);
+        searchField.setTextSize(15);
+        searchField.setBackground(null);
+        searchField.setPadding(0, style.dp(10), 0, style.dp(10));
+        searchField.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        searchField.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        searchField.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        searchBar.addView(searchField, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        final android.widget.ImageView clear = style.kindView(Kind.CLOSE, PanelStyle.COL_SUMMARY, 16);
+        clear.setPadding(style.dp(8), style.dp(8), style.dp(8), style.dp(8));
+        clear.setContentDescription(uiStrings.get("settings_ai_cancel", "Cancel"));
+        clear.setVisibility(View.GONE);
+        clear.setOnClickListener(v -> searchField.setText(""));
+        searchBar.addView(clear, new LinearLayout.LayoutParams(style.dp(34), style.dp(34)));
+        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        barLp.bottomMargin = style.dp(8);
+        content.addView(searchBar, barLp);
+
+        searchResults = new LinearLayout(context);
+        searchResults.setOrientation(LinearLayout.VERTICAL);
+        searchResults.setVisibility(View.GONE);
+        content.addView(searchResults, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // Reading every language's strings takes a moment: start as soon as the field is
+        // focused, so the first letter typed does not wait for it.
+        searchField.setOnFocusChangeListener((v, focused) -> {
+            if (focused && searchIndex == null) {
+                Thread warm = new Thread(this::searchIndex, "SettingsSearchIndex");
+                warm.setDaemon(true);
+                warm.start();
+            }
+        });
+        searchField.setOnEditorActionListener((v, actionId, event) -> {
+            hideKeyboard();
+            return true;
+        });
+        searchField.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence text, int start, int before, int count) { }
+            @Override public void afterTextChanged(android.text.Editable text) {
+                String query = text.toString();
+                boolean searching = !query.trim().isEmpty();
+                clear.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+                if (sectionsContainer != null) sectionsContainer.setVisibility(searching ? View.GONE : View.VISIBLE);
+                searchResults.setVisibility(searching ? View.VISIBLE : View.GONE);
+                if (!searching) {
+                    searchResults.removeAllViews();
+                    return;
+                }
+                renderSearchResults(query);
+            }
+        });
+    }
+
+    private void hideKeyboard() {
+        if (searchField == null) return;
+        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)
+                context.getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
+        searchField.clearFocus();
+    }
+
+    /** Everything searchable, built once per search session from what the panel shows now. */
+    private synchronized com.eza.spicyex.settings.SettingsSearch searchIndex() {
+        if (searchIndex != null) return searchIndex;
+        List<com.eza.spicyex.settings.SettingsSearch.Entry> entries = new ArrayList<>();
+        LinkedHashMap<Settings.Section, List<Settings.Setting<?>>> grouped = groupVisibleSettings();
+        List<Settings.Section> sections = new ArrayList<>(grouped.keySet());
+        sections.add(Settings.DEBUG);
+        for (Settings.Section section : sections) {
+            String name = uiStrings.section(section);
+            entries.add(new com.eza.spicyex.settings.SettingsSearch.Entry(section,
+                    names(name, SettingsUiResourceNames.section(section), section.label), "", section.id,
+                    sectionKeywords(section)));
+            List<Settings.Setting<?>> items = grouped.get(section);
+            if (items == null) continue;
+            for (Settings.Setting<?> setting : items) {
+                if (setting == Settings.LYRICS_SOURCE_OVERRIDE || setting == Settings.LYRICS_SOURCE_ORDER) continue;
+                entries.add(new com.eza.spicyex.settings.SettingsSearch.Entry(setting,
+                        names(searchTitle(setting), SettingsUiResourceNames.setting(setting), setting.label),
+                        name, section.id, settingKeywords(setting, section)));
+            }
+        }
+        // What only the Layout Editor edits: found here too, opening the editor.
+        String lyricsEditor = uiStrings.get("settings_search_editor_lyrics", "Layout editor · Lyrics screen");
+        String cardEditor = uiStrings.get("settings_search_editor_card", "Layout editor · Now playing");
+        for (Settings.Setting<?> setting : com.eza.spicyex.hooks.LayoutEditorSettings.covered()) {
+            boolean card = com.eza.spicyex.hooks.LayoutEditorSettings.isCardSetting(setting);
+            List<String> extra = settingKeywords(setting, null);
+            extra.add("layout editor");
+            extra.add(uiStrings.section(Settings.LYRICS_SCREEN));
+            entries.add(new com.eza.spicyex.settings.SettingsSearch.Entry(
+                    new EditorTarget(card ? EDITOR_CARD : EDITOR_LYRICS, setting),
+                    names(searchTitle(setting), SettingsUiResourceNames.setting(setting), setting.label),
+                    card ? cardEditor : lyricsEditor, card ? "editor_card" : "editor_lyrics", extra));
+        }
+        // Synonym groups: each language's own words, from its strings file.
+        List<List<String>> concepts = new ArrayList<>();
+        for (String id : com.eza.spicyex.settings.SettingsSearch.CONCEPT_IDS) {
+            concepts.add(com.eza.spicyex.settings.SettingsSearch.mergeTerms(
+                    uiStrings.inEveryLanguage("search_terms_" + id)));
+        }
+        searchIndex = new com.eza.spicyex.settings.SettingsSearch(entries, concepts);
+        return searchIndex;
+    }
+
+    /** A name as shown, then as every shipped language has it, then the English built-in. */
+    private List<String> names(String shown, String resource, String builtIn) {
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        out.add(shown);
+        out.addAll(uiStrings.inEveryLanguage(resource));
+        if (builtIn != null) out.add(builtIn);
+        return new ArrayList<>(out);
+    }
+
+    private String searchTitle(Settings.Setting<?> setting) {
+        if (setting == Settings.LYRICS_SOURCE_MODE) {
+            return uiStrings.get("settings_source_list_title", "Sources");
+        }
+        return uiStrings.setting(setting);
+    }
+
+    private List<String> sectionKeywords(Settings.Section section) {
+        List<String> extra = new ArrayList<>();
+        extra.add(section.id.replace('_', ' '));
+        if (section == Settings.LYRICS_SOURCES) {
+            extra.add("Apple Music Musixmatch LRCLIB NetEase QQ Music Spotify cache");
+            extra.add(uiStrings.get("settings_cache_title", "Stored lyrics"));
+        }
+        return extra;
+    }
+
+    /** The words that describe a setting besides its name: key, section, option labels. */
+    private List<String> settingKeywords(Settings.Setting<?> setting, Settings.Section section) {
+        List<String> extra = new ArrayList<>();
+        extra.add(setting.key.replace('_', ' '));
+        if (section != null) extra.add(section.label);
+        // Words written for search, in every language that has them.
+        extra.addAll(uiStrings.inEveryLanguage("settings_search_" + setting.key));
+        if (setting instanceof Settings.StringSetting && setting.allowedValues != null) {
+            for (Object value : setting.allowedValues) {
+                String raw = String.valueOf(value);
+                extra.add(raw);
+                extra.add(uiStrings.option((Settings.StringSetting) setting, raw));
+            }
+        }
+        if (setting == Settings.LYRICS_SOURCE_MODE) {
+            extra.add("Apple Music Musixmatch LRCLIB NetEase QQ Music Spotify smart order ranking");
+            extra.add(uiStrings.section(Settings.LYRICS_SOURCES));
+        }
+        if (setting == Settings.CACHE_SIZE) {
+            extra.add(uiStrings.get("settings_cache_title", "Stored lyrics"));
+            extra.add(uiStrings.get("settings_cache_clear", "Clear"));
+        }
+        return extra;
+    }
+
+    private void renderSearchResults(String query) {
+        searchResults.removeAllViews();
+        List<com.eza.spicyex.settings.SettingsSearch.Result> results = searchIndex().search(query, 12, 4);
+        if (results.isEmpty()) {
+            TextView empty = style.text(uiStrings.get("settings_search_empty", "No matching settings"), 14,
+                    PanelStyle.COL_SUMMARY, false);
+            empty.setGravity(Gravity.CENTER);
+            empty.setPadding(0, style.dp(32), 0, style.dp(32));
+            searchResults.addView(empty);
+            return;
+        }
+        boolean relatedShown = false;
+        for (com.eza.spicyex.settings.SettingsSearch.Result result : results) {
+            if (result.related && !relatedShown) {
+                relatedShown = true;
+                TextView caption = style.text(uiStrings.get("settings_search_related", "Related"), 13,
+                        PanelStyle.COL_SECTION, true);
+                caption.setPadding(style.dp(6), style.dp(14), 0, style.dp(4));
+                searchResults.addView(caption);
+            }
+            searchResults.addView(searchResultRow(result.entry));
+        }
+    }
+
+    private View searchResultRow(final com.eza.spicyex.settings.SettingsSearch.Entry entry) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(style.dp(56));
+        row.setPadding(style.dp(8), style.dp(8), style.dp(6), style.dp(8));
+        android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
+        shape.setCornerRadius(style.dp(14));
+        shape.setColor(0x00000000);
+        row.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x22FFFFFF), shape, shape));
+
+        Kind icon = entry.target instanceof Settings.Section
+                ? PanelStyle.sectionIcon((Settings.Section) entry.target)
+                : entry.target instanceof EditorTarget ? Kind.EDIT
+                : entry.target instanceof Settings.Setting
+                ? PanelStyle.sectionIcon(((Settings.Setting<?>) entry.target).section) : null;
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(style.dp(20), style.dp(20));
+        iconLp.rightMargin = style.dp(14);
+        row.addView(style.kindView(icon == null ? Kind.SETTINGS : icon, PanelStyle.COL_SECTION, 18), iconLp);
+
+        LinearLayout texts = new LinearLayout(context);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        TextView title = style.text(entry.title, 15, PanelStyle.COL_TITLE, true);
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        texts.addView(title);
+        String detail = entry.place;
+        if (entry.target instanceof Settings.StringSetting) {
+            Settings.StringSetting setting = (Settings.StringSetting) entry.target;
+            String value = labelFor(setting, store.get(setting));
+            if (value != null && !value.isEmpty()) detail = detail.isEmpty() ? value : detail + " \u00b7 " + value;
+        }
+        if (!detail.isEmpty()) {
+            TextView sub = style.text(detail, 12, PanelStyle.COL_SUMMARY, false);
+            sub.setSingleLine(true);
+            sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            texts.addView(sub);
+        }
+        row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(style.kindView(Kind.CHEVRON_RIGHT, PanelStyle.COL_SECTION, 16),
+                new LinearLayout.LayoutParams(style.dp(24), style.dp(24)));
+        row.setOnClickListener(v -> openSearchResult(entry));
+        return row;
+    }
+
+    private void openSearchResult(com.eza.spicyex.settings.SettingsSearch.Entry entry) {
+        hideKeyboard();
+        Object target = entry.target;
+        searchField.setText("");
+        if (target instanceof EditorTarget) {
+            openEditor(((EditorTarget) target).mode);
+        } else if (target instanceof Settings.Section) {
+            Settings.Section section = (Settings.Section) target;
+            reveal(section, null);
+        } else if (target instanceof Settings.Setting) {
+            final Settings.Setting<?> setting = (Settings.Setting<?>) target;
+            reveal(setting.section, setting);
+        }
+    }
+
+    /** Expands a section (the panel's sections fold) and scrolls to it, or to one of its rows. */
+    private void reveal(Settings.Section section, Settings.Setting<?> setting) {
+        if (sectionsContainer == null) return;
+        if (!expandedSections.contains(section.id)) {
+            expandedSections.add(section.id);
+            rebuildSection(section);
+        }
+        sectionsContainer.postDelayed(() -> {
+            if (setting != null) {
+                revealRow(setting);
+                return;
+            }
+            View header = findChildByTag(sectionsContainer, PanelTags.header(section));
+            if (header != null && scrollRoot != null) {
+                scrollRoot.smoothScrollTo(0, Math.max(0, sectionsContainer.getTop() + header.getTop() - style.dp(12)));
+            }
+        }, 240);
+    }
+
+    /** Scrolls a row of an open section into view and marks it with a brief highlight. */
+    private void revealRow(Settings.Setting<?> setting) {
+        if (sectionsContainer == null || scrollRoot == null) return;
+        View cardView = findChildByTag(sectionsContainer, PanelTags.card(setting.section));
+        if (!(cardView instanceof LinearLayout)) return;
+        View row = findRowIn((LinearLayout) cardView, setting.key);
+        if (row == null) return;
+        int y = 0;
+        for (View v = row; v != null && v != scrollRoot; v = v.getParent() instanceof View ? (View) v.getParent() : null) {
+            y += v.getTop();
+        }
+        scrollRoot.smoothScrollTo(0, Math.max(0, y - style.dp(96)));
+        final android.graphics.drawable.GradientDrawable mark = new android.graphics.drawable.GradientDrawable();
+        mark.setCornerRadius(style.dp(12));
+        mark.setColor(PanelStyle.COL_ACCENT);
+        mark.setAlpha(0);
+        row.setForeground(mark);
+        android.animation.ValueAnimator pulse = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        pulse.setDuration(1600);
+        pulse.addUpdateListener(a -> {
+            float p = (float) a.getAnimatedValue();
+            // In quickly, hold, then out slowly.
+            float level = p < 0.15f ? p / 0.15f : p < 0.45f ? 1f : 1f - (p - 0.45f) / 0.55f;
+            mark.setAlpha(Math.round(56 * level));
+        });
+        pulse.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator animation) {
+                row.setForeground(null);
+            }
+        });
+        pulse.start();
     }
 
     private void renderHeader(LinearLayout content) {
@@ -441,6 +781,19 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             spicyTokenRow(content);
             return;
         }
+        if (setting == Settings.CACHE_SIZE) {
+            // The limit row with the stored-lyrics block under it, one keyed unit: patchRow
+            // still finds the limit's summary inside, and the block refreshes itself.
+            LinearLayout unit = new LinearLayout(context);
+            unit.setOrientation(LinearLayout.VERTICAL);
+            rows.selectorRow(unit, Settings.CACHE_SIZE);
+            if (unit.getChildCount() > 0) unit.getChildAt(0).setTag(null);
+            cache.block(unit);
+            unit.setTag(PanelTags.row(Settings.CACHE_SIZE));
+            content.addView(unit, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return;
+        }
         if (setting == Settings.LYRICS_FONT_CUSTOM_PATH) {
             lyricsFontPathRow(content);
             return;
@@ -476,6 +829,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     }
 
     private void rebuildSections() {
+        searchIndex = null;
         sectionReflowGeneration++;
         if (sectionsContainer == null) return;
         captureAnchor();
@@ -496,6 +850,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
      */
     private void rebuildSection(Settings.Section target) {
         if (sectionsContainer == null) return;
+        // What is visible may have changed; the search index is rebuilt from it on next use.
+        searchIndex = null;
         int headerIdx = indexOfChildByTag(PanelTags.header(target));
         if (headerIdx < 0) {
             rebuildSections();
@@ -1024,23 +1380,12 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                             uiStrings.get("settings_resync_timing_done", "Lyrics sync reset"),
                             android.widget.Toast.LENGTH_SHORT).show();
                 });
-        clearAction(content, "settings_action_clear_translation_cache",
-                "Clear translation cache", CacheClearKind.TRANSLATION);
-        clearAction(content, "settings_action_clear_reading_cache",
-                "Clear transliteration cache", CacheClearKind.TRANSLITERATION);
-        clearAction(content, "settings_action_clear_ai_cache",
-                "Clear AI results", CacheClearKind.AI);
-        clearAction(content, "settings_action_clear_lyrics_cache",
-                "Clear lyrics response cache", CacheClearKind.LYRICS_RESPONSE);
+        // Cache clears live with the cache itself, on the Lyrics sources page (CacheManager).
         rows.actionRow(content, Kind.EXTERNAL_LINK,
                 uiStrings.get("settings_action_open_github", "Open GitHub"), v -> openGithub());
     }
 
-    private void clearAction(LinearLayout content, String key, String fallback, CacheClearKind kind) {
-        rows.actionRow(content, null, uiStrings.get(key, fallback), v -> clearCache(kind));
-    }
-
-    private void clearCache(CacheClearKind kind) {
+    @Override public void clearCache(CacheClearKind kind) {
         if (onClearCache == null) return;
         onClearCache.accept(kind);
         // Cache clears update preference memory (and the AI database) before returning. Rebuild
@@ -1163,6 +1508,10 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
 
     @Override public boolean unavailable(Settings.Setting<?> setting) {
         return PanelPolicy.unavailable(setting, captureSnapshot());
+    }
+
+    @Override public String cacheLimitLabel() {
+        return uiStrings.option(Settings.CACHE_SIZE, store.get(Settings.CACHE_SIZE));
     }
 
     @Override public String cacheSizeSummary() {
