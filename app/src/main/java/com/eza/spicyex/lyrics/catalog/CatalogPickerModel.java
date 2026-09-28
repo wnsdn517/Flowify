@@ -39,7 +39,7 @@ public final class CatalogPickerModel {
     /** Source display order matches the automatic tie-break. */
     static final SourceId[] SOURCE_ORDER = {
             SourceId.APPLE, SourceId.SPOTIFY_NATIVE, SourceId.AMLL, SourceId.LRCLIB,
-            SourceId.QQ, SourceId.NETEASE,
+            SourceId.QQ, SourceId.NETEASE, SourceId.MUSIXMATCH,
     };
 
     public static final class Row {
@@ -201,6 +201,7 @@ public final class CatalogPickerModel {
             case AMLL: return "AMLL";
             case LRCLIB: return "LRCLIB";
             case QQ: return "QQ Music";
+            case MUSIXMATCH: return "Musixmatch";
             case NETEASE: return "NetEase";
             default: return source.id;
         }

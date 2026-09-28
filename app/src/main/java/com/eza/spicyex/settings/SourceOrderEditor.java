@@ -156,6 +156,7 @@ public final class SourceOrderEditor {
         if (source == Source.AMLL) return "AMLL";
         if (source == Source.QQ) return "QQ Music";
         if (source == Source.NETEASE) return "NetEase";
+        if (source == Source.MUSIXMATCH) return "Musixmatch";
         return "LRCLIB";
     }
 

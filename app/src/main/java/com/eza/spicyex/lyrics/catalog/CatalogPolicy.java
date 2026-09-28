@@ -81,6 +81,8 @@ public final class CatalogPolicy {
                 return SourceId.QQ;
             case NETEASE:
                 return SourceId.NETEASE;
+            case MUSIXMATCH:
+                return SourceId.MUSIXMATCH;
             default:
                 return null;
         }
@@ -102,6 +104,8 @@ public final class CatalogPolicy {
                 return LyricsSourcePreferences.Source.QQ;
             case NETEASE:
                 return LyricsSourcePreferences.Source.NETEASE;
+            case MUSIXMATCH:
+                return LyricsSourcePreferences.Source.MUSIXMATCH;
             default:
                 return null;
         }
