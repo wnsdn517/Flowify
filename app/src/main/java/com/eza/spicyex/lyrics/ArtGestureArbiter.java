@@ -43,8 +43,16 @@ public final class ArtGestureArbiter {
     private final float commitThresholdPx;
     private final Clock clock;
 
+    /** Guarded drag: horizontal travel must dominate vertical by this much to be a swipe. */
+    static final float SWIPE_DOMINANCE = 1.5f;
+
     private State state = State.IDLE;
     private long doubleTapArmedUntilMs = -1;
+    /** Accidental-touch guard, all by distance: diagonal grazes don't drag, and a skip needs
+     *  {@link #guardedCommitPx} of travel instead of the bare threshold. (A tap is already
+     *  distance-judged: any move past slop ends it.) */
+    private boolean guarded;
+    private float guardedCommitPx;
     private boolean secondTap;
     private float dragDxPx;
 
@@ -54,6 +62,12 @@ public final class ArtGestureArbiter {
         this.doubleTapTimeoutMs = Math.max(0L, doubleTapTimeoutMs);
         this.commitThresholdPx = Math.max(1f, commitThresholdPx);
         this.clock = clock;
+    }
+
+    /** Applies the accidental-touch guard to the next gesture (call before {@link #onDown}). */
+    public void setGuard(boolean enabled, float commitPx) {
+        guarded = enabled;
+        guardedCommitPx = Math.max(commitThresholdPx, commitPx);
     }
 
     public Output onDown(long nowMs) {
@@ -78,7 +92,8 @@ public final class ArtGestureArbiter {
             return Output.NONE;
         }
         doubleTapArmedUntilMs = -1;
-        if (Math.abs(dxTotalPx) > Math.abs(dyTotalPx)) {
+        float dominance = guarded ? SWIPE_DOMINANCE : 1f;
+        if (Math.abs(dxTotalPx) > Math.abs(dyTotalPx) * dominance) {
             state = State.DRAGGING;
             dragDxPx = dxTotalPx;
             return Output.DRAG_UPDATE;
@@ -91,8 +106,9 @@ public final class ArtGestureArbiter {
         if (state == State.DRAGGING) {
             state = State.IDLE;
             doubleTapArmedUntilMs = -1;
-            if (dragDxPx <= -commitThresholdPx) return Output.COMMIT_NEXT;
-            if (dragDxPx >= commitThresholdPx) return Output.COMMIT_PREV;
+            float commit = guarded ? guardedCommitPx : commitThresholdPx;
+            if (dragDxPx <= -commit) return Output.COMMIT_NEXT;
+            if (dragDxPx >= commit) return Output.COMMIT_PREV;
             return Output.SPRING_BACK;
         }
         if (state != State.TAP_ARMED) return Output.NONE;

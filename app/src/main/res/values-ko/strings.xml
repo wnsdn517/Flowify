@@ -428,6 +428,8 @@
     <string name="share_save_failed">카드를 저장하지 못했어요</string>
     <string name="share_chooser">가사 공유</string>
     <string name="settings_label_lyrics_long_press_share">가사를 길게 눌러 공유</string>
+    <string name="settings_label_lyrics_accidental_touch_guard">오터치 방지</string>
+    <string name="settings_search_lyrics_accidental_touch_guard">주머니 모드, 손바닥 인식, 오작동, 짧은 터치, 의도치 않은 제스처, 실수로 스와이프, 근접 센서</string>
     <string name="settings_label_lyrics_show_fullscreen_back_button">뒤로 버튼 표시</string>
     <string name="settings_layout_editor_options_button">옵션</string>
     <string name="settings_layout_editor_close">닫기</string>

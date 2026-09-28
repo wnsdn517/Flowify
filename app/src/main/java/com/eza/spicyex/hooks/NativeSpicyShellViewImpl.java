@@ -127,6 +127,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private String pendingLikedUri = "";
     private final LyricsJumpToCurrentController jumpToCurrentController;
     private final LyricsSkipGapController skipGapController;
+    private final LyricsTouchGuard touchGuard;
     /** Track URI + gap start the skip acknowledged; the gap must not re-fire while landing. */
     private String skipAckUri = "";
     private long skipAckGapStartMs = -1;
@@ -471,6 +472,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (trackInfoController != null) trackInfoController.onPreferenceChanged();
         if (jumpToCurrentController != null) jumpToCurrentController.onPreferenceChanged();
         if (skipGapController != null) skipGapController.onPreferenceChanged();
+        touchGuard.refresh(running);
         if (chromeViews != null) {
             updatePipButtonVisibility();
             LyricsShellChromeController.applyClusterPosition(chromeViews,
@@ -1530,6 +1532,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             frameScheduler.requestFrame();
             scheduleScrollWindowRender();
             if (applyingLyricScroll) return;
+            if (scrollY != oldScrollY) tapSeekHandler.noteUserScroll();
             scrollInProgress = true;
             scheduleScrollSettleRemeasure();
         });
@@ -1543,6 +1546,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 config,
                 uiStrings(),
                 this::resumeFollowCurrentLine);
+        touchGuard = new LyricsTouchGuard(activity, config);
         skipGapController = LyricsSkipGapController.attach(
                 activity,
                 floatingChipHost,
@@ -1668,6 +1672,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         revealChrome();
         documentGate.start();
         registerPreferenceListener();
+        touchGuard.refresh(true);
         sessionSubscription = host.subscribeLyricsSession(sessionListener);
         shellLifecycle.start();
         playbackClock.reset("");
@@ -1736,6 +1741,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             TrackInfoReadoutController.ART_NETWORK_LISTENERS.remove(artworkDownloadListener);
         }
         unregisterPreferenceListener();
+        touchGuard.stop();
         toggleSpinnerController.reset();
         shellLifecycle.stop();
         frameScheduler.stop();
@@ -5033,6 +5039,19 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        LyricsTouchGuard.Verdict verdict = touchGuard == null
+                ? LyricsTouchGuard.Verdict.PASS : touchGuard.check(ev);
+        if (verdict == LyricsTouchGuard.Verdict.DROP) return true;
+        if (verdict == LyricsTouchGuard.Verdict.CANCEL) {
+            MotionEvent cancel = MotionEvent.obtain(ev);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            try {
+                super.dispatchTouchEvent(cancel);
+            } finally {
+                cancel.recycle();
+            }
+            return true;
+        }
         try {
             if (ev != null && ev.getActionMasked() == MotionEvent.ACTION_DOWN
                     && trackInfoController != null
