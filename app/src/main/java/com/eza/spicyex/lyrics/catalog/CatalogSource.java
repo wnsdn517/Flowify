@@ -8,9 +8,9 @@ import java.util.Locale;
  * Catalog vocabulary: source identities, timing levels, match methods, provider states, and
  * selection modes shared by acquisition, selection, and rendering.
  *
- * <p>Direct Musixmatch is deliberately absent: there is no Musixmatch source ID, adapter, setting,
- * or rank. Spotify native stays {@code spotify_native}; its credit text may still name Musixmatch
- * because that is information inside Spotify's payload, not a second route.
+ * <p>Direct Musixmatch is an explicit-check source like QQ and NetEase (this fork adds it back).
+ * Spotify native stays {@code spotify_native}; its credit text may still name Musixmatch because
+ * that is information inside Spotify's payload, not a second route.
  */
 public final class CatalogSource {
     private CatalogSource() {
@@ -26,7 +26,8 @@ public final class CatalogSource {
         AMLL("amll"),
         LRCLIB("lrclib"),
         QQ("qq"),
-        NETEASE("netease");
+        NETEASE("netease"),
+        MUSIXMATCH("musixmatch");
 
         public final String id;
 
@@ -167,6 +168,7 @@ public final class CatalogSource {
         if (v.startsWith("lrclib")) return SourceId.LRCLIB;
         if (v.startsWith("qq")) return SourceId.QQ;
         if (v.startsWith("netease")) return SourceId.NETEASE;
+        if (v.startsWith("musixmatch")) return SourceId.MUSIXMATCH;
         return null;
     }
 }

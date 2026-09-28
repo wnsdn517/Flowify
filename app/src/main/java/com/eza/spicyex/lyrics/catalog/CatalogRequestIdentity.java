@@ -49,6 +49,7 @@ public final class CatalogRequestIdentity {
             case LRCLIB:
             case QQ:
             case NETEASE:
+            case MUSIXMATCH:
                 return EPOCH_CREDENTIAL_FREE;
             default:
                 return EPOCH_CREDENTIAL_FREE;
