@@ -406,6 +406,14 @@ public final class Settings {
             "Off", "Top", "Bottom", "Header"
     );
 
+    // With the song info at the top: the lyrics scroll under it (Overlap - the readout's
+    // background keeps them legible) or start below it, fading out at its edge (Below), the way
+    // the picture-in-picture window lays them out. Edited in the Layout Editor (Artwork).
+    public static final Setting<String> TRACK_INFO_LYRICS_FLOW = enumSetting(
+            "lyrics_track_info_flow", INTERNAL, "Lyrics and song info", "Overlap",
+            "Overlap", "Below"
+    );
+
     // What sits behind the readout. Gradient is the original edge scrim, which lets lyrics
     // show through the dock; Solid fills the dock so nothing reads through it; None draws nothing.
     // Editable from the layout editor's Track text element.
@@ -808,6 +816,12 @@ public final class Settings {
     // Previous / play-pause / next in the window's own controls.
     public static final Setting<Boolean> PIP_CONTROLS = boolSetting(
             "lyrics_pip_controls", PIP, "Playback controls", true
+    );
+
+    // The song's artwork and title as a header at the top of the window; the lyrics start below
+    // it. Off gives the lyrics the whole window.
+    public static final Setting<Boolean> PIP_SONG_INFO = boolSetting(
+            "lyrics_pip_song_info", PIP, "Show artwork and title", true
     );
 
     // Where the current line rests: the lyrics screen's focus position, taken as a height on the
