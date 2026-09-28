@@ -519,6 +519,7 @@
     <string name="share_done">Done</string>
     <string name="share_artist_unavailable">Artist photo unavailable</string>
     <string name="settings_label_lyrics_long_press_share">Long-press a line to share</string>
+    <string name="settings_label_lyrics_accidental_touch_guard">Accidental touch guard</string>
     <string name="settings_label_lyrics_double_tap_like">Double-tap to like</string>
     <string name="settings_tap_seek_taken_by_like">Off · double tap likes</string>
     <string name="settings_tap_seek_double_tap_turns_off_like">Turns off double-tap to like</string>
@@ -740,6 +741,7 @@
     <string name="settings_option_lyrics_double_tap_like_mark_star">Star</string>
     <string name="settings_search_lyrics_double_tap_like">heart, add to liked songs, instagram</string>
     <string name="settings_search_lyrics_long_press_share">share lyrics image, story, instagram, card</string>
+    <string name="settings_search_lyrics_accidental_touch_guard">pocket mode, palm rejection, mistouch, short taps, accidental swipe, ignore touches in pocket, proximity sensor</string>
     <string name="settings_search_lyric_tap_seek_mode">tap a line to jump there, play from this line</string>
     <string name="settings_search_lyrics_status_bar_hidden_mode">hide clock and battery, fullscreen, notification bar</string>
 </resources>

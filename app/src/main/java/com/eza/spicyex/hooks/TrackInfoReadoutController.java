@@ -1883,6 +1883,8 @@ final class TrackInfoReadoutController {
                     arbiter.reset();
                     cancelArmed = true;
                 } else {
+                    arbiter.setGuard(readBool(Settings.ACCIDENTAL_TOUCH_GUARD),
+                            Math.max(dp(56), dragBoundPx * 0.35f));
                     arbiter.onDown(now);
                 }
                 if (onRevealChrome != null) onRevealChrome.run();
