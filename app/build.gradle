@@ -201,6 +201,8 @@ dependencies {
     // where 4.x burned the full connect timeout per new connection. See
     // docs/backlog/HAPPY_EYEBALLS_TRANSPORT_REQUIREMENTS.md.
     implementation 'com.squareup.okhttp3:okhttp:5.0.0'
+    // WebViewCompat/WebViewFeature - document-start JS injection for the Connect web player.
+    implementation 'androidx.webkit:webkit:1.13.0'
     implementation 'org.apache.tika:tika-langdetect-charsoup-core:4.0.0'
     implementation 'com.atilika.kuromoji:kuromoji-unidic:0.9.0'
     implementation 'com.belerweb:pinyin4j:2.5.1'

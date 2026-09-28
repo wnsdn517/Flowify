@@ -197,16 +197,19 @@ public final class SettingRowFactory {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
     }
 
-    public void actionRow(LinearLayout content, Kind lead, String label, View.OnClickListener listener) {
+    /** @return the label, for rows whose text follows some later-known state */
+    public TextView actionRow(LinearLayout content, Kind lead, String label, View.OnClickListener listener) {
         PanelStyle style = host.style();
         LinearLayout row = style.newRow(content);
         if (lead != null) row.addView(style.kindView(lead, PanelStyle.COL_ACCENT, 19), style.leadParams());
-        row.addView(style.text(label, 16, PanelStyle.COL_ACCENT, false),
-                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        TextView text = style.text(label, 16, PanelStyle.COL_ACCENT, false);
+        row.addView(text, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         row.setOnClickListener(listener);
+        return text;
     }
 
-    public void infoRow(LinearLayout content, String label, String value) {
+    /** @return the value, for rows whose value follows some later-known state */
+    public TextView infoRow(LinearLayout content, String label, String value) {
         PanelStyle style = host.style();
         LinearLayout row = style.newRow(content);
         row.addView(style.text(label, 14, PanelStyle.COL_SUMMARY, false),
@@ -214,6 +217,7 @@ public final class SettingRowFactory {
         TextView val = style.text(value == null ? "" : value, 14, PanelStyle.COL_TITLE, false);
         val.setGravity(android.view.Gravity.RIGHT | android.view.Gravity.CENTER_VERTICAL);
         row.addView(val, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        return val;
     }
 
     /** AI-provided row: label + accent value, optional icon actions and a chevron. */

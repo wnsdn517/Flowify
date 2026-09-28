@@ -49,9 +49,64 @@ final class PlaybackBridge {
     private Method playerWrapperGetStateMethod;
 
     void install(XpPackage lpparm, SpotifySymbolResolver symbols) {
+        current = this;
         hookPlayerStateBridge(lpparm, symbols);
         installMediaSessionHook();
         AdBreakInfo.installHooks();
+    }
+
+    /** The installed bridge, for callers outside the lyrics hook (Connect's app-start switch). */
+    static volatile PlaybackBridge current;
+
+    /** Pauses through Spotify's own MediaSession - a real pause, wherever it is playing
+     *  (locally or on a Connect device). False when no session is captured or it can't pause. */
+    boolean pause() {
+        return sendTransportControl("pause", PlaybackState.ACTION_PAUSE,
+                MediaController.TransportControls::pause);
+    }
+
+    /** Spotify's own session says playing (or about to): what a pause would act on. */
+    boolean sessionPlaying() {
+        try {
+            MediaController controller = transportController();
+            PlaybackState state = controller == null ? null : controller.getPlaybackState();
+            if (state == null) return false;
+            int s = state.getState();
+            return s == PlaybackState.STATE_PLAYING || s == PlaybackState.STATE_BUFFERING
+                    || s == PlaybackState.STATE_CONNECTING;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** Playing on this phone itself: Spotify's session is playing and its playback is local.
+     *  (While Spotify controls a Connect device its session switches to remote playback.) */
+    boolean playingLocally() {
+        try {
+            MediaController controller = transportController();
+            if (controller == null || !sessionPlaying()) return false;
+            MediaController.PlaybackInfo info = controller.getPlaybackInfo();
+            return info != null && info.getPlaybackType() == MediaController.PlaybackInfo.PLAYBACK_TYPE_LOCAL;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** MediaSessionCompat's own shuffle action (what MediaControllerCompat#setShuffleMode
+     *  sends), which Spotify's session advertises; NONE is idempotent, unlike its "toggle". */
+    boolean setShuffleOff() {
+        try {
+            MediaController controller = transportController();
+            if (controller == null) return false;
+            android.os.Bundle args = new android.os.Bundle();
+            args.putInt("android.support.v4.media.session.action.ARGUMENT_SHUFFLE_MODE", 0);
+            controller.getTransportControls().sendCustomAction(
+                    "android.support.v4.media.session.action.SET_SHUFFLE_MODE", args);
+            return true;
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " shuffle off failed: " + t);
+            return false;
+        }
     }
 
     private void hookPlayerStateBridge(XpPackage lpparm, SpotifySymbolResolver symbols) {

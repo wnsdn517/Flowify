@@ -16,6 +16,14 @@ public final class PanelPolicy {
     }
 
     public static boolean shouldRender(Settings.Setting<?> setting, PanelSnapshot snapshot) {
+        // Ad music style only matters when ads are replaced with music; Connect's options only
+        // while the receiver is on.
+        if (setting == Settings.AD_MUSIC_THEME) {
+            return Settings.AD_MODE_MUSIC.equals(snapshot.get(Settings.AD_MODE));
+        }
+        if (setting == Settings.CONNECT_AUTO_SWITCH || setting == Settings.CONNECT_NETWORK_RECOVERY) {
+            return Boolean.TRUE.equals(snapshot.get(Settings.CONNECT_ENABLED));
+        }
         // The rest of the PiP section only matters while its button is enabled.
         if (setting.section == Settings.PIP && setting != Settings.PIP_ENABLED) {
             return Boolean.TRUE.equals(snapshot.get(Settings.PIP_ENABLED));
@@ -221,6 +229,8 @@ public final class PanelPolicy {
     /** UI language rebuilds every label; dependency settings rebuild only their own section. */
     public static boolean shouldRebuildSectionAfterChange(Settings.Setting<?> setting) {
         return setting == Settings.PIP_ENABLED
+                || setting == Settings.AD_MODE
+                || setting == Settings.CONNECT_ENABLED
                 || setting == Settings.AI_ENABLED
                 || setting == Settings.AI_PROVIDER
                 || setting == Settings.TRANSLATION_ENABLED

@@ -288,6 +288,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 .aiOffered(aiAvailable());
         snapshot.put(Settings.AI_ENABLED, store.get(Settings.AI_ENABLED));
         snapshot.put(Settings.PIP_ENABLED, store.get(Settings.PIP_ENABLED));
+        snapshot.put(Settings.AD_MODE, store.get(Settings.AD_MODE));
+        snapshot.put(Settings.CONNECT_ENABLED, store.get(Settings.CONNECT_ENABLED));
         snapshot.put(Settings.AI_PROVIDER, store.get(Settings.AI_PROVIDER));
         snapshot.put(Settings.TRANSLATION_ENABLED, store.get(Settings.TRANSLATION_ENABLED));
         snapshot.put(Settings.TRANSLITERATION_ENABLED, store.get(Settings.TRANSLITERATION_ENABLED));
@@ -326,6 +328,16 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             dynamic.setOrientation(LinearLayout.VERTICAL);
             dynamic.setTag(PanelTags.AI_DYNAMIC);
             aiRows().render(dynamic);
+            card.addView(dynamic, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        if (section == Settings.AD_FREE) {
+            // Same tagged-block treatment as the AI rows above: Connect's sign-in and status rows
+            // appear/disappear with the receiver toggle, which per-key row sync never touches.
+            LinearLayout dynamic = new LinearLayout(context);
+            dynamic.setOrientation(LinearLayout.VERTICAL);
+            dynamic.setTag(PanelTags.CONNECT_DYNAMIC);
+            if (Boolean.TRUE.equals(store.get(Settings.CONNECT_ENABLED))) renderConnectLogin(dynamic);
             card.addView(dynamic, new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
@@ -591,6 +603,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         // The AI dynamic block re-renders as a unit; detach it so positions count rows only.
         View dynamic = findChildByTag(card, PanelTags.AI_DYNAMIC);
         if (dynamic != null) card.removeView(dynamic);
+        View connectDynamic = findChildByTag(card, PanelTags.CONNECT_DYNAMIC);
+        if (connectDynamic != null) card.removeView(connectDynamic);
         for (String dead : plan.removals) {
             View stale = findRowIn(card, dead);
             if (stale != null) card.removeView(stale);
@@ -613,7 +627,31 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             }
         }
         refreshAiDynamicBlock(card, target);
+        refreshConnectDynamicBlock(card, target);
         syncEditorActionRows(card, target);
+    }
+
+    /** Connect's sign-in/status rows appear only while CONNECT_ENABLED is on; same tagged-block
+     *  treatment as {@link #refreshAiDynamicBlock}, since toggling it is a cross-row visibility
+     *  change the ordinary per-key row sync never touches. */
+    private void refreshConnectDynamicBlock(LinearLayout card, Settings.Section target) {
+        View dynamic = findChildByTag(card, PanelTags.CONNECT_DYNAMIC);
+        if (target != Settings.AD_FREE) {
+            if (dynamic != null) card.removeView(dynamic);
+            return;
+        }
+        LinearLayout block;
+        if (dynamic instanceof LinearLayout) {
+            block = (LinearLayout) dynamic;
+            block.removeAllViews();
+        } else {
+            block = new LinearLayout(context);
+            block.setOrientation(LinearLayout.VERTICAL);
+            block.setTag(PanelTags.CONNECT_DYNAMIC);
+            card.addView(block, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        if (Boolean.TRUE.equals(store.get(Settings.CONNECT_ENABLED))) renderConnectLogin(block);
     }
 
     /** Keeps non-setting editor launch rows present on both full renders and keyed section
@@ -688,6 +726,10 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             com.eza.spicyex.lyrics.session.LyricsSourcePreferences.setRankingMode(context,
                     com.eza.spicyex.lyrics.session.LyricsSourcePreferences.RankingMode.parse(
                             String.valueOf(store.get(setting))));
+        }
+        if (setting == Settings.CONNECT_ENABLED) {
+            com.eza.spicyex.hooks.SpotifyConnectHook.onSettingsChanged(context,
+                    Boolean.TRUE.equals(store.get(Settings.CONNECT_ENABLED)));
         }
         if (setting == Settings.UI_LANGUAGE) {
             rebuildSections();
@@ -907,6 +949,54 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         row.addView(info, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(style.kindView(Kind.LANGUAGES, PanelStyle.COL_ACCENT, 18),
                 new LinearLayout.LayoutParams(style.dp(24), style.dp(30)));
+    }
+
+    // --- Connect rows ---
+
+    private void renderConnectLogin(LinearLayout card) {
+        // Labels follow the player's own answer (session cookie confirmed by the live page).
+        // The sign-in row always opens the sign-in screen, which shows "signed in" and closes
+        // itself when there is nothing to do.
+        TextView login = rows.actionRow(card, Kind.GLOBE,
+                uiStrings.get("settings_connect_checking", "Checking Spotify sign-in…"),
+                v -> com.eza.spicyex.hooks.SpotifyConnectHook.openLogin(context));
+        TextView player = rows.infoRow(card,
+                uiStrings.get("settings_connect_status_label", "Player"),
+                uiStrings.get("settings_connect_status_starting", "Starting…"));
+        TextView device = rows.infoRow(card,
+                uiStrings.get("settings_connect_device_label", "Device"),
+                "—");
+        java.lang.ref.WeakReference<TextView> loginRef = new java.lang.ref.WeakReference<>(login);
+        java.lang.ref.WeakReference<TextView> playerRef = new java.lang.ref.WeakReference<>(player);
+        java.lang.ref.WeakReference<TextView> deviceRef = new java.lang.ref.WeakReference<>(device);
+        com.eza.spicyex.hooks.SpotifyConnectHook.queryStatus(context, (code, deviceId, activeId, playing) -> {
+            TextView loginLabel = loginRef.get();
+            TextView playerValue = playerRef.get();
+            TextView deviceValue = deviceRef.get();
+            if (loginLabel == null || playerValue == null || deviceValue == null) return;
+            if (code == com.eza.spicyex.hooks.SpotifyConnectHook.WARM_STARTING) return;
+            if (code != com.eza.spicyex.hooks.SpotifyConnectHook.WARM_READY) {
+                loginLabel.setText(uiStrings.get("settings_connect_login", "Login required · Sign in to Spotify"));
+                playerValue.setText(code == com.eza.spicyex.hooks.SpotifyConnectHook.WARM_LOGIN_REQUIRED
+                        ? uiStrings.get("settings_connect_status_login", "Sign-in required")
+                        : uiStrings.get("settings_connect_status_failed", "Not running"));
+                deviceValue.setText("—");
+                return;
+            }
+            loginLabel.setText(uiStrings.get("settings_connect_signed_in", "Signed in to Spotify · Manage account"));
+            playerValue.setText(uiStrings.get("settings_connect_status_running", "Running"));
+            String state;
+            if (deviceId == null) {
+                state = uiStrings.get("settings_connect_device_registering", "Registering…");
+            } else if (playing) {
+                state = uiStrings.get("settings_connect_device_playing", "Playing on the web player");
+            } else if (deviceId.equals(activeId)) {
+                state = uiStrings.get("settings_connect_device_active", "Selected · paused");
+            } else {
+                state = uiStrings.get("settings_connect_device_idle", "Available");
+            }
+            deviceValue.setText("Web Player · " + state);
+        });
     }
 
     // --- Diagnostics card ---

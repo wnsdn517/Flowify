@@ -93,6 +93,12 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             // Ad muting runs process-wide, not per screen: it applies to local playback
             // everywhere while changing only Spotify's ad AudioTrack.
             new AdMuteController(this, applicationContext).start();
+            SpotifyConnectHook.init(applicationContext);
+            SpotifyConnectHook.installPickerButton();
+            // Connect auto-start + auto-connect fire on Spotify's first resumed activity, not
+            // here: at process start Spotify isn't foreground yet, and only a foreground sender
+            // can get the player's foreground service past Android 12+'s background-start ban.
+            SpotifyConnectHook.armAutoStart(applicationContext);
             // Debug builds only, and inert until the arm file exists. See AgentCommandChannel.
             AgentCommandChannel.start(this, applicationContext);
             ActivityResultBridge.install();

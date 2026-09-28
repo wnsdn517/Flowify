@@ -812,6 +812,30 @@ public final class Settings {
     /** Pre-AD_MODE boolean; read once by SettingsStore#migrateAdMode. */
     public static final String LEGACY_AUTO_MUTE_ADS = "auto_mute_ads";
 
+    // Spotify Connect: a background WebView logged into open.spotify.com's own web player (ads
+    // stripped client-side), exposed as a Spotify Connect device this app can cast to.
+    public static final Setting<Boolean> CONNECT_ENABLED = boolSetting(
+            "connect_enabled", AD_FREE, "Enable Spotify Connect receiver", false
+    );
+
+    // When Spotify hands its playback to the web player by itself. "On app start" starts the
+    // player as Spotify opens, moves playback that is already going on the phone at once, and
+    // otherwise hands over the moment playback starts; "On first play" only does the latter.
+    // Playback on another device (a desktop, a speaker) is never taken over.
+    public static final StringSetting CONNECT_AUTO_SWITCH =
+            (StringSetting) enumSetting(
+                    "connect_auto_switch", AD_FREE, "Switch to the web player automatically",
+                    "On app start",
+                    "On app start", "On first play", "Off"
+            );
+
+    // After a network change (wifi to wifi, wifi to mobile) the player's connection to
+    // Spotify is gone. On: check it came back, reload the player if not, and have Spotify
+    // select it again if music was playing.
+    public static final Setting<Boolean> CONNECT_NETWORK_RECOVERY = boolSetting(
+            "connect_network_recovery", AD_FREE, "Reconnect after network changes", true
+    );
+
     // ===================== INTERNAL (fixed defaults, not shown) =====================
 
     // Legacy composer-owned flag. New builds persist AI_TRANSLATION_PIPELINE; this remains only so

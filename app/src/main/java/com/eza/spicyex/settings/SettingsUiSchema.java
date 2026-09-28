@@ -104,7 +104,10 @@ public final class SettingsUiSchema {
             Settings.PIP_LEAVE_SPOTIFY,
             // Ad-free listening
             Settings.AD_MODE,
-            Settings.AD_MUSIC_THEME));
+            Settings.AD_MUSIC_THEME,
+            Settings.CONNECT_ENABLED,
+            Settings.CONNECT_AUTO_SWITCH,
+            Settings.CONNECT_NETWORK_RECOVERY));
 
     /** Every renderable setting, in panel row order. */
     public static List<Settings.Setting<?>> orderedSettings() {
