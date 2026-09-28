@@ -65,8 +65,8 @@ import static com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri;
  *
  * <p>The card is drawn in its own fixed 1080x1350 pixel space (never device dp, so text is the
  * same size on every phone). It comes in four designs - Glass, Classic, Minimal, Polaroid - over
- * one of two backdrops: the blurred artwork (the lyrics screen's own look) or the artwork's
- * colours as a gradient. Lyrics are fitted
+ * one of three backdrops: the blurred artwork (the lyrics screen's own look), the artwork's
+ * colours as a gradient, or the artist's photo, fetched from Spotify's Web API. Lyrics are fitted
  * by shrinking to a floor size; a selection that still would not fit is refused rather than
  * overflowing, and the card says so.
  *
@@ -94,7 +94,7 @@ final class LyricsShareCardController {
     private static final String PREF_CODE = "share_card_spotify_code";
 
     enum Design { GLASS, CLASSIC, MINIMAL, POLAROID, POSTER, VINYL, TICKET, SPOTLIGHT }
-    enum Backdrop { BLUR, COLOR }
+    enum Backdrop { BLUR, COLOR, ARTIST }
 
     /** Renders the lyrics screen's own background at a given size. */
     interface BackgroundSnapshot {
@@ -120,6 +120,7 @@ final class LyricsShareCardController {
     private static final int THUMB_H_DP = 72;
     private static final String PREF_ALIGN = "share_card_text_align";
     private static final String PREF_POS = "share_card_text_pos";
+    private static final java.util.Map<String, Bitmap> ARTIST_IMAGES = new java.util.LinkedHashMap<>();
     /** Spotify Code images by "uri|dark" - bars white on black, or black on white for paper. */
     private static final java.util.Map<String, Bitmap> SPOTIFY_CODES = new java.util.LinkedHashMap<>();
 
@@ -216,6 +217,7 @@ final class LyricsShareCardController {
     private boolean showTranslation = true;
     private SpotifyTrack track;
     private Bitmap artwork;
+    private Bitmap artistImage;
     private ViewGroup root;
     private Design design;
     private Backdrop backdrop;
@@ -307,6 +309,7 @@ final class LyricsShareCardController {
     private void show() {
         if (activity == null || root == null || track == null) return;
         dismiss();
+        artistImage = cachedArtist(track);
         lyricsBackground = null;
         fitCache.clear();
         codePlayed = false;
@@ -337,6 +340,7 @@ final class LyricsShareCardController {
         }
         render(Transition.FADE);
         renderThumbs();
+        if (backdrop == Backdrop.ARTIST && artistImage == null) fetchArtistImage();
         if (spotifyCode) fetchSpotifyCode();
         if (document != null && !picked.isEmpty() && hintPasses() > 0) {
             View teaseHost = overlay;
@@ -1465,16 +1469,25 @@ final class LyricsShareCardController {
         divLp.setMargins(dp(16), dp(4), dp(16), dp(12));
         content.addView(divider, divLp);
 
-        // Share targets: copy link, save and the system sheet.
+        // Share targets, as in Spotify's own sheet: the story apps that are installed (with their
+        // own icons), then copy link, save and the system sheet.
         HorizontalScrollView targetsScroll = new HorizontalScrollView(activity);
         targetsScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout targets = new LinearLayout(activity);
         targets.setPadding(dp(8), 0, dp(8), 0);
+        if (canShareTo(StoryTarget.INSTAGRAM)) {
+            targets.addView(appShareTarget(StoryTarget.INSTAGRAM.pkg,
+                    s("instagram_story", "Instagram Stories"), v -> shareToStory(StoryTarget.INSTAGRAM)));
+        }
+        if (canShareTo(StoryTarget.FACEBOOK)) {
+            targets.addView(appShareTarget(StoryTarget.FACEBOOK.pkg,
+                    s("facebook_story", "Facebook Stories"), v -> shareToStory(StoryTarget.FACEBOOK)));
+        }
         if (!isBlank(webLink(track))) {
             targets.addView(shareTarget(null, LineIcon.Kind.LINK, s("copy_link", "Copy link"), v -> copyLink()));
         }
         targets.addView(shareTarget(null, LineIcon.Kind.DOWNLOAD, s("save", "Save"), v -> saveOnly()));
-        // Installed chat apps, found off the main thread, join after the copy/save targets.
+        // Installed chat apps, found off the main thread, join after the story targets.
         int directAt = targets.getChildCount();
         targets.addView(shareTarget(null, LineIcon.Kind.MORE, s("more", "More"), v -> shareCard(null)));
         targetsScroll.addView(targets);
@@ -1536,7 +1549,8 @@ final class LyricsShareCardController {
         LinearLayout page = new LinearLayout(activity);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setGravity(Gravity.CENTER_HORIZONTAL);
-        String[] backdropLabels = {s("backdrop_blur", "Blurred artwork"), s("backdrop_lyrics", "Lyrics background")};
+        String[] backdropLabels = {s("backdrop_blur", "Blurred artwork"), s("backdrop_lyrics", "Lyrics background"),
+                s("backdrop_artist", "Artist photo")};
         LinearLayout backdrops = segmented(backdropLabels, backdropChips, backdrop.ordinal(), index -> {
             Backdrop next = Backdrop.values()[index];
             if (next == backdrop) return;
@@ -1544,6 +1558,7 @@ final class LyricsShareCardController {
             prefs.edit().putString(PREF_BACKDROP, backdrop.name()).apply();
             render(Transition.FADE);
             renderThumbs();
+            if (backdrop == Backdrop.ARTIST && artistImage == null) fetchArtistImage();
         });
         page.addView(centredScroll(backdrops));
 
@@ -2191,7 +2206,7 @@ final class LyricsShareCardController {
         TextStyle style = textStyle;
         Backdrop b = backdrop;
         Bitmap art = artwork;
-        Bitmap artist = null;
+        Bitmap artist = artistImage;
         Bitmap lyricsBg = lyricsBackground;
         SpotifyTrack t = track;
         float scale = thumbScale();
@@ -2343,6 +2358,25 @@ final class LyricsShareCardController {
         } catch (Throwable error) {
             return null;
         }
+    }
+
+    /** An app's share button whose icon loads off the main thread (an adaptive icon load is
+     *  several ms each - too much for the sheet's opening frames) and fades in. */
+    private View appShareTarget(String pkg, String label, View.OnClickListener onClick) {
+        View item = shareTarget(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT), null,
+                label, onClick);
+        ImageView icon = (ImageView) ((ViewGroup) item).getChildAt(0);
+        THUMBS.execute(() -> {
+            android.graphics.drawable.Drawable drawable = appIcon(pkg);
+            if (drawable == null) return;
+            main.post(() -> {
+                if (!icon.isAttachedToWindow() && icon.getParent() == null) return;
+                icon.setImageDrawable(drawable);
+                icon.setAlpha(0f);
+                icon.animate().alpha(1f).setDuration(160).start();
+            });
+        });
+        return item;
     }
 
     /** A round button (an app's own icon, or a line icon on glass) over its label. */
@@ -2842,7 +2876,7 @@ final class LyricsShareCardController {
         TextStyle style = textStyle;
         Backdrop b = backdrop;
         Bitmap art = artwork;
-        Bitmap artist = null;
+        Bitmap artist = artistImage;
         Bitmap lyricsBg = lyricsBackground;
         SpotifyTrack t = track;
         float thumbScale = thumbScale();
@@ -2985,7 +3019,7 @@ final class LyricsShareCardController {
         Bitmap code = layoutCode(d);
         boolean wantCode = spotifyCode;
         Bitmap art = artwork;
-        Bitmap artist = null;
+        Bitmap artist = artistImage;
         Bitmap lyricsBg = lyricsBackground;
         SpotifyTrack t = track;
         float thumbScale = thumbScale();
@@ -3992,10 +4026,10 @@ final class LyricsShareCardController {
                 break;
             }
             case POSTER: {
-                // Poster: the artwork full-bleed across the top, melting into
+                // Poster: the artwork (or the artist photo) full-bleed across the top, melting into
                 // a solid colour taken from it; the lyric sits on the join, anchored to the title.
-                Bitmap hero = art;
-                int ground = extractGradient(art)[1];
+                Bitmap hero = backdrop == Backdrop.ARTIST && artist != null ? artist : art;
+                int ground = extractGradient(art != null ? art : artist)[1];
                 Paint fill = new Paint();
                 fill.setColor(ground);
                 canvas.drawRect(0, 0, W, H, fill);
@@ -4412,14 +4446,24 @@ final class LyricsShareCardController {
             canvas.drawRect(full, vignette);
             return;
         }
-        if (backdrop == Backdrop.COLOR || art == null) {
+        if (backdrop == Backdrop.COLOR || art == null && artist == null) {
             int[] gradient = extractGradient(art);
             Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
             bg.setShader(new LinearGradient(0, 0, W, H, gradient[0], gradient[1], Shader.TileMode.CLAMP));
             canvas.drawRect(full, bg);
+        } else if (backdrop == Backdrop.ARTIST && artist != null) {
+            // The photo itself, sharp (it used to be shrunk and re-enlarged, which read as a
+            // blown-up thumbnail); darkened toward the bottom so the text stays legible.
+            canvas.drawBitmap(artist, centreCrop(artist, W / (float) H), full,
+                    new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG));
+            Paint shade = new Paint();
+            shade.setShader(new LinearGradient(0, 0, 0, H,
+                    Color.argb(90, 0, 0, 0), Color.argb(215, 0, 0, 0), Shader.TileMode.CLAMP));
+            canvas.drawRect(full, shade);
+            return;
         } else {
             // The lyrics screen's look: artwork dissolved into soft colour fields.
-            Bitmap blurred = cachedBlur(art);
+            Bitmap blurred = cachedBlur(art != null ? art : artist);
             Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
             ColorMatrix saturate = new ColorMatrix();
             saturate.setSaturation(1.5f);
@@ -4899,6 +4943,158 @@ final class LyricsShareCardController {
         });
     }
 
+    // ---------------------------------------------------------------- artist photo
+
+    private static Bitmap cachedArtist(SpotifyTrack track) {
+        synchronized (ARTIST_IMAGES) {
+            return ARTIST_IMAGES.get(trackIdFromUri(track == null ? "" : track.uri));
+        }
+    }
+
+    /**
+     * The track's first artist, then their photo. The artist comes from Spotify's own track
+     * metadata ({@code artist_uri}, read with the player state); the photo from Spotify's public
+     * oEmbed endpoint, which needs no token. The Web API route (with Spotify's captured token)
+     * stays as a fallback when the metadata had no artist. Every step logs, so a missing photo
+     * says why.
+     */
+    private void fetchArtistImage() {
+        SpotifyTrack t = track;
+        String trackId = trackIdFromUri(t == null ? "" : t.uri);
+        if (trackId.isEmpty()) return;
+        String trackUri = safe(t.uri);
+        String metaArtist = trackUri.equals(com.eza.spicyex.References.lastTrackUri)
+                ? com.eza.spicyex.References.lastArtistUri : "";
+        NETWORK.execute(() -> {
+            Bitmap image = null;
+            try {
+                String artistId = metaArtist.startsWith("spotify:artist:")
+                        ? metaArtist.substring("spotify:artist:".length()) : null;
+                if (artistId == null) {
+                    XpLog.log(TAG + " artist: no artist_uri in metadata, trying Web API");
+                    SpotifyTokenState.Authorized auth = SpotifyTokenStore.authorization(System.currentTimeMillis());
+                    if (auth == null) {
+                        XpLog.log(TAG + " artist: no Web API token either");
+                    } else {
+                        org.json.JSONObject trackJson = getJson(
+                                "https://api.spotify.com/v1/tracks/" + trackId, auth.token());
+                        artistId = trackJson == null ? null
+                                : trackJson.getJSONArray("artists").getJSONObject(0).optString("id", null);
+                    }
+                }
+                if (artistId != null) {
+                    org.json.JSONObject embed = getJson("https://open.spotify.com/oembed?url="
+                            + Uri.encode("https://open.spotify.com/artist/" + artistId), null);
+                    String url = embed == null ? null : embed.optString("thumbnail_url", null);
+                    // oEmbed hands out a small rendition; ask the CDN for the largest one.
+                    if (url != null) image = downloadLargest(url);
+                    // Still small (an artist without its own large photo, or an image kind the
+                    // size codes don't cover): the Web API lists every size - take the biggest.
+                    if (image == null || image.getWidth() < 600) {
+                        Bitmap viaApi = artistImageFromWebApi(artistId);
+                        if (viaApi != null && (image == null || viaApi.getWidth() > image.getWidth())) {
+                            image = viaApi;
+                        }
+                    }
+                    XpLog.log(TAG + " artist: id=" + artistId + " image="
+                            + (image == null ? "none" : image.getWidth() + "px"));
+                }
+            } catch (Throwable error) {
+                XpLog.log(TAG + " artist image failed: " + error);
+            }
+            Bitmap result = image;
+            if (result != null) {
+                synchronized (ARTIST_IMAGES) {
+                    ARTIST_IMAGES.put(trackId, result);
+                    while (ARTIST_IMAGES.size() > 2) {
+                        ARTIST_IMAGES.remove(ARTIST_IMAGES.keySet().iterator().next());
+                    }
+                }
+            }
+            main.post(() -> {
+                if (track != t || overlay == null) return;
+                if (result == null) {
+                    Toast.makeText(activity, s("artist_unavailable", "Artist photo unavailable"),
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                artistImage = result;
+                if (backdrop == Backdrop.ARTIST) {
+                    render(Transition.FADE);
+                    renderThumbs();
+                }
+            });
+        });
+    }
+
+    /**
+     * Spotify CDN image ids start with a size code. oEmbed returns the 320px artist rendition, but
+     * some artists come back as the 160px one, or - without a photo of their own - as a 300px or
+     * 64px album cover. Each is swapped for the largest code of its kind; the original is kept
+     * when the larger one does not exist.
+     */
+    private static Bitmap downloadLargest(String url) {
+        String[][] upgrades = {
+                {"ab67616100005174", "ab6761610000e5eb"},
+                {"ab6761610000f178", "ab6761610000e5eb"},
+                {"ab67616d00001e02", "ab67616d0000b273"},
+                {"ab67616d00004851", "ab67616d0000b273"},
+        };
+        for (String[] pair : upgrades) {
+            if (url.contains(pair[0])) {
+                Bitmap big = downloadBitmap(url.replace(pair[0], pair[1]));
+                if (big != null) return big;
+            }
+        }
+        return downloadBitmap(url);
+    }
+
+    private static Bitmap downloadBitmap(String url) {
+        try (Response response = NativeRuntime.HTTP.newCall(
+                new Request.Builder().url(url).get().build()).execute()) {
+            if (!response.isSuccessful() || response.body() == null) return null;
+            return BitmapFactory.decodeStream(response.body().byteStream());
+        } catch (Throwable error) {
+            return null;
+        }
+    }
+
+    /** The artist's largest image from the Web API, with Spotify's own captured token. */
+    private static Bitmap artistImageFromWebApi(String artistId) {
+        try {
+            SpotifyTokenState.Authorized auth = SpotifyTokenStore.authorization(System.currentTimeMillis());
+            if (auth == null) return null;
+            org.json.JSONObject artist = getJson("https://api.spotify.com/v1/artists/" + artistId, auth.token());
+            org.json.JSONArray images = artist == null ? null : artist.optJSONArray("images");
+            if (images == null || images.length() == 0) return null;
+            String best = null;
+            int bestWidth = -1;
+            for (int i = 0; i < images.length(); i++) {
+                org.json.JSONObject img = images.getJSONObject(i);
+                int w = img.optInt("width", 0);
+                if (w > bestWidth) {
+                    bestWidth = w;
+                    best = img.optString("url", null);
+                }
+            }
+            return best == null ? null : downloadLargest(best);
+        } catch (Throwable error) {
+            return null;
+        }
+    }
+
+    private static org.json.JSONObject getJson(String url, String token) throws Exception {
+        Request.Builder builder = new Request.Builder().url(url).get();
+        if (token != null) builder.header("Authorization", "Bearer " + token);
+        try (Response response = NativeRuntime.HTTP.newCall(builder.build()).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                XpLog.log(TAG + " http " + response.code() + " " + url.replaceAll("\\?.*", ""));
+                return null;
+            }
+            return new org.json.JSONObject(response.body().string());
+        }
+    }
+
     // ---------------------------------------------------------------- share / save
 
     /** The shared card, drawn once however often it is shared or saved. */
@@ -4909,6 +5105,7 @@ final class LyricsShareCardController {
 
         private final Maker make;
         private Bitmap square;
+        private Bitmap rounded;
 
         CardRecipe(Maker make) {
             this.make = make;
@@ -4918,6 +5115,12 @@ final class LyricsShareCardController {
         synchronized Bitmap get() throws Exception {
             if (square == null) square = make.make(false);
             return square;
+        }
+
+        /** A story sticker: the card's own rounded shape, floating on the story's background. */
+        synchronized Bitmap sticker() throws Exception {
+            if (rounded == null) rounded = make.make(true);
+            return rounded;
         }
     }
 
@@ -5060,6 +5263,108 @@ final class LyricsShareCardController {
             }
         }
         return out;
+    }
+
+    // ---------------------------------------------------------------- stories
+
+    /**
+     * Story targets, sent the way Spotify's own share sheet sends them (read from its
+     * InstagramStories / FacebookStories destinations): the card goes in as a movable sticker
+     * over a two-colour background, with the song's link as the story's attribution and, for
+     * Instagram, the track as the music sticker's entity. Running inside Spotify, the module
+     * signs the request with Spotify's own Facebook App ID - the one those apps check the
+     * attribution link against.
+     */
+    enum StoryTarget {
+        INSTAGRAM("com.instagram.android", "com.instagram.share.ADD_TO_STORY"),
+        FACEBOOK("com.facebook.katana", "com.facebook.stories.ADD_TO_STORY");
+
+        final String pkg;
+        final String action;
+
+        StoryTarget(String pkg, String action) {
+            this.pkg = pkg;
+            this.action = action;
+        }
+    }
+
+    private Intent storyIntent(StoryTarget target) {
+        Intent intent = new Intent(target.action);
+        intent.setPackage(target.pkg);
+        intent.setType("image/png");
+        return intent;
+    }
+
+    private boolean canShareTo(StoryTarget target) {
+        try {
+            return activity.getPackageManager().resolveActivity(storyIntent(target), 0) != null;
+        } catch (Throwable error) {
+            return false;
+        }
+    }
+
+    private void shareToStory(StoryTarget target) {
+        CardRecipe recipe = currentRecipe;
+        SpotifyTrack t = track;
+        Bitmap art = artwork;
+        if (recipe == null || t == null) return;
+        RENDER.execute(() -> {
+            try {
+                Bitmap card = recipe.sticker();
+                Uri sticker = shareableUri(card);
+                if (sticker == null) sticker = saveToGallery(card);
+                if (sticker == null) throw new IllegalStateException("no uri for the card");
+                int[] colors = extractGradient(art);
+                Intent intent = storyIntent(target);
+                intent.putExtra("interactive_asset_uri", sticker);
+                intent.putExtra("top_background_color", hexColor(colors[0]));
+                intent.putExtra("bottom_background_color", hexColor(colors[1]));
+                String link = webLink(t);
+                if (!isBlank(link)) intent.putExtra("content_url", link);
+                String appId = facebookAppId();
+                if (target == StoryTarget.INSTAGRAM) {
+                    intent.putExtra("source_application", appId);
+                    String uri = safe(t.uri);
+                    if (uri.startsWith("spotify:track:")) {
+                        intent.putExtra("com.instagram.sharedSticker.entityURI", uri);
+                    }
+                } else {
+                    intent.putExtra("com.facebook.platform.extra.APPLICATION_ID", appId);
+                }
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                activity.grantUriPermission(target.pkg, sticker, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                main.post(() -> {
+                    try {
+                        activity.startActivity(intent);
+                        dismiss();
+                    } catch (Throwable error) {
+                        XpLog.log(TAG + " story share failed: " + error);
+                        Toast.makeText(activity, s("story_failed", "Could not open the app"),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (Throwable error) {
+                XpLog.log(TAG + " story share failed: " + error);
+                main.post(() -> Toast.makeText(activity, s("story_failed", "Could not open the app"),
+                        Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private static String hexColor(int color) {
+        return String.format(java.util.Locale.ROOT, "#%06X", color & 0xFFFFFF);
+    }
+
+    /** Spotify's own Facebook App ID, from its manifest - as its share destinations read it. */
+    private String facebookAppId() {
+        try {
+            android.content.pm.ApplicationInfo info = activity.getPackageManager().getApplicationInfo(
+                    activity.getPackageName(), android.content.pm.PackageManager.GET_META_DATA);
+            Object id = info.metaData == null ? null : info.metaData.get("com.facebook.sdk.ApplicationId");
+            return id == null ? "" : String.valueOf(id);
+        } catch (Throwable error) {
+            return "";
+        }
     }
 
     /**

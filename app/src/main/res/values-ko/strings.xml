@@ -413,12 +413,17 @@
     <string name="share_design_classic">클래식</string>
     <string name="share_design_minimal">미니멀</string>
     <string name="share_design_polaroid">폴라로이드</string>
+    <string name="share_instagram_story">인스타그램 스토리</string>
+    <string name="share_facebook_story">페이스북 스토리</string>
+    <string name="share_story_failed">앱을 열 수 없어요</string>
     <string name="share_backdrop_blur">흐린 아트워크</string>
     <string name="share_backdrop_lyrics">가사 배경</string>
+    <string name="share_backdrop_artist">아티스트 사진</string>
     <string name="share_code_unavailable">Spotify 코드를 가져올 수 없어요</string>
     <string name="share_save">저장</string>
     <string name="share_share">공유</string>
     <string name="share_full">카드에 더 이상 줄을 넣을 공간이 없어요</string>
+    <string name="share_artist_unavailable">아티스트 사진을 가져올 수 없어요</string>
     <string name="share_saved">사진/SpicyEx에 저장했어요</string>
     <string name="share_save_failed">카드를 저장하지 못했어요</string>
     <string name="share_chooser">가사 공유</string>

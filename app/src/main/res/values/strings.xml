@@ -454,6 +454,7 @@
     <string name="share_design_polaroid">Polaroid</string>
     <string name="share_backdrop_blur">Blurred artwork</string>
     <string name="share_backdrop_lyrics">Lyrics background</string>
+    <string name="share_backdrop_artist">Artist photo</string>
     <string name="share_spotify_code">Spotify Code</string>
     <string name="share_code_unavailable">Spotify Code unavailable</string>
     <string name="share_save">Save</string>
@@ -484,6 +485,7 @@
     <string name="share_pick_title">Choose lyrics</string>
     <string name="share_pick_count" formatted="false">%1$d selected</string>
     <string name="share_done">Done</string>
+    <string name="share_artist_unavailable">Artist photo unavailable</string>
     <string name="settings_label_lyrics_long_press_share">Long-press a line to share</string>
     <string name="settings_label_lyrics_double_tap_like">Double-tap to like</string>
     <string name="settings_tap_seek_taken_by_like">Off · double tap likes</string>
