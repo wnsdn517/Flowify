@@ -100,6 +100,7 @@ public final class SettingsUiSchema {
             Settings.AI_BUTTON_BEHAVIOR,
             // Picture-in-picture
             Settings.PIP_ENABLED,
+            Settings.PIP_ON_CLOSE,
             Settings.PIP_SHAPE,
             Settings.PIP_CONTROLS,
             Settings.PIP_FOCUS,

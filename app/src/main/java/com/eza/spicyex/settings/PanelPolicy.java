@@ -27,9 +27,12 @@ public final class PanelPolicy {
         if (setting == Settings.CONNECT_AUTO_SWITCH || setting == Settings.CONNECT_NETWORK_RECOVERY) {
             return Boolean.TRUE.equals(snapshot.get(Settings.CONNECT_ENABLED));
         }
-        // The rest of the PiP section only matters while its button is enabled.
-        if (setting.section == Settings.PIP && setting != Settings.PIP_ENABLED) {
-            return Boolean.TRUE.equals(snapshot.get(Settings.PIP_ENABLED));
+        // The rest of the PiP section only matters while PiP can open: its button, or leaving
+        // the lyrics screen.
+        if (setting.section == Settings.PIP && setting != Settings.PIP_ENABLED
+                && setting != Settings.PIP_ON_CLOSE) {
+            return Boolean.TRUE.equals(snapshot.get(Settings.PIP_ENABLED))
+                    || Boolean.TRUE.equals(snapshot.get(Settings.PIP_ON_CLOSE));
         }
         if (setting == Settings.DOWNLOAD_LANGUAGE_MODELS) return !snapshot.languageModelReady();
         if ((setting.section == Settings.TRANSLITERATION || setting.section == Settings.TRANSLATION)
@@ -232,6 +235,7 @@ public final class PanelPolicy {
     /** UI language rebuilds every label; dependency settings rebuild only their own section. */
     public static boolean shouldRebuildSectionAfterChange(Settings.Setting<?> setting) {
         return setting == Settings.PIP_ENABLED
+                || setting == Settings.PIP_ON_CLOSE
                 || setting == Settings.AD_MODE
                 || setting == Settings.CONNECT_ENABLED
                 || setting == Settings.DOUBLE_TAP_LIKE

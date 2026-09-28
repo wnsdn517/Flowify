@@ -170,12 +170,24 @@ final class LyricsPipController {
         if (from == null || !isSupported(from) || !hosts.isEmpty() || opener != null) return false;
         if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(from)
                 .get(com.eza.spicyex.Settings.PIP_ENABLED))) return false;
-        open(from);
+        open(from, false);
         return opener != null;
     }
 
-    /** Starts the PiP host; the lyrics screen closes once the window is up (see enter()). */
-    void open(Activity from) {
+    /** Closing the lyrics screen with Settings.PIP_ON_CLOSE on: continue it in PiP instead.
+     *  False (close as usual) when off, unsupported, or PiP is already up or on its way. */
+    boolean openOnClose(Activity from) {
+        if (from == null || !isSupported(from) || !hosts.isEmpty() || opener != null) return false;
+        if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(from)
+                .get(com.eza.spicyex.Settings.PIP_ON_CLOSE))) return false;
+        open(from, true);
+        return opener != null;
+    }
+
+    /** Starts the PiP host; the lyrics screen closes once the window is up (see enter()).
+     *  closeIfNotEntered: the request came from leaving the lyrics screen, which then still
+     *  closes if the window never comes up. */
+    void open(Activity from, boolean closeIfNotEntered) {
         if (from == null || !isSupported(from)) return;
         try {
             opener = new WeakReference<>(from);
@@ -186,12 +198,21 @@ final class LyricsPipController {
             from.startActivity(intent,
                     android.app.ActivityOptions.makeCustomAnimation(from, 0, 0).toBundle());
             XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: opening host");
-            // An explicit PiP action leaves fullscreen in place when the host cannot enter.
+            // An explicit PiP action leaves fullscreen in place when the host cannot enter; a
+            // back press was already consumed for PiP, so that one still closes the lyrics screen.
             main.postDelayed(() -> {
                 Activity pending = opener == null ? null : opener.get();
                 if (pending != from) return;
                 opener = null;
-                XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: not entered, keeping lyrics");
+                if (!closeIfNotEntered) {
+                    XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: not entered, keeping lyrics");
+                    return;
+                }
+                XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: not entered, closing lyrics");
+                if (!from.isFinishing()) {
+                    host.markExplicitLyricsExit(from);
+                    from.finish();
+                }
             }, ENTER_TIMEOUT_MS + 300L);
         } catch (Throwable t) {
             opener = null;

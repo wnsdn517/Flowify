@@ -288,6 +288,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 .aiOffered(aiAvailable());
         snapshot.put(Settings.AI_ENABLED, store.get(Settings.AI_ENABLED));
         snapshot.put(Settings.PIP_ENABLED, store.get(Settings.PIP_ENABLED));
+        snapshot.put(Settings.PIP_ON_CLOSE, store.get(Settings.PIP_ON_CLOSE));
         snapshot.put(Settings.AD_MODE, store.get(Settings.AD_MODE));
         snapshot.put(Settings.DOUBLE_TAP_LIKE, store.get(Settings.DOUBLE_TAP_LIKE));
         snapshot.put(Settings.TAP_SEEK_MODE, store.get(Settings.TAP_SEEK_MODE));
