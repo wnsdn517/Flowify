@@ -17,6 +17,7 @@
 
     <!-- Settings labels -->
     <string name="settings_label_lyric_tap_seek_mode">リリックスをタップしてシーク</string>
+    <string name="settings_label_lyrics_accidental_touch_guard">誤タッチ防止</string>
     <string name="settings_label_lyric_stay_on_track_change">トラック変更時にリリックス画面を保持</string>
     <string name="settings_label_lyric_auto_resume_follow">リリックスの自動追従を再開</string>
     <string name="settings_label_lyric_auto_resume_follow_delay_seconds">自動追従再開までの遅延</string>

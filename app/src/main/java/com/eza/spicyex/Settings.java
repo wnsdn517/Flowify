@@ -52,6 +52,13 @@ public final class Settings {
             "Off", "Single tap", "Double tap"
     );
 
+    // Drops touches on the lyrics screen while the proximity sensor is covered (in a pocket or
+    // bag) and touches with a palm-sized contact patch, and only counts deliberate taps as taps
+    // (see hooks/LyricsTouchGuard, lyrics/LyricsTapSeekHandler). Off by default while in progress.
+    public static final Setting<Boolean> ACCIDENTAL_TOUCH_GUARD = boolSetting(
+            "lyrics_accidental_touch_guard", LYRICS, "Accidental touch guard", false
+    );
+
     // Double-tapping the lyrics adds the song to Liked Songs with a heart (or star) burst where
     // the finger was, as on Instagram Reels. It never removes a like. While on it owns the
     // double tap outright: "Tap lyric to seek" on double tap does nothing, and on single tap
