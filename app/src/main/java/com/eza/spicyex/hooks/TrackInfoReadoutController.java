@@ -1050,7 +1050,9 @@ final class TrackInfoReadoutController {
     }
 
     private void setMode(String mode) {
-        if (pipPresentation) mode = "Off";
+        // In PiP the readout is the window's header (Settings.PIP_SONG_INFO) or nothing: there is
+        // no chrome row to hold "Header" and the window is the size of a top band anyway.
+        if (pipPresentation) mode = readBool(Settings.PIP_SONG_INFO) ? "Top" : "Off";
         if (mode == null) mode = "Off";
         // Two-column's left column is this readout's column placement: it shows for every stored
         // position except Off, and hiding it collapses that column (the lyrics take the width).

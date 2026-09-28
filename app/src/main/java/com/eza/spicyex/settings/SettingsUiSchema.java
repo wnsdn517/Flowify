@@ -104,6 +104,7 @@ public final class SettingsUiSchema {
             Settings.PIP_ON_CLOSE,
             Settings.PIP_SHAPE,
             Settings.PIP_CONTROLS,
+            Settings.PIP_SONG_INFO,
             Settings.PIP_FOCUS,
             Settings.PIP_LEAVE_SPOTIFY,
             // Ad-free listening
