@@ -1034,6 +1034,9 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 "Clear lyrics response cache", CacheClearKind.LYRICS_RESPONSE);
         rows.actionRow(content, Kind.EXTERNAL_LINK,
                 uiStrings.get("settings_action_open_github", "Open GitHub"), v -> openGithub());
+        rows.actionRow(content, null,
+                uiStrings.get("settings_action_audio_debug", "Audio analysis (diagnostic)"),
+                v -> showAudioDebug());
     }
 
     private void clearAction(LinearLayout content, String key, String fallback, CacheClearKind kind) {
@@ -1046,6 +1049,62 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         // Cache clears update preference memory (and the AI database) before returning. Rebuild
         // the owning row now so its usage summary reflects the clear without closing the panel.
         rebuildSection(Settings.LYRICS_SOURCES);
+    }
+
+    /**
+     * Live view of the audio analysis behind the beat-reactive background and the instrumental
+     * visualizer: the band levels, loudness and beat, the stream format, and how often each
+     * AudioTrack#write overload fires. All zeros in the write counts means Spotify is not
+     * playing through a Java AudioTrack on this device, so there is nothing to analyse.
+     */
+    private void showAudioDebug() {
+        com.eza.spicyex.ui.PanelDialog dialog = new com.eza.spicyex.ui.PanelDialog(context,
+                uiStrings.get("settings_action_audio_debug", "Audio analysis (diagnostic)"));
+        com.eza.spicyex.lyrics.InstrumentalVisualizerView bars =
+                new com.eza.spicyex.lyrics.InstrumentalVisualizerView(context,
+                        () -> com.eza.spicyex.hooks.AudioDebug.spectrum);
+        bars.setBands(true);
+        bars.setLayoutParams(new LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.round(140 * context.getResources().getDisplayMetrics().density)));
+        dialog.add(bars);
+        android.widget.TextView stats = dialog.readOnlyBlock("…");
+        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        long[][] previous = {com.eza.spicyex.hooks.AudioDebug.writeCalls()};
+        long[] previousAt = {android.os.SystemClock.uptimeMillis()};
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                long now = android.os.SystemClock.uptimeMillis();
+                long[] calls = com.eza.spicyex.hooks.AudioDebug.writeCalls();
+                String[] kinds = com.eza.spicyex.hooks.AudioDebug.kinds();
+                float seconds = Math.max(0.001f, (now - previousAt[0]) / 1000f);
+                StringBuilder out = new StringBuilder();
+                out.append(String.format(java.util.Locale.ROOT, "loudness %.2f   kick %.2f   snare %.2f%n",
+                        com.eza.spicyex.hooks.AudioDebug.loudness, com.eza.spicyex.hooks.AudioDebug.beat,
+                        com.eza.spicyex.hooks.AudioDebug.accent));
+                boolean reactive = Boolean.TRUE.equals(store.get(Settings.BEAT_REACTIVE_BACKGROUND));
+                out.append("beat-reactive background: ").append(reactive ? "on" : "off").append("\n");
+                String format = com.eza.spicyex.hooks.AudioDebug.format();
+                out.append(format.isEmpty() ? "format —" : format).append('\n');
+                out.append("AudioTrack.write /s:");
+                for (int i = 0; i < kinds.length; i++) {
+                    out.append(String.format(java.util.Locale.ROOT, "  %s %.0f", kinds[i],
+                            (calls[i] - previous[0][i]) / seconds));
+                }
+                stats.setText(out.toString());
+                previous[0] = calls;
+                previousAt[0] = now;
+                handler.postDelayed(this, 500L);
+            }
+        };
+        com.eza.spicyex.hooks.AudioDebug.watch(true);
+        dialog.onDismiss(() -> {
+            handler.removeCallbacks(tick);
+            com.eza.spicyex.hooks.AudioDebug.watch(false);
+        });
+        dialog.show();
+        handler.postDelayed(tick, 500L);
     }
 
     private void renderStatus(LinearLayout content) {

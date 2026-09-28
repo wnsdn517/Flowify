@@ -46,6 +46,21 @@ public interface LyricsHost {
     /** Opens the optional lyrics picture-in-picture window from its explicit button. */
     boolean openLyricsPip(Activity activity);
 
+    /** Gates AudioReactiveController's analysis to when something on screen uses it. */
+    void setAudioReactiveListening(boolean enabled);
+
+    /** 0..1 loudness of the playing audio; tells playing from silence. */
+    float currentAudioLevel();
+
+    /** 0..1 kick-drum envelope for the audio heard now: the beat. */
+    float currentAudioBeat();
+
+    /** 0..1 snare/clap envelope for the audio heard now. */
+    float currentAudioAccent();
+
+    /** Log-spaced band levels, 0..1 each, for the instrumental visualizer. */
+    float[] currentAudioSpectrum();
+
     /** Settings.PIP_ON_CLOSE: true when closing the lyrics screen opened PiP instead. */
     boolean openLyricsPipOnClose(Activity activity);
 

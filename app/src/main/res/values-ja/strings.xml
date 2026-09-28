@@ -132,6 +132,7 @@
     <string name="settings_label_lyric_line_sync_fill">リリックス塗りつぶし方向</string>
     <string name="settings_label_lyric_enable_background">アニメーション背景</string>
     <string name="settings_label_lyric_background_style">背景スタイル</string>
+    <string name="settings_label_lyric_beat_reactive_background">ビート反応背景</string>
     <string name="settings_label_lyric_force_dark_background">背景を強制的に暗くする</string>
     <string name="settings_label_lyric_extra_dark_background">背景を暗くする</string>
     <string name="settings_action_resync_timing">歌詞の同期をリセット</string>
@@ -141,8 +142,12 @@
     <string name="settings_label_lyrics_blur_intensity">ぼかしの強さ</string>
     <string name="settings_label_lyrics_furigana_brightness">ふりがなの明るさ</string>
     <string name="settings_label_lyrics_furigana_position_percent">ふりがなの位置</string>
+    <string name="settings_action_audio_debug">オーディオ解析（診断）</string>
     <string name="lyrics_translation_retrying">翻訳を再試行しています…</string>
     <string name="lyrics_instrumental">インストゥルメンタル</string>
+    <string name="settings_layout_editor_labs">ラボ</string>
+    <string name="settings_layout_editor_labs_audio_sync_hint">試験的な機能です。聞こえている音とずれることがあります。</string>
+    <string name="lyrics_visualizer_labs_note">ラボ機能 · 音とずれることがあります</string>
     <string name="settings_label_lyrics_transliteration_enabled">リリックスを音字</string>
     <string name="settings_label_lyric_aligned_per_word_romaji">各単語の下に音字を付ける</string>
     <string name="settings_label_lyrics_japanese_reading_mode">日本語読み</string>

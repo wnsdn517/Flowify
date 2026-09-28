@@ -132,6 +132,7 @@
     <string name="settings_label_lyric_line_sync_fill">가사 채움 방향</string>
     <string name="settings_label_lyric_enable_background">움직이는 배경</string>
     <string name="settings_label_lyric_background_style">배경 스타일</string>
+    <string name="settings_label_lyric_beat_reactive_background">비트에 반응하는 배경</string>
     <string name="settings_label_lyric_force_dark_background">배경 항상 어둡게</string>
     <string name="settings_label_lyric_extra_dark_background">배경 더 어둡게</string>
     <string name="settings_action_resync_timing">가사 싱크 다시 맞추기</string>
@@ -141,8 +142,12 @@
     <string name="settings_label_lyrics_blur_intensity">흐림 강도</string>
     <string name="settings_label_lyrics_furigana_brightness">후리가나 밝기</string>
     <string name="settings_label_lyrics_furigana_position_percent">후리가나 위치</string>
+    <string name="settings_action_audio_debug">오디오 분석 (진단)</string>
     <string name="lyrics_translation_retrying">번역 다시 시도 중…</string>
     <string name="lyrics_instrumental">연주곡</string>
+    <string name="settings_layout_editor_labs">실험실</string>
+    <string name="settings_layout_editor_labs_audio_sync_hint">실험실 기능이에요. 실제로 들리는 소리와 싱크가 맞지 않을 수 있어요.</string>
+    <string name="lyrics_visualizer_labs_note">실험실 기능 · 소리와 싱크가 맞지 않을 수 있어요</string>
     <string name="settings_label_lyrics_transliteration_enabled">가사 발음 표기</string>
     <string name="settings_label_lyric_aligned_per_word_romaji">단어마다 아래에 발음 표기</string>
     <string name="settings_label_lyrics_japanese_reading_mode">일본어 발음 표기</string>

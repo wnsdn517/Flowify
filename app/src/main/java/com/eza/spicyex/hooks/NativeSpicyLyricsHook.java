@@ -36,6 +36,13 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
     private final NowPlayingInjector nowPlayingInjector = new NowPlayingInjector(this);
     private final LyricsActivityTakeoverHook activityTakeoverHook =
             new LyricsActivityTakeoverHook(this, nowPlayingInjector);
+    private volatile float audioReactiveLevel;
+    private volatile float[] audioSpectrum = new float[AudioReactiveController.BANDS];
+    private final AudioReactiveController audioReactiveController =
+            new AudioReactiveController((loudness, beat, spectrum) -> {
+                audioReactiveLevel = loudness;
+                audioSpectrum = spectrum;
+            });
     private final PlaybackBridge playbackBridge = new PlaybackBridge();
     private final LyricsPipController pipController = new LyricsPipController(this);
     private final LyricsFetchCoordinator lyricsFetchCoordinator =
@@ -102,6 +109,9 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             // Debug builds only, and inert until the arm file exists. See AgentCommandChannel.
             AgentCommandChannel.start(this, applicationContext);
             ActivityResultBridge.install();
+            // Installs only the AudioTrack#play hook, which is cheap. The Visualizer it can
+            // trigger stays off until the lyrics screen asks for it - see setListeningEnabled.
+            audioReactiveController.start();
             Diagnostics.event("bootstrap", "hook_ready",
                     Diagnostics.context("result", "main_process"));
         } else {
@@ -121,6 +131,34 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
 
     public void markExplicitLyricsExit(Activity activity) {
         activityTakeoverHook.markExplicitLyricsExit(activity);
+    }
+
+    /** 0..1 loudness of what Spotify is playing (AudioReactiveController); 0 while not listening. */
+    @Override
+    public float currentAudioLevel() {
+        return audioReactiveLevel;
+    }
+
+    @Override
+    public float currentAudioBeat() {
+        // Read live from the beat timeline, not the ~30Hz analysis callback: kicks are ~10ms
+        // events and the frame loop wants the value for the audio being heard this frame.
+        return audioReactiveController.beatNow();
+    }
+
+    @Override
+    public float currentAudioAccent() {
+        return audioReactiveController.accentNow();
+    }
+
+    @Override
+    public float[] currentAudioSpectrum() {
+        return audioSpectrum;
+    }
+
+    @Override
+    public void setAudioReactiveListening(boolean enabled) {
+        audioReactiveController.setListeningEnabled(enabled);
     }
 
     @Override

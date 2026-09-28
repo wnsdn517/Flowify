@@ -347,6 +347,7 @@ final class LyricsLayoutEditController {
                 Settings.TRACK_INFO_TEXT_SIZE, Settings.TRACK_INFO_TEXT_SIZE_CUSTOM,
                 Settings.BACKGROUND_STYLE,
                 Settings.FORCE_DARK_BACKGROUND, Settings.EXTRA_DARK_BACKGROUND,
+                Settings.BEAT_REACTIVE_BACKGROUND,
                 Settings.SKIP_CHIP_POSITION, Settings.SKIP_CHIP_STYLE,
                 Settings.FOLLOW_CHIP_POSITION, Settings.FOLLOW_CHIP_STYLE,
                 Settings.BACKGROUND_RENDER_QUALITY,
@@ -3279,6 +3280,15 @@ final class LyricsLayoutEditController {
                     }), matchWrap(12));
 
             if ("Animated texture".equals(store.get(Settings.BACKGROUND_STYLE))) {
+                endGroup();
+                // Labs: it follows the audio as Spotify writes it, which only estimates when that
+                // audio is heard, so it can lead or trail the sound a little.
+                addOption(toggleRow(Settings.BEAT_REACTIVE_BACKGROUND,
+                        strings.setting(Settings.BEAT_REACTIVE_BACKGROUND) + "  ·  "
+                                + s("labs", "Labs"), null), matchWrap(4));
+                addOption(text(s("labs_audio_sync_hint", "Experimental - it may not stay in sync "
+                        + "with what you hear."), 12, 0x80FFFFFF, false), matchWrap(12));
+
                 endGroup();
                 beginGroup(strings.setting(Settings.BACKGROUND_RENDER_QUALITY));
                 addOption(text(s("background_quality_hint", "Lower trades a softer/grainier "
