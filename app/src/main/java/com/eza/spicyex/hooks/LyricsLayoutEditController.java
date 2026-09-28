@@ -330,6 +330,11 @@ final class LyricsLayoutEditController {
         return bestIndex;
     }
 
+    /** The settings the editor covers, for the settings search (see LayoutEditorSettings). */
+    static Settings.Setting<?>[] coveredSettings() {
+        return Session.TOUCHED_SETTINGS.clone();
+    }
+
     /** One editor invocation's mutable state - a plain instance instead of a pile of one-element
      *  arrays now that there's real state (selected element, snapshot, current drag) to carry. */
     private static final class Session implements EditorHandle {

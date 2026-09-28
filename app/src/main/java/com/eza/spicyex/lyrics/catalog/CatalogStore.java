@@ -423,6 +423,53 @@ public final class CatalogStore {
         }
     }
 
+    /** One saved track for the stored-lyrics browser. */
+    public static final class StoredTrack {
+        public final String trackId;
+        public final String uri;
+        public final String title;
+        public final String artists;
+        /** Source of the most recently fetched candidate. */
+        public final SourceId source;
+        public final long bytes;
+        public final long savedAtMs;
+
+        StoredTrack(String trackId, String uri, String title, String artists, SourceId source,
+                    long bytes, long savedAtMs) {
+            this.trackId = trackId;
+            this.uri = uri;
+            this.title = title;
+            this.artists = artists;
+            this.source = source;
+            this.bytes = bytes;
+            this.savedAtMs = savedAtMs;
+        }
+    }
+
+    /** Every track with at least one stored candidate, newest first. */
+    public static List<StoredTrack> storedTracks(Context context) {
+        List<StoredTrack> out = new ArrayList<>();
+        if (context == null) return out;
+        try {
+            SQLiteDatabase db = helper(context).getReadableDatabase();
+            try (Cursor cursor = db.rawQuery("SELECT c.track_id, IFNULL(t.uri, ''), IFNULL(t.title, ''),"
+                    + " IFNULL(t.artists, ''), c.source_id, MAX(c.fetched_at_ms)"
+                    + " FROM " + CatalogSchema.TABLE_CANDIDATES + " c LEFT JOIN "
+                    + CatalogSchema.TABLE_TRACKS + " t ON t.track_id = c.track_id"
+                    + " GROUP BY c.track_id ORDER BY MAX(c.fetched_at_ms) DESC", null)) {
+                while (cursor.moveToNext()) {
+                    String trackId = cursor.getString(0);
+                    out.add(new StoredTrack(trackId, cursor.getString(1), cursor.getString(2),
+                            cursor.getString(3), SourceId.parse(cursor.getString(4)),
+                            CatalogStorage.estimateTrackBytes(db, trackId), cursor.getLong(5)));
+                }
+            }
+        } catch (Throwable t) {
+            Diagnostics.warn("CatalogStore", "storedTracks", t);
+        }
+        return out;
+    }
+
     public static int trackCount(Context context) {
         return count(context, CatalogSchema.TABLE_TRACKS, null, null);
     }

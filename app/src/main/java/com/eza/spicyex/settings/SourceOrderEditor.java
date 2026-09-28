@@ -149,7 +149,7 @@ public final class SourceOrderEditor {
     }
 
     /** Provider names are brands and stay as authored; only the surrounding copy localizes. */
-    public String sourceLabel(Source source) {
+    public static String sourceLabel(Source source) {
         if (source == Source.APPLE_MUSIC) return "Apple Music";
         if (source == Source.SPICY) return "Spicy";
         if (source == Source.SPOTIFY) return "Spotify";
