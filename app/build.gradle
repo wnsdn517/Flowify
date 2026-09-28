@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace 'com.eza.spicyex'
-    compileSdk 35
+    compileSdk providers.gradleProperty("SPICY_COMPILE_SDK").orElse("35").get().toInteger()
 
     // Keep focused JVM runs discoverable without moving the existing JUnit4 classes. Groups are
     // intentionally additive: the narrower lyrics-ai and lyrics-session groups sit inside the
@@ -118,7 +118,12 @@ android {
         buildConfig true
     }
 
+    // The bridge contract is kept as Java source so ARM64 Termux builds do not require the
+    // host-only Android SDK aidl executable.
     sourceSets {
+        main {
+            aidl.srcDirs = []
+        }
         // Model files are delivered only through the language model pack, never inside the APK.
         // JVM tests still read the JMdict tables straight from the pack's source folder.
         test {
@@ -206,6 +211,10 @@ dependencies {
 tasks.register("packageLanguageModelPack", Zip) {
     archiveFileName = "spicyex-language-models-v1.zip"
     destinationDirectory = layout.buildDirectory.dir("language-models")
+    // Byte-identical for the same models, so build-install.sh can tell an unchanged pack by its
+    // hash (and skip copying it to the device again) even after a clean build.
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
     from("language-models")
     from(configurations.debugRuntimeClasspath.collect { zipTree(it) }) {
         include "com/atilika/kuromoji/unidic/*.bin"

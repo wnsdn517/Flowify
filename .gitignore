@@ -198,6 +198,7 @@ dependency-reduced-pom.xml
 *.sublime-*
 /scratch
 .gradle
+.gradle-user
 README.html
 *.iml
 .idea
@@ -232,3 +233,15 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Local scratch: device captures, decompiled apks, network traces
+/.artifacts/
+/dev/
+*.har
+
+# scripts/build-install.sh: what was last installed on each device
+.build-install/
+
+# IDE inspection exports and local build logs
+/*.xml
+/build_*.txt
