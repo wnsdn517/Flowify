@@ -52,6 +52,23 @@ public final class Settings {
             "Off", "Single tap", "Double tap"
     );
 
+    // Double-tapping the lyrics adds the song to Liked Songs with a heart (or star) burst where
+    // the finger was, as on Instagram Reels. It never removes a like. While on it owns the
+    // double tap outright: "Tap lyric to seek" on double tap does nothing, and on single tap
+    // the seek waits out the double-tap window so a double tap never also seeks.
+    public static final Setting<Boolean> DOUBLE_TAP_LIKE = boolSetting(
+            "lyrics_double_tap_like", LYRICS, "Double-tap to like", true
+    );
+
+    // Which mark bursts where the finger double-tapped. Looks only - either way the song goes to
+    // Liked Songs. "Like button" follows the dock's like button style (Layout Editor), falling
+    // back to a heart while that button is off.
+    public static final StringSetting DOUBLE_TAP_LIKE_MARK =
+            (StringSetting) enumSetting(
+                    "lyrics_double_tap_like_mark", LYRICS, "Double-tap mark", "Like button",
+                    "Like button", "Heart", "Star"
+            );
+
     // When on, the lyric screen stays open across track changes (Spotify's implicit finish() on
     // song change is suppressed) and reloads for the new track; explicit back/header-close still exits.
     public static final Setting<Boolean> STAY_IN_LYRICS = boolSetting(

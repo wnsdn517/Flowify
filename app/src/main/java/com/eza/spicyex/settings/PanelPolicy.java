@@ -18,6 +18,9 @@ public final class PanelPolicy {
     public static boolean shouldRender(Settings.Setting<?> setting, PanelSnapshot snapshot) {
         // Ad music style only matters when ads are replaced with music; Connect's options only
         // while the receiver is on.
+        if (setting == Settings.DOUBLE_TAP_LIKE_MARK) {
+            return Boolean.TRUE.equals(snapshot.get(Settings.DOUBLE_TAP_LIKE));
+        }
         if (setting == Settings.AD_MUSIC_THEME) {
             return Settings.AD_MODE_MUSIC.equals(snapshot.get(Settings.AD_MODE));
         }
@@ -231,6 +234,7 @@ public final class PanelPolicy {
         return setting == Settings.PIP_ENABLED
                 || setting == Settings.AD_MODE
                 || setting == Settings.CONNECT_ENABLED
+                || setting == Settings.DOUBLE_TAP_LIKE
                 || setting == Settings.AI_ENABLED
                 || setting == Settings.AI_PROVIDER
                 || setting == Settings.TRANSLATION_ENABLED

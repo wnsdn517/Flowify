@@ -45,6 +45,8 @@ public final class SettingsUiSchema {
             // Behavior
             Settings.UI_LANGUAGE,
             Settings.TAP_SEEK_MODE,
+            Settings.DOUBLE_TAP_LIKE,
+            Settings.DOUBLE_TAP_LIKE_MARK,
             Settings.STAY_IN_LYRICS,
             Settings.AUTO_RESUME_FOLLOW,
             Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS,

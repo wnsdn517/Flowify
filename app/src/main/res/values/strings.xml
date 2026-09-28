@@ -629,4 +629,9 @@
     <string name="connect_login_back">Back to Spotify</string>
     <string name="connect_login_switch">Sign in with another account</string>
     <string name="settings_search_connect_enabled">control from a pc, desktop app, remote control</string>
+    <string name="settings_label_lyrics_double_tap_like_mark">Double-tap mark</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_like_button">Same as like button</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_heart">Heart</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_star">Star</string>
+    <string name="settings_search_lyrics_double_tap_like">heart, add to liked songs, instagram</string>
 </resources>

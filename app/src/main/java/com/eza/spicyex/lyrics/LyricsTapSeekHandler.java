@@ -25,7 +25,12 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
     private long scrollDownAtMs;
     private long lastTapAtMs;
     private float lastTapY;
+    private float lastTapX;
     private boolean longPressFired;
+    private DoubleTapCallback doubleTapCallback;
+    /** A single-tap seek waiting to see whether a second tap makes it a double tap. */
+    private final Runnable pendingSeek = this::runPendingSeek;
+    private float pendingSeekY;
 
     public LyricsTapSeekHandler(
             Context context,
@@ -64,7 +69,11 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
             if (touchCallback != null) touchCallback.touching(true);
             hold();
         } else if (action == MotionEvent.ACTION_MOVE) {
-            if (Math.abs(event.getY() - scrollDownY) >= dp(10)) cancelLongPress();
+            if (Math.abs(event.getY() - scrollDownY) >= dp(10)) {
+                cancelLongPress();
+                // A scroll right after a tap is not the tap's seek any more.
+                longPressHandler.removeCallbacks(pendingSeek);
+            }
             hold();
         } else if (action == MotionEvent.ACTION_UP) {
             cancelLongPress();
@@ -74,7 +83,28 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
             long held = SystemClock.elapsedRealtime() - scrollDownAtMs;
             if (dy < dp(10) && held < 600) {
                 String mode = config == null ? "" : config.get(Settings.TAP_SEEK_MODE);
-                if ("Double tap".equalsIgnoreCase(mode)) {
+                if (doubleTapCallback != null && config != null
+                        && Boolean.TRUE.equals(config.get(Settings.DOUBLE_TAP_LIKE))) {
+                    // Double tap likes. A single tap still seeks in "Single tap" mode, once the
+                    // double-tap window has passed; the tap that completes a double tap does not.
+                    long now = SystemClock.elapsedRealtime();
+                    long window = ViewConfiguration.getDoubleTapTimeout();
+                    if (now - lastTapAtMs < window && Math.abs(event.getY() - lastTapY) < dp(40)
+                            && Math.abs(event.getX() - lastTapX) < dp(40)) {
+                        lastTapAtMs = 0;
+                        longPressHandler.removeCallbacks(pendingSeek);
+                        doubleTapCallback.onDoubleTap(event.getX(), event.getY());
+                    } else {
+                        lastTapAtMs = now;
+                        lastTapY = event.getY();
+                        lastTapX = event.getX();
+                        if ("Single tap".equalsIgnoreCase(mode)) {
+                            pendingSeekY = event.getY();
+                            longPressHandler.removeCallbacks(pendingSeek);
+                            longPressHandler.postDelayed(pendingSeek, window);
+                        }
+                    }
+                } else if ("Double tap".equalsIgnoreCase(mode)) {
                     long now = SystemClock.elapsedRealtime();
                     if (now - lastTapAtMs < 350 && Math.abs(event.getY() - lastTapY) < dp(20)) {
                         seek(event.getY());
@@ -124,6 +154,15 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
         if (seekCallback != null) seekCallback.seekAt(y);
     }
 
+    private void runPendingSeek() {
+        seek(pendingSeekY);
+    }
+
+    /** Receives double taps when "Double-tap to like" is on (they no longer seek then). */
+    public void setDoubleTapCallback(DoubleTapCallback callback) {
+        doubleTapCallback = callback;
+    }
+
     private int dp(int value) {
         float density = context == null ? 1f : context.getResources().getDisplayMetrics().density;
         return Math.round(value * density);
@@ -143,5 +182,9 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
 
     public interface LongPressCallback {
         void onLongPress(float y);
+    }
+
+    public interface DoubleTapCallback {
+        void onDoubleTap(float x, float y);
     }
 }

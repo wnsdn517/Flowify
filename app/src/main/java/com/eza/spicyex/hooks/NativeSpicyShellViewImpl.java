@@ -120,6 +120,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private final ImageButton translationToggle;
     private final ImageButton likeButton;
     private String likedMode;
+    /** Settings.DOUBLE_TAP_LIKE_MARK, cached with likedMode. */
+    private String doubleTapMark;
     private Boolean lastLikedSaved;
     private com.eza.spicyex.ui.ActionIconDrawable.Kind lastLikedKind;
     private String pendingLikedUri = "";
@@ -461,6 +463,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (!running) return;
         applyStatusBarPreference();
         likedMode = config.get(Settings.LIKED_SONGS_BUTTON);
+        doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
         refreshLikedButton(currentTrackThrottled());
         applyRenderConfigChanges("preference changed", false);
         ambientController.applySettings(renderConfig.backgroundStyle, renderConfig.forceDarkBackground,
@@ -1326,6 +1329,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
         int chromeButton = chromeButtonDp();
         likedMode = config.get(Settings.LIKED_SONGS_BUTTON);
+        doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
         LyricsShellChromeController.ChromeViews chrome = LyricsShellChromeController.attach(
                 activity,
                 this,
@@ -1451,6 +1455,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 followState::setTouching,
                 this::seekNearestLineAt,
                 this::shareLyricLineAt);
+        tapSeekHandler.setDoubleTapCallback((x, y) -> likeFromDoubleTap(lyricsScroll, x, y));
         lyricsScroll.setOnTouchListener((view, event) -> {
             if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
                     || event.getActionMasked() == android.view.MotionEvent.ACTION_MOVE) {
@@ -5367,11 +5372,82 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (host.toggleSpotifySaved(likedMode, track)) {
             pendingLikedUri = safe(track.uri);
             applyLikedIconState(!track.saved);
+            animateLikeButton(!track.saved);
         } else {
             android.widget.Toast.makeText(activity,
                     uiText("lyrics_like_unavailable", "Liked Songs action unavailable"),
                     android.widget.Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /**
+     * Instagram-style double tap: a heart or star (Settings.DOUBLE_TAP_LIKE_MARK) bursts
+     * where the finger was, and the song is added to Liked Songs. It only ever adds - double
+     * tapping a song already liked just plays the burst again.
+     */
+    private void likeFromDoubleTap(View source, float x, float y) {
+        SpotifyTrack track = currentTrackThrottled();
+        if (track == null || !SpotifyCollectionAction.isSong(track)) return;
+        String mode = SpotifyCollectionAction.enabled(likedMode) ? likedMode : "Heart";
+        // The mark is looks only; the action is Liked Songs either way.
+        String mark = "Heart".equals(doubleTapMark) || "Star".equals(doubleTapMark) ? doubleTapMark : mode;
+        boolean star = com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(mark)
+                == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR;
+        int[] here = new int[2];
+        int[] from = new int[2];
+        getLocationInWindow(here);
+        source.getLocationInWindow(from);
+        new com.eza.spicyex.ui.LikeBurstView(activity, star, true,
+                from[0] - here[0] + x, from[1] - here[1] + y, dp(92)).play(this);
+        performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
+        boolean alreadyLiked = track.saved
+                || (!pendingLikedUri.isEmpty() && pendingLikedUri.equals(safe(track.uri))
+                && Boolean.TRUE.equals(lastLikedSaved));
+        if (alreadyLiked) return;
+        if (host.toggleSpotifySaved(mode, track)) {
+            pendingLikedUri = safe(track.uri);
+            applyLikedIconState(true);
+            animateLikeButton(true);
+        } else {
+            android.widget.Toast.makeText(activity,
+                    uiText("lyrics_like_unavailable", "Liked Songs action unavailable"),
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * The like button's own answer to a toggle, kept quiet: turning on, a light press and a
+     * gentle spring back while a small burst plays around it; turning off, a short dip.
+     */
+    private void animateLikeButton(boolean liked) {
+        if (likeButton == null || likeButton.getVisibility() != View.VISIBLE) return;
+        likeButton.animate().cancel();
+        if (!liked) {
+            likeButton.animate().scaleX(0.82f).scaleY(0.82f).setDuration(90)
+                    .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                    .withEndAction(() -> likeButton.animate().scaleX(1f).scaleY(1f).setDuration(180)
+                            .setInterpolator(new android.view.animation.DecelerateInterpolator()).start())
+                    .start();
+            return;
+        }
+        likeButton.setScaleX(1f);
+        likeButton.setScaleY(1f);
+        likeButton.animate().scaleX(0.86f).scaleY(0.86f).setDuration(110)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .withEndAction(() -> likeButton.animate().scaleX(1f).scaleY(1f).setDuration(380)
+                        .setInterpolator(new android.view.animation.OvershootInterpolator(1.4f)).start())
+                .start();
+        boolean star = com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(likedMode)
+                == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR;
+        int[] here = new int[2];
+        int[] button = new int[2];
+        getLocationInWindow(here);
+        likeButton.getLocationInWindow(button);
+        float cx = button[0] - here[0] + likeButton.getWidth() / 2f;
+        float cy = button[1] - here[1] + likeButton.getHeight() / 2f;
+        // Starts as the button springs back out, not while it is pressed.
+        postDelayed(() -> new com.eza.spicyex.ui.LikeBurstView(activity, star, false, cx, cy,
+                Math.max(likeButton.getWidth(), dp(36)) * 1.2f).play(this), 90);
     }
 
     private void updateLikedButton(SpotifyTrack track) {

@@ -535,4 +535,9 @@
     <string name="connect_login_back">Spotify로 돌아가기</string>
     <string name="connect_login_switch">다른 계정으로 로그인</string>
     <string name="settings_search_connect_enabled">PC에서 제어, 데스크톱, 원격 조종</string>
+    <string name="settings_label_lyrics_double_tap_like_mark">두 번 탭할 때 표시</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_like_button">좋아요 버튼과 같게</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_heart">하트</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_star">별</string>
+    <string name="settings_search_lyrics_double_tap_like">하트, 좋아요 추가, 이중탭, 더블탭</string>
 </resources>

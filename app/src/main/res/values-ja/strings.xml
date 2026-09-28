@@ -512,4 +512,8 @@
     <string name="connect_login_countdown">%1$d秒後に自動で閉じます</string>
     <string name="connect_login_back">Spotifyに戻る</string>
     <string name="connect_login_switch">別のアカウントでログイン</string>
+    <string name="settings_label_lyrics_double_tap_like_mark">ダブルタップ時のマーク</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_like_button">いいねボタンと同じ</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_heart">ハート</string>
+    <string name="settings_option_lyrics_double_tap_like_mark_star">スター</string>
 </resources>
