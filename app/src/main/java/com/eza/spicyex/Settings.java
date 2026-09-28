@@ -617,6 +617,15 @@ public final class Settings {
             LyricsBackgroundStyle.ANIMATED_TEXTURE
     );
 
+    // Only meaningful when BACKGROUND_STYLE is ANIMATED_TEXTURE - gates whether the background
+    // reacts to the drums and loudness AudioReactiveController pulls out of what Spotify plays,
+    // independent of turning the animated texture on at all (some people want the flow without the
+    // kick). Off also means that analysis never runs for the background, so it costs nothing unused.
+    // Edited in the Layout Editor (Background), so it lives outside the settings panel.
+    public static final Setting<Boolean> BEAT_REACTIVE_BACKGROUND = boolSetting(
+            "lyric_beat_reactive_background", INTERNAL, "Beat-reactive background", false
+    );
+
     public static final Setting<Boolean> FORCE_DARK_BACKGROUND = boolSetting(
             "lyric_force_dark_background", INTERNAL, "Force dark background", true
     );

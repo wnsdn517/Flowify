@@ -171,6 +171,7 @@
     <string name="settings_label_lyric_line_sync_fill">Lyric fill direction</string>
     <string name="settings_label_lyric_enable_background">Animated background</string>
     <string name="settings_label_lyric_background_style">Background style</string>
+    <string name="settings_label_lyric_beat_reactive_background">Beat-reactive background</string>
     <string name="settings_label_lyric_force_dark_background">Force dark background</string>
     <string name="settings_label_lyric_extra_dark_background">Darken background</string>
     <string name="settings_label_lyrics_transliteration_enabled">Transliterate lyrics</string>
@@ -474,6 +475,9 @@
     <string name="settings_search_editor_card">Layout editor · Now playing</string>
     <string name="settings_source_list_title">Sources</string>
     <string name="lyrics_instrumental">Instrumental</string>
+    <string name="settings_layout_editor_labs">Labs</string>
+    <string name="settings_layout_editor_labs_audio_sync_hint">Experimental - it may not stay in sync with what you hear.</string>
+    <string name="lyrics_visualizer_labs_note">Labs · may not stay in sync with the audio</string>
     <string name="settings_label_lyrics_status_bar_hidden_mode">Hide status bar</string>
     <string name="settings_label_lyrics_blur_intensity">Blur intensity</string>
     <string name="settings_label_lyrics_furigana_brightness">Furigana brightness</string>
@@ -547,6 +551,7 @@
     <string name="settings_layout_editor_reset_confirm_title">Reset layout?</string>
     <string name="settings_layout_editor_reset_confirm_message">Reset the layout editor changes to their defaults?</string>
     <string name="settings_layout_editor_done">Done</string>
+    <string name="settings_action_audio_debug">Audio analysis (diagnostic)</string>
     <string name="settings_layout_editor_close">Close</string>
     <string name="settings_layout_editor_options_button">Options</string>
     <string name="settings_layout_editor_element_artwork">Artwork</string>

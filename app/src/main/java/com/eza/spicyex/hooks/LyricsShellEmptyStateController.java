@@ -235,7 +235,7 @@ final class LyricsShellEmptyStateController {
      * An instrumental track: a quiet note and its label in place of "No lyrics found", so a
      * deliberate no-lyrics track does not read as a lookup failure.
      */
-    void showInstrumental(LinearLayout lyricsColumn) {
+    void showInstrumental(LinearLayout lyricsColumn, java.util.function.Supplier<float[]> spectrum) {
         ++stateToken;
         lyricsColumn.removeAllViews();
         com.eza.spicyex.SettingsUiStrings strings = com.eza.spicyex.UiLanguage.strings(activity,
@@ -257,6 +257,25 @@ final class LyricsShellEmptyStateController {
         title.setAlpha(0.85f);
         box.addView(title, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        com.eza.spicyex.lyrics.InstrumentalVisualizerView visualizer =
+                new com.eza.spicyex.lyrics.InstrumentalVisualizerView(activity, spectrum);
+        LinearLayout.LayoutParams visualizerLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(170));
+        visualizerLp.topMargin = dp(28);
+        visualizerLp.leftMargin = dp(20);
+        visualizerLp.rightMargin = dp(20);
+        box.addView(visualizer, visualizerLp);
+        // Labs: the visualizer follows the audio as Spotify writes it, which only estimates when
+        // that audio is heard.
+        TextView labs = textFactory.createText(activity,
+                strings.get("lyrics_visualizer_labs_note", "Labs · may not stay in sync with the audio"),
+                11, Color.WHITE, textFactory.resolveTypeface(false));
+        labs.setGravity(Gravity.CENTER);
+        labs.setAlpha(0.45f);
+        LinearLayout.LayoutParams labsLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        labsLp.topMargin = dp(10);
+        box.addView(labs, labsLp);
         lyricsColumn.addView(box, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
