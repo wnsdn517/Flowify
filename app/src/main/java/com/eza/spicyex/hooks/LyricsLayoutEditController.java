@@ -334,7 +334,7 @@ final class LyricsLayoutEditController {
      *  arrays now that there's real state (selected element, snapshot, current drag) to carry. */
     private static final class Session implements EditorHandle {
         private static final Settings.Setting<?>[] TOUCHED_SETTINGS = {
-                Settings.TRACK_INFO_POSITION, Settings.TRACK_INFO_ART_RADIUS,
+                Settings.TRACK_INFO_POSITION, Settings.TRACK_INFO_LYRICS_FLOW, Settings.TRACK_INFO_ART_RADIUS,
                 Settings.TRACK_INFO_ART_SIZE, Settings.TRACK_INFO_ART_SIZE_CUSTOM_DP,
                 Settings.TRACK_INFO_TEXT_ALIGN, Settings.TRACK_INFO_TEXT_SIZE_ADAPTIVE,
                 Settings.TRACK_INFO_SHOW_TITLE, Settings.TRACK_INFO_SHOW_ARTIST,
@@ -2749,6 +2749,15 @@ final class LyricsLayoutEditController {
                         + "drag the artwork itself up/down to reposition."), 12, 0x80FFFFFF, false), matchWrap(12));
 
                 endGroup();
+                // Only the top placement sits over the lyrics: whether they scroll under it or
+                // start below it, as in the picture-in-picture window.
+                if ("Top".equals(safeGetString(Settings.TRACK_INFO_POSITION)) && !landscape) {
+                    beginGroup(strings.setting(Settings.TRACK_INFO_LYRICS_FLOW));
+                    addOption(chipRow(Settings.TRACK_INFO_LYRICS_FLOW,
+                            new String[]{"Overlap", "Below"}, null), matchWrap(12));
+
+                    endGroup();
+                }
             }
             beginGroup(strings.setting(Settings.TRACK_INFO_ART_RADIUS));
             addOption(dragRow(

@@ -120,6 +120,9 @@
     <string name="settings_option_30_seconds">30 seconds</string>
     <string name="settings_option_always_on">Always on</string>
     <string name="settings_label_lyrics_track_info_position">Track info position</string>
+    <string name="settings_label_lyrics_track_info_flow">Lyrics and song info</string>
+    <string name="settings_option_lyrics_track_info_flow_overlap">Scroll under</string>
+    <string name="settings_option_lyrics_track_info_flow_below">Start below</string>
     <string name="settings_option_top">Top</string>
     <string name="settings_option_bottom">Bottom</string>
     <string name="settings_label_lyrics_track_info_text_size">Track info text size</string>
@@ -637,6 +640,7 @@
     <string name="settings_section_pip">Picture-in-picture</string>
     <string name="settings_label_lyrics_pip_shape">Window shape</string>
     <string name="settings_label_lyrics_pip_controls">Playback controls</string>
+    <string name="settings_label_lyrics_pip_song_info">Show artwork and title</string>
     <string name="settings_label_lyrics_pip_focus">Current line position</string>
     <string name="settings_label_lyrics_pip_leave_spotify">Return to the previous app</string>
     <string name="settings_option_lyrics_pip_shape_portrait">Portrait (3:4)</string>
@@ -646,6 +650,7 @@
     <string name="settings_option_lyrics_pip_focus_center">Center</string>
     <string name="settings_search_lyrics_pip_shape">pip size, ratio, aspect, square, portrait</string>
     <string name="settings_search_lyrics_pip_controls">pip buttons, play pause, next, previous</string>
+    <string name="settings_search_lyrics_pip_song_info">pip header, album art, song title, cover, song info</string>
     <string name="settings_search_lyrics_pip_focus">pip focus, active line, center</string>
     <string name="settings_search_lyrics_pip_leave_spotify">pip home, background, go back, leave spotify</string>
     <string name="settings_option_lyrics_pip_shape_landscape">Landscape (4:3)</string>

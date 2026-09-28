@@ -102,6 +102,9 @@
     <string name="settings_option_30_seconds">30秒</string>
     <string name="settings_option_always_on">常にオン</string>
     <string name="settings_label_lyrics_track_info_position">トラック情報の位置</string>
+    <string name="settings_label_lyrics_track_info_flow">歌詞とトラック情報</string>
+    <string name="settings_option_lyrics_track_info_flow_overlap">下を流れる</string>
+    <string name="settings_option_lyrics_track_info_flow_below">下から始める</string>
     <string name="settings_option_top">上</string>
     <string name="settings_option_bottom">下</string>
     <string name="settings_label_lyrics_track_info_text_size">トラック情報テキストサイズ</string>
@@ -453,6 +456,7 @@
     <string name="settings_section_pip">ピクチャー・イン・ピクチャー</string>
     <string name="settings_label_lyrics_pip_shape">ウィンドウの形</string>
     <string name="settings_label_lyrics_pip_controls">再生コントロール</string>
+    <string name="settings_label_lyrics_pip_song_info">アートワークとタイトルを表示</string>
     <string name="settings_label_lyrics_pip_focus">現在の行の位置</string>
     <string name="settings_label_lyrics_pip_leave_spotify">前のアプリに戻る</string>
     <string name="settings_option_lyrics_pip_shape_portrait">縦長 (3:4)</string>
@@ -462,6 +466,7 @@
     <string name="settings_option_lyrics_pip_focus_center">中央</string>
     <string name="settings_search_lyrics_pip_shape">pip サイズ, 比率, 正方形, 縦長</string>
     <string name="settings_search_lyrics_pip_controls">pip ボタン, 再生 一時停止, 次の曲, 前の曲</string>
+    <string name="settings_search_lyrics_pip_song_info">pip ヘッダー, アルバムアート, 曲名, カバー, トラック情報</string>
     <string name="settings_search_lyrics_pip_focus">pip フォーカス, 現在の歌詞, 中央</string>
     <string name="settings_search_lyrics_pip_leave_spotify">pip ホーム, バックグラウンド, 戻る</string>
     <string name="settings_option_lyrics_pip_shape_landscape">横長 (4:3)</string>

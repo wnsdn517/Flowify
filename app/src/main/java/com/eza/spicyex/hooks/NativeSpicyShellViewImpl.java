@@ -347,8 +347,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // Where the content sits on screen is shared with the full-screen shell; a PiP window's
         // position must not become it.
         watchContentScreenTop(false);
-        if (first) addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> post(this::fitPipLyrics));
         if (trackInfoController != null) trackInfoController.setPipPresentation();
+        if (first) post(this::fitLyricsArea);
         if (chromeHeader != null) {
             chromeHeader.animate().cancel();
             chromeHeader.setVisibility(View.GONE);
@@ -357,20 +357,103 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (jumpToCurrentController != null) jumpToCurrentController.update(false);
     }
 
-    /** Keep the lyrics area at full height after the readout is removed. */
-    private void fitPipLyrics() {
-        if (!pipPresentation || lyricsFrame == null) return;
+    private TopEdgeFade lyricsTopFade;
+    private static final int LYRICS_TOP_FADE_DP = 72;
+    /** About half a lyric line: the focus point is a line's middle, not its top. */
+    private static final int FOCUS_HALF_LINE_DP = 48;
+
+    /**
+     * Whether the lyrics start below the song info instead of scrolling under it: the PiP
+     * window's header (Settings.PIP_SONG_INFO), or on the lyrics screen the song info at the
+     * top with Settings.TRACK_INFO_LYRICS_FLOW "Below" (portrait, single column only - the side
+     * and two-column placements never sit over the lyrics).
+     */
+    private boolean lyricsBelowSongInfo() {
+        try {
+            if (pipPresentation) return Boolean.TRUE.equals(config.get(Settings.PIP_SONG_INFO));
+            return !twoColumn && !isLandscape()
+                    && "Top".equals(config.get(Settings.TRACK_INFO_POSITION))
+                    && "Below".equals(config.get(Settings.TRACK_INFO_LYRICS_FLOW));
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** Fades out what is under its top {@code length} pixels (drawn in the owner's own layer). */
+    private static final class TopEdgeFade extends android.graphics.drawable.Drawable {
+        private final int length;
+        private final android.graphics.Paint paint = new android.graphics.Paint();
+
+        TopEdgeFade(int length) {
+            this.length = length;
+            paint.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT));
+            paint.setShader(new android.graphics.LinearGradient(0, 0, 0, length,
+                    Color.BLACK, Color.TRANSPARENT, android.graphics.Shader.TileMode.CLAMP));
+        }
+
+        @Override
+        public void draw(android.graphics.Canvas canvas) {
+            android.graphics.Rect b = getBounds();
+            if (b.isEmpty()) return;
+            canvas.drawRect(b.left, b.top, b.right, b.top + length, paint);
+        }
+
+        @Override public void setAlpha(int alpha) { }
+        @Override public void setColorFilter(android.graphics.ColorFilter filter) { }
+        @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
+    }
+
+    /**
+     * Lays the lyrics area out against the song info. Below it (see lyricsBelowSongInfo): the
+     * area starts under the artwork and title, so no line ever runs beneath them, and lines
+     * leaving the top dissolve into the background at that edge instead of being cut - the mask
+     * erases the area's own layer, so whatever background is behind shows through. Otherwise
+     * the area has the full height again.
+     */
+    private void fitLyricsArea() {
+        if (lyricsFrame == null) return;
         if (!(lyricsFrame.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)
                 || !(lyricsFrame.getParent() instanceof View)) return;
         ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) lyricsFrame.getLayoutParams();
+        boolean below = lyricsBelowSongInfo();
+        if (!below && lp.topMargin == 0 && lyricsTopFade == null && !pipPresentation) return;
+        int headerBottom = 0;
+        if (below && trackInfoController != null) {
+            for (View frame : new View[]{trackInfoController.currentArtFrame(),
+                    trackInfoController.currentTextFrame()}) {
+                if (frame == null || !frame.isShown() || frame.getHeight() <= 0) continue;
+                android.graphics.Rect r = new android.graphics.Rect(0, 0, frame.getWidth(), frame.getHeight());
+                offsetDescendantRectToMyCoords(frame, r);
+                if (r.top < getHeight() / 2) headerBottom = Math.max(headerBottom, r.bottom);
+            }
+        }
         android.graphics.Rect parent = new android.graphics.Rect(0, 0, 1, 1);
         offsetDescendantRectToMyCoords((View) lyricsFrame.getParent(), parent);
-        if (lp.topMargin != 0) {
-            lp.topMargin = 0;
+        int wanted = headerBottom <= 0 ? 0
+                : Math.max(0, headerBottom - parent.top - lyricsFrame.getPaddingTop() + dp(10));
+        if (lp.topMargin != wanted) {
+            lp.topMargin = wanted;
             lyricsFrame.setLayoutParams(lp);
             return; // measured again on the layout this causes
         }
-        applyPipAnchor(parent.top + lp.topMargin, lyricsFrame.getHeight());
+        setLyricsTopFade(wanted > 0);
+        if (pipPresentation) applyPipAnchor(parent.top + lp.topMargin, lyricsFrame.getHeight());
+    }
+
+    private void setLyricsTopFade(boolean on) {
+        if (on) {
+            if (lyricsTopFade == null) {
+                lyricsFrame.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+                lyricsTopFade = new TopEdgeFade(dp(LYRICS_TOP_FADE_DP));
+                lyricsFrame.getOverlay().add(lyricsTopFade);
+            }
+            lyricsTopFade.setBounds(0, 0, lyricsFrame.getWidth(), lyricsFrame.getHeight());
+            lyricsFrame.invalidate();
+        } else if (lyricsTopFade != null) {
+            lyricsFrame.getOverlay().remove(lyricsTopFade);
+            lyricsTopFade = null;
+            lyricsFrame.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
     }
 
     /** Map the focus setting into the visible PiP window and keep it inside the lyrics area. */
@@ -380,7 +463,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float wantedY = "Center".equals(config.get(Settings.PIP_FOCUS))
                 ? areaTop + areaHeight / 2f
                 : pipCropTopPx + baseFocusAnchorFraction() * visible;
-        float fraction = Math.max(0.12f, Math.min(0.88f, (wantedY - areaTop) / areaHeight));
+        // Never inside the top fade: the current line would be half dissolved.
+        float min = 0.12f;
+        if (lyricsTopFade != null) {
+            float clearOfFade = (LYRICS_TOP_FADE_DP + FOCUS_HALF_LINE_DP)
+                    * getResources().getDisplayMetrics().density;
+            min = Math.max(min, clearOfFade / areaHeight);
+        }
+        float fraction = Math.max(min, Math.min(0.88f, (wantedY - areaTop) / areaHeight));
         if (Math.abs(fraction - pipAnchorFraction) < 0.005f) return;
         pipAnchorFraction = fraction;
         scrollController.setAnchorFraction(fraction);
@@ -471,6 +561,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (trackInfoController != null) trackInfoController.onPreferenceChanged();
         if (jumpToCurrentController != null) jumpToCurrentController.onPreferenceChanged();
         if (skipGapController != null) skipGapController.onPreferenceChanged();
+        post(this::fitLyricsArea);
         if (chromeViews != null) {
             updatePipButtonVisibility();
             LyricsShellChromeController.applyClusterPosition(chromeViews,
@@ -1475,6 +1566,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             return tapSeekHandler.onTouch(view, event);
         });
         lyricsFrame = new FrameLayout(activity);
+        // The song info can move or change size on any layout; keep the lyrics area fitted to it.
+        addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> post(this::fitLyricsArea));
         lyricsColumn = new LinearLayout(activity);
         lyricsColumn.setOrientation(LinearLayout.VERTICAL);
         lyricsColumn.setGravity(Gravity.CENTER_HORIZONTAL);
