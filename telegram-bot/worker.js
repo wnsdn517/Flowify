@@ -68,9 +68,13 @@ async function command(env, cmd, msg) {
   const chatId = msg.chat.id, replyTo = msg.message_id;
   if (cmd === "ci") return sendCi(env, chatId, replyTo);
   const list = await gh(env, "/releases?per_page=30");
-  const pick = (beta) => list.find((r) => !r.draft && r.prerelease === beta && r.tag_name !== "ci-latest");
-  if (cmd === "release") return sendRelease(env, chatId, replyTo, "Latest release", pick(false));
-  if (cmd === "beta") return sendRelease(env, chatId, replyTo, "Latest beta", pick(true));
+  const published = (list || []).filter((r) => !r.draft && r.tag_name !== "ci-latest");
+  if (cmd === "release") return sendRelease(env, chatId, replyTo, "Latest release", published.find((r) => !r.prerelease));
+  // /beta = the newest build of any kind, so it never comes back empty when a stable release is newer.
+  if (cmd === "beta") {
+    const newest = published[0];
+    return sendRelease(env, chatId, replyTo, newest?.prerelease ? "Latest beta" : "Latest (stable)", newest);
+  }
 }
 
 export default {
