@@ -3051,8 +3051,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  size toward the middle - the scroll reads as a list receding rather than rows being cut
      *  off. A line shrinks the moment it nears the edge but grows back at a fixed speed, so in a
      *  very fast scroll the lines streaming in stay small, and a little more of them shows. */
-    private static final float EDGE_SCALE_ZONE = 0.11f;
-    private static final float EDGE_SCALE_MIN = 0.78f;
+    /** Where along the way from the focus line to the screen edge the shrinking starts. */
+    private static final float EDGE_SCALE_START = 0.4f;
+    private static final float EDGE_SCALE_MIN = 0.72f;
     private static final float EDGE_SCALE_GROW_PER_SEC = 0.55f;
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
     private long edgeScaleAtMs;
@@ -3070,7 +3071,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (mountedRowsHost == null || lyricsScroll == null || lyricsColumn == null) return;
         int viewport = lyricsScroll.getHeight();
         if (viewport <= 0) return;
-        float zone = viewport * EDGE_SCALE_ZONE;
+        // Measured from the focus line, not the screen edge: the lines dim away well before the
+        // edge, so that is where they have to be getting smaller too. Above and below the focus
+        // the distance is taken to its own side's edge.
+        float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
         int scrollY = lyricsScroll.getScrollY();
         int hostTop = 0;
         for (View v = mountedRowsHost; v != null && v != lyricsColumn; ) {
@@ -3083,10 +3087,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             int height = row.getHeight();
             if (height <= 0) continue;
             float center = hostTop + row.getTop() + height / 2f - scrollY;
-            float edge = Math.min(center, viewport - center);
-            float f = Math.max(0f, Math.min(1f, edge / zone));
+            float reach = center < anchor ? anchor : viewport - anchor;
+            float away = Math.abs(center - anchor) / Math.max(1f, reach);
+            float f = Math.max(0f, Math.min(1f, (away - EDGE_SCALE_START) / (1f - EDGE_SCALE_START)));
             f = f * f * (3f - 2f * f);
-            float target = EDGE_SCALE_MIN + (1f - EDGE_SCALE_MIN) * f;
+            float target = 1f - (1f - EDGE_SCALE_MIN) * f;
             Float known = edgeScales.get(row);
             float current = known == null ? target : known;
             // Shrinks with the edge at once; grows back no faster than the fixed rate.
