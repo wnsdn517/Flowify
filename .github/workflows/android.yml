@@ -24,8 +24,6 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
 
       - name: Decode keystore
         run: |
@@ -51,6 +49,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
         run: |
+          export PATH="$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1):$PATH"
           expected=$(keytool -list -v \
             -keystore "$SIGNING_KEYSTORE_FILE" \
             -storepass "$SIGNING_STORE_PASSWORD" \

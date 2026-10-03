@@ -30,7 +30,6 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - uses: android-actions/setup-android@v3
 
       - name: Decode keystore
         run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/spicyex-release.jks"
