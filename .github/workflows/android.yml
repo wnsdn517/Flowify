@@ -76,21 +76,9 @@ jobs:
             app/build/outputs/apk/release/*.apk
             app/build/outputs/apk/debug/*.apk
 
-      - name: Send APK to Telegram CI channel
+      - name: Send APKs to Telegram CI channel
         if: success()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CI_CHAT_ID: ${{ secrets.TELEGRAM_CI_CHAT_ID }}
-        run: |
-          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CI_CHAT_ID" ]; then
-            echo "Telegram secrets not set; skipping."; exit 0
-          fi
-          short=${GITHUB_SHA::7}
-          caption="Spicy EX CI build
-          Branch: ${GITHUB_REF_NAME}
-          Commit: ${short} - $(git log -1 --pretty=%s)
-          Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          for kind in release debug; do
-            apk=$(ls app/build/outputs/apk/$kind/*.apk | head -1)
-            curl -sS --fail -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument"               --form-string chat_id="$TELEGRAM_CI_CHAT_ID"               -F "document=@${apk};filename=spicy-ex-${kind}-${short}.apk"               --form-string caption="$caption ($kind)" > /dev/null
-          done
+        run: bash scripts/ci-telegram.sh
