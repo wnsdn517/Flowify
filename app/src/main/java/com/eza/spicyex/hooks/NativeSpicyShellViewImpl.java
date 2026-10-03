@@ -370,6 +370,22 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
         if (skipGapController != null) skipGapController.hide();
         if (jumpToCurrentController != null) jumpToCurrentController.update(false);
+        fitPipArtColumn();
+    }
+
+    /** The landscape window crops the status-bar room off the top of the layout, and the column's
+     *  full-screen margins (made for a status bar and a nav bar) assumed portrait's insets: the
+     *  cover and song info are centred in what the window really shows, with even margins. */
+    private void fitPipArtColumn() {
+        if (!twoColumn || landscapeLeftColumn == null
+                || !(landscapeLeftColumn.getLayoutParams() instanceof LinearLayout.LayoutParams)) return;
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) landscapeLeftColumn.getLayoutParams();
+        int top = pipCropTopPx + dp(24);
+        int bottom = dp(24);
+        if (lp.topMargin == top && lp.bottomMargin == bottom) return;
+        lp.topMargin = top;
+        lp.bottomMargin = bottom;
+        landscapeLeftColumn.setLayoutParams(lp);
     }
 
     /** Keep the lyrics area at full height after the readout is removed. */
