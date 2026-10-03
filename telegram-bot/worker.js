@@ -188,8 +188,8 @@ async function isAdmin(env, chatId, userId) {
 const BUG_DETAILS_ASK = [
   "Reply to this message with:",
   "1) Spicy EX version, Spotify version, Android version/device — Settings → About → <b>Share for a bug report</b> generates this for you",
-  "2) Steps to reproduce",
-  "3) A log file, if you have one (attach it to your reply)",
+  "2) What you were doing when it happened and the exact steps to reproduce it — be specific, this is the part people skip and it's the part that actually gets bugs fixed",
+  "3) A log file, if you have one (attach it to your reply) — if you don't have one, the description in (2) matters even more",
   "",
   "Don't include tokens, passwords, or anything else private — this becomes a public issue.",
   "",
