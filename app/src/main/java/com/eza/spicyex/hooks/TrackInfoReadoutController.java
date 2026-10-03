@@ -979,6 +979,7 @@ final class TrackInfoReadoutController {
         Drawable bg = view.getBackground();
         if (bg instanceof GradientDrawable) {
             ((GradientDrawable) bg).setCornerRadius(dp(radiusDp));
+            view.invalidateOutline(); // the art views clip to it
         }
     }
 
@@ -1571,10 +1572,10 @@ final class TrackInfoReadoutController {
      *  given bitmap instead. */
     void showDemoTrack(SpotifyTrack track, Bitmap art) {
         onTrackChanged(track);
-        Bitmap rounded = art == null ? null : roundBitmap(art, dp(bottomArtDpF), dp(artRadiusDp));
-        Bitmap sideRounded = art == null ? null : roundBitmap(art, dp(sideArtDp), dp(artRadiusDp));
+        Bitmap rounded = art == null ? null : roundBitmap(art, dp(bottomArtDpF), 0f);
+        Bitmap sideRounded = art == null ? null : roundBitmap(art, dp(sideArtDp), 0f);
         Bitmap columnRounded = art == null || columnArt == null ? null
-                : roundBitmap(art, dp(columnArtDpF), dp(artRadiusDp));
+                : roundBitmap(art, dp(columnArtDpF), 0f);
         if (currentArtwork != null) {
             try {
                 currentArtwork.recycle();
@@ -1746,7 +1747,7 @@ final class TrackInfoReadoutController {
             }
             if (raw == null) return null;
             int targetPx = large ? (fromNetworkCache ? size : raw.getWidth()) : size;
-            return roundBitmap(raw, targetPx, radiusPx);
+            return roundBitmap(raw, targetPx, 0f);
         } catch (RuntimeException unavailable) {
             return null;
         } finally {
@@ -1851,7 +1852,13 @@ final class TrackInfoReadoutController {
         view.animate().alpha(1f).setDuration(180).start();
     }
 
-    /** Rounds once per track change so drag frames never pay for an outline mask. */
+    /**
+     * Scales the cover to its bitmap size. The corners are not baked in (radiusPx is 0 at every
+     * call): the art views clip to their own rounded background instead (styleArt). A radius baked
+     * at the bitmap's size scaled with it wherever the view was shown at another size - the PiP
+     * window's cover column most of all - so the cover's corners no longer matched its
+     * placeholder and touch scrim, which round at the view's real size.
+     */
     private static Bitmap roundBitmap(Bitmap src, int sizePx, float radiusPx) {
         Bitmap out = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(out);
@@ -2234,6 +2241,9 @@ final class TrackInfoReadoutController {
         placeholder.setColor(0xFF3A3F55);
         placeholder.setCornerRadius(dp(radiusDp));
         art.setBackground(placeholder);
+        // The cover is clipped by this rounded background (its outline), so image, placeholder
+        // and scrim share one radius at whatever size the view ends up.
+        art.setClipToOutline(true);
     }
 
     /** Overlay scrim with the art's shape (rounded readout, square side panel). */
