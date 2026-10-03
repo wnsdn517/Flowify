@@ -1,8 +1,9 @@
 // Cloudflare Worker for the Spicy EX Telegram bot.
 //  - Telegram webhook: /release, /beta, /ci, /help in the discussion group; each release reply has a
 //    "Full notes here" button that prints the untouched release body in-chat (not just a GitHub link).
-//  - Feature-request detection: a keyword match in the discussion group gets a "File as GitHub issue"
-//    button; clicking it (original author or a group admin) files the issue, deduped by message text.
+//  - Feature-request / bug-report detection: a keyword match in the discussion group gets a "File as
+//    GitHub issue" button (labeled bug or enhancement); clicking it (original author or a group admin)
+//    files the issue, deduped by message text.
 //  - POST /ci-update (from CI, header X-CI-Secret): stores the Telegram file_ids of the newest CI build.
 // Bindings: KV "CI". Secrets: TELEGRAM_BOT_TOKEN, WEBHOOK_SECRET, CI_NOTIFY_SECRET, GH_TOKEN (optional
 // but strongly recommended: raises the GitHub API rate limit from 60/hr per shared Worker IP to 5000/hr,
@@ -118,7 +119,7 @@ const HELP_TEXT = [
   "",
   "Every release reply has a <b>Full notes here</b> button that prints the untouched release notes in this chat, and an <b>Open on GitHub</b> link.",
   "",
-  "Write something like \"feature request: …\", \"could you add …\" or \"it'd be nice if …\" and I'll offer a button to file it as a GitHub issue — nothing is filed without that confirmation.",
+  "Write something like \"feature request: …\", \"could you add …\" or \"it'd be nice if …\" — or a bug report like \"X crashes when…\" / \"Y doesn't work\" — and I'll offer a button to file it as a GitHub issue, right here in Telegram. Nothing is filed without that confirmation, and only you or a group admin can confirm it.",
 ].join("\n");
 
 async function command(env, cmd, msg) {
@@ -140,11 +141,21 @@ async function command(env, cmd, msg) {
   }
 }
 
-// ---------- Feature-request detection ----------
+// ---------- Feature-request / bug-report detection ----------
 
-// English phrasings for "please add this" / "it would be nice if". The group's rules are English-only,
-// so detection stays English-only too. Loose substrings on purpose - a false positive just shows an
-// unused button, which is cheap, so flexible wins over strict.
+// English only, matching the group's English-only rule. Loose substrings on purpose - a false
+// positive just shows an unused button, which is cheap, so flexible wins over strict. Checked in
+// order: a bug report takes priority when a message happens to match both (e.g. "crashes, please
+// add a fallback").
+const BUG_RE = new RegExp(
+  [
+    "\\bbug\\b", "\\bcrash(ed|es|ing)?\\b", "doesn'?t work", "isn'?t working", "not working",
+    "won'?t (open|load|start|launch)", "\\bbroken\\b", "force ?close", "\\banr\\b", "keeps? (crashing|freezing|stopping)",
+    "stuck on", "\\bfreez(e|es|ing)\\b", "\\bregression\\b", "stack ?trace", "\\bexception\\b", "null ?pointer",
+    "throws? an error", "error:", "doesn'?t load", "fails? to",
+  ].join("|"),
+  "i"
+);
 const FEATURE_RE = new RegExp(
   [
     "feature request", "feature idea", "\\bfr:", "#feature",
@@ -173,21 +184,24 @@ async function isAdmin(env, chatId, userId) {
 
 async function maybeOfferFeatureRequest(env, msg) {
   const text = msg.text || "";
-  if (text.startsWith("/") || text.length < 12 || !FEATURE_RE.test(text)) return;
+  if (text.startsWith("/") || text.length < 12) return;
+  const kind = BUG_RE.test(text) ? "bug" : FEATURE_RE.test(text) ? "feature" : null;
+  if (!kind) return;
   if (env.DISCUSSION_CHAT_USERNAME && msg.chat.username !== env.DISCUSSION_CHAT_USERNAME) return;
 
   const id = crypto.randomUUID().slice(0, 8);
   const author = msg.from.username ? `@${msg.from.username}` : [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ");
   await env.CI.put(
     `fr:${id}`,
-    JSON.stringify({ text, authorId: msg.from.id, author, chatId: msg.chat.id, messageId: msg.message_id }),
+    JSON.stringify({ text, kind, authorId: msg.from.id, author, chatId: msg.chat.id, messageId: msg.message_id }),
     { expirationTtl: 1209600 } // 2 weeks to decide is plenty
   );
+  const [prompt, label] = kind === "bug" ? ["Sounds like a bug report.", "🐛 File as GitHub issue"] : ["Sounds like a feature request.", "📝 File as GitHub issue"];
   await tgCall(env, "sendMessage", {
     chat_id: msg.chat.id,
     reply_to_message_id: msg.message_id,
-    text: "Sounds like a feature request. File it on GitHub?",
-    reply_markup: { inline_keyboard: [[{ text: "📝 File as GitHub issue", callback_data: `fr:${id}` }]] },
+    text: `${prompt} File it on GitHub?`,
+    reply_markup: { inline_keyboard: [[{ text: label, callback_data: `fr:${id}` }]] },
   });
 }
 
@@ -212,7 +226,10 @@ async function fileIssue(env, cq) {
 
   await answer("Filing…");
   const link = env.DISCUSSION_CHAT_USERNAME ? `https://t.me/${env.DISCUSSION_CHAT_USERNAME}/${entry.messageId}` : null;
-  const title = entry.text.length > 80 ? entry.text.slice(0, 77) + "…" : entry.text;
+  const isBug = entry.kind === "bug";
+  const prefix = isBug ? "Bug: " : "";
+  const titleBody = entry.text.length > 80 - prefix.length ? entry.text.slice(0, 77 - prefix.length) + "…" : entry.text;
+  const title = prefix + titleBody;
   const body = [
     entry.text, "",
     `Filed from Telegram by ${entry.author}${link ? ` ([message](${link}))` : ""}.`,
@@ -221,7 +238,7 @@ async function fileIssue(env, cq) {
   const res = await gh(env, "/issues", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, body, labels: ["enhancement", "from-telegram"] }),
+    body: JSON.stringify({ title, body, labels: [isBug ? "bug" : "enhancement", "from-telegram"] }),
   });
 
   if (!res.html_url) {
