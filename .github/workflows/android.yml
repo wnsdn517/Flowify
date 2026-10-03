@@ -1,8 +1,10 @@
-name: Build Spicy EX APK
+name: CI (debug + release APK)
 
-# Private checkpoint pushes are validated locally and on-device.
-# Keep this workflow manual-only so GitHub Actions does not spend minutes or artifact quota.
+# CI builds both debug and signed release APKs and posts them to the Telegram CI channel.
+# Publishing a release is done by release.yml (release APK only).
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -12,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # versionCode = git commit count; a shallow clone would reset it
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -70,3 +74,23 @@ jobs:
           name: spicy-ex-release-apks
           path: |
             app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
+
+      - name: Send APK to Telegram CI channel
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CI_CHAT_ID: ${{ secrets.TELEGRAM_CI_CHAT_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CI_CHAT_ID" ]; then
+            echo "Telegram secrets not set; skipping."; exit 0
+          fi
+          short=${GITHUB_SHA::7}
+          caption="Spicy EX CI build
+          Branch: ${GITHUB_REF_NAME}
+          Commit: ${short} - $(git log -1 --pretty=%s)
+          Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          for kind in release debug; do
+            apk=$(ls app/build/outputs/apk/$kind/*.apk | head -1)
+            curl -sS --fail -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument"               -F chat_id="$TELEGRAM_CI_CHAT_ID"               -F document=@"$apk;filename=spicy-ex-${kind}-${short}.apk"               -F caption="$caption ($kind)" > /dev/null
+          done

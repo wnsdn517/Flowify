@@ -1,0 +1,59 @@
+name: Release (signed release APK only)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.58.182)'
+        required: true
+      prerelease:
+        description: 'Mark as beta/pre-release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # versionCode = git commit count; a shallow clone would reset it
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Decode keystore
+        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/spicyex-release.jks"
+
+      - name: Build signed release APK
+        env:
+          SIGNING_KEYSTORE_FILE: ${{ github.workspace }}/spicyex-release.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: chmod +x gradlew && ./gradlew :app:assembleRelease
+
+      - name: Pick release notes
+        id: notes
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          if [ -f ".github/release-notes/$tag.md" ]; then echo "path=.github/release-notes/$tag.md" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          prerelease: ${{ github.event.inputs.prerelease == 'true' || contains(github.ref_name, 'beta') }}
+          body_path: ${{ steps.notes.outputs.path }}
+          generate_release_notes: ${{ steps.notes.outputs.path == '' }}
+          files: app/build/outputs/apk/release/*.apk

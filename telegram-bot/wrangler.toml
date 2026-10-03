@@ -1,0 +1,6 @@
+name = "spicy-ex-bot"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+GITHUB_REPO = "wnsdn517/spicy-ex"

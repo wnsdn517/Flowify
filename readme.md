@@ -1,7 +1,7 @@
 <div align="center">
 
 # Spicy EX
-Animated synced lyrics inside Spotify, as an Xposed/LSPosed module.<br>
+Animated synced lyrics inside Spotify for Android (Spicy Lyrics for Android), as an Xposed/LSPosed/LSPatch module.<br>
 Unofficial community project — not affiliated with Spotify or Spicy Lyrics.<br>
 For the desktop version, check out [spicy-lyrics](https://github.com/amarinne/spicy-lyrics).
 Xiaomi HyperOS 3 lockscreen/AOD integration: [HyperGlow](https://github.com/amarinne/hyperglow)
@@ -19,16 +19,21 @@ Have an idea, found a bug, or just want to talk?
 
 Join the SpicyEX community and help make the experience better.
 
-<br><a href="https://github.com/OWNER/REPO/discussions">
+<br><a href="https://github.com/wnsdn517/spicy-ex/discussions">
   <img src="https://img.shields.io/badge/Explore-Discussions-181818?style=for-the-badge&logo=github&logoColor=white" alt="Explore Discussions">
-</a></div>---
-## What's new in v1.58.181
-- Rebuilt in-Spotify settings with a cleaner section layout, Lucide icons, status badges and smoother panel motion.
-- Introduced the new opt-in AI feature set: separate Meaning and Sound lanes for translation and pronunciation/transliteration.
-- New AI setup supports Gemini, official OpenAI and custom OpenAI-compatible providers with provider-scoped credentials, model checks and visible request status.
-- New layered results can show a Google preliminary result immediately, then let accepted AI translation or reading supersede it.
-- New review and cache handling lets accepted AI results be reused without re-running paid work.
-- Improved Arabic/Hebrew right-to-left and mixed-script lyric layout.
+</a></div>
+
+---
+
+## What's new in v1.6.1 (first fork release)
+- **Lyrics:** Apple Music-style motion, sync that follows Spotify's audio clock, momentum scrolling with edge fade, tap-to-seek, sync offset, follow chip, outro skip that works on free accounts, NetEase / QQ sources and a per-song source picker.
+- **Layout Editor:** edit the lyrics screen live in place (artwork, text, focus point, background, chips, top controls, now-playing card).
+- **Double-tap like:** 14 effect styles, heart/star/like-button mark, and a Try it trial bar.
+- **Share cards:** 7 designs, artist-photo backdrop, multi-line picking, Instagram / Facebook Stories.
+- **Picture-in-Picture:** floating lyrics with song info, landscape layout and several window shapes.
+- **Ad-free listening:** mute ads or replace them with generated music, plus an ad card on the lyrics screen.
+- **Spicy Connect:** an ad-free web player that appears as a Spotify Connect device.
+- **Settings:** bottom sheet with search, About page, fork versioning; Korean and Japanese translations completed.
 
 ## Features
 - Full-screen synced lyrics — Spicy karaoke wash, per-word animation, interludes.
@@ -82,6 +87,12 @@ versioned archive with `:app:packageLanguageModelPack` (JMdict sources live in
 `-PLANGUAGE_MODEL_PACK_SHA256=...`.
 
 Docs-only changes do not require unit/device testing. Device behavior remains the final validation path for UI, hook, and Spotify-host integration changes.
+
+## Community
+- [Announcements](https://t.me/spicy_ex) — release news
+- [Discussion](https://t.me/spicy_ex_discussion) — chat and support. Bot commands: `/release`, `/beta`, `/ci`
+- [CI builds](https://t.me/spicy_ex_ci) — every CI build APK is posted here automatically
+- [CI discussion](https://t.me/spicy_ex_ci) — see the CI channel
 
 ## Credits
 - [LeNerd46/SpotifyPlus](https://github.com/LeNerd46/SpotifyPlus)
