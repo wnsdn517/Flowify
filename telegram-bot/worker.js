@@ -108,16 +108,14 @@ async function command(env, cmd, msg) {
 
 // ---------- Feature-request detection ----------
 
-// English and Korean phrasings for "please add this" / "it would be nice if". Loose substrings on
-// purpose (Korean particles attach directly to the verb stem, so a strict phrase won't catch most
-// real messages) - a false positive just shows an unused button, which is cheap, so flexible wins.
+// English phrasings for "please add this" / "it would be nice if". The group's rules are English-only,
+// so detection stays English-only too. Loose substrings on purpose - a false positive just shows an
+// unused button, which is cheap, so flexible wins over strict.
 const FEATURE_RE = new RegExp(
   [
     "feature request", "feature idea", "\\bfr:", "#feature",
     "(could|can|would) you add", "please add", "add support for", "support for",
     "it('?d| would) be (nice|great|cool|awesome)", "i wish", "suggestion:", "idea:",
-    "기능\\s*요청", "추가해", "추가\\s*좀", "넣어주", "달아주", "지원해주", "지원\\s*좀",
-    "(으면|면)\\s*좋겠", "(으면|면)\\s*좋을", "건의", "제안", "요청(드립니다|합니다|드려요)",
   ].join("|"),
   "i"
 );
