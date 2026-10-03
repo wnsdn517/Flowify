@@ -9,7 +9,19 @@ Xiaomi HyperOS 3 lockscreen/AOD integration: [HyperGlow](https://github.com/amar
 <img src="assets/demo.gif" width="320" alt="Spicy EX lyrics demo">
 
 </div>
+---
 
+<div align="center">💬 Join the Conversation
+
+Music is better when it's shared.
+
+Have an idea, found a bug, or just want to talk?
+
+Join the SpicyEX community and help make the experience better.
+
+<br><a href="https://github.com/OWNER/REPO/discussions">
+  <img src="https://img.shields.io/badge/Explore-Discussions-181818?style=for-the-badge&logo=github&logoColor=white" alt="Explore Discussions">
+</a></div>---
 ## What's new in v1.58.181
 - Rebuilt in-Spotify settings with a cleaner section layout, Lucide icons, status badges and smoother panel motion.
 - Introduced the new opt-in AI feature set: separate Meaning and Sound lanes for translation and pronunciation/transliteration.
