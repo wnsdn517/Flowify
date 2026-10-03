@@ -372,6 +372,22 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
         if (skipGapController != null) skipGapController.hide();
         if (jumpToCurrentController != null) jumpToCurrentController.update(false);
+        fitPipArtColumn();
+    }
+
+    /** The landscape window crops the status-bar room off the top of the layout, and the column's
+     *  full-screen margins (made for a status bar and a nav bar) assumed portrait's insets: the
+     *  cover and song info are centred in what the window really shows, with even margins. */
+    private void fitPipArtColumn() {
+        if (!twoColumn || landscapeLeftColumn == null
+                || !(landscapeLeftColumn.getLayoutParams() instanceof LinearLayout.LayoutParams)) return;
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) landscapeLeftColumn.getLayoutParams();
+        int top = pipCropTopPx + dp(24);
+        int bottom = dp(24);
+        if (lp.topMargin == top && lp.bottomMargin == bottom) return;
+        lp.topMargin = top;
+        lp.bottomMargin = bottom;
+        landscapeLeftColumn.setLayoutParams(lp);
     }
 
     private TopEdgeFade lyricsTopFade;
@@ -1445,6 +1461,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float dt = deltaTimeSeconds <= 0d ? (1f / 60f) : (float) Math.max(0.001d, Math.min(0.08d, deltaTimeSeconds));
         // Order matters: the reveal publishes this frame's alpha factor, then updateState() runs
         // the renderer, which reads it. Stepping it after would show every row one frame stale.
+        // Lines still growing back after the scroll stopped finish on the frame clock.
+        if (this.edgeScaleSettling) applyEdgeRowScale(dt);
         stepLoadEntrance(dt);
         stepRowCascade(dt);
         stepScrollSpring(dt);
@@ -3029,12 +3047,26 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 document.appliedLines, anchor, NativeRuntime.LYRIC_WINDOW_EDGE_BUFFER);
     }
 
-    /** Lines near the top and bottom edge shrink a little as they leave, easing to full size
-     *  toward the middle - the scroll reads as a list receding rather than rows being cut off. */
-    private static final float EDGE_SCALE_ZONE = 0.24f;
-    private static final float EDGE_SCALE_MIN = 0.9f;
+    /** Lines near the top and bottom edge are smaller the closer they are to it, easing to full
+     *  size toward the middle - the scroll reads as a list receding rather than rows being cut
+     *  off. A line shrinks the moment it nears the edge but grows back at a fixed speed, so in a
+     *  very fast scroll the lines streaming in stay small, and a little more of them shows. */
+    private static final float EDGE_SCALE_ZONE = 0.3f;
+    private static final float EDGE_SCALE_MIN = 0.8f;
+    private static final float EDGE_SCALE_GROW_PER_SEC = 0.55f;
+    private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
+    private long edgeScaleAtMs;
+    private boolean edgeScaleSettling;
 
     private void applyEdgeRowScale() {
+        long now = SystemClock.uptimeMillis();
+        float dt = edgeScaleAtMs == 0L ? 0f : Math.min(0.1f, (now - edgeScaleAtMs) / 1000f);
+        edgeScaleAtMs = now;
+        applyEdgeRowScale(dt);
+    }
+
+    private void applyEdgeRowScale(float dt) {
+        edgeScaleSettling = false;
         if (mountedRowsHost == null || lyricsScroll == null || lyricsColumn == null) return;
         int viewport = lyricsScroll.getHeight();
         if (viewport <= 0) return;
@@ -3045,6 +3077,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             hostTop += v.getTop();
             v = v.getParent() instanceof View ? (View) v.getParent() : null;
         }
+        float grow = EDGE_SCALE_GROW_PER_SEC * dt;
         for (int i = 0; i < mountedRowsHost.getChildCount(); i++) {
             View row = mountedRowsHost.getChildAt(i);
             int height = row.getHeight();
@@ -3053,12 +3086,18 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             float edge = Math.min(center, viewport - center);
             float f = Math.max(0f, Math.min(1f, edge / zone));
             f = f * f * (3f - 2f * f);
-            float scale = EDGE_SCALE_MIN + (1f - EDGE_SCALE_MIN) * f;
-            if (Math.abs(row.getScaleX() - scale) < 0.002f) continue;
+            float target = EDGE_SCALE_MIN + (1f - EDGE_SCALE_MIN) * f;
+            Float known = edgeScales.get(row);
+            float current = known == null ? target : known;
+            // Shrinks with the edge at once; grows back no faster than the fixed rate.
+            current = target <= current ? target : Math.min(target, current + grow);
+            if (current < target) edgeScaleSettling = true;
+            edgeScales.put(row, current);
+            if (Math.abs(row.getScaleX() - current) < 0.002f) continue;
             row.setPivotX(row.getWidth() * 0.5f);
             row.setPivotY(height * 0.5f);
-            row.setScaleX(scale);
-            row.setScaleY(scale);
+            row.setScaleX(current);
+            row.setScaleY(current);
         }
     }
 
