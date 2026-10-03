@@ -2863,10 +2863,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  area - the scroll reads as a list receding rather than rows being cut off. The faster the
      *  list moves (either way), the further in the effect reaches and the deeper it goes; it
      *  eases back as the scroll slows. Shrinking and growing follow the target at the same pace. */
-    /** Height of the stretch just inside the area's top and bottom edge where a line shrinks
-     *  at rest: full size until its outer edge enters it, smallest once that edge reaches the
-     *  area's edge. Everything further in keeps its size. */
-    private static final int EDGE_SCALE_ZONE_DP = 40;
+    /** How close to the area's top or bottom edge a line's outer edge comes, at rest, before it
+     *  starts shrinking. It is smallest once it is half out, so the shrink happens on the edge
+     *  itself, as the line crosses it. Everything further in keeps its size. */
+    private static final int EDGE_SCALE_ZONE_DP = 16;
     /** How much further in the zone reaches at full scroll speed, as a multiple of the above. */
     private static final float EDGE_SCALE_ZONE_SPEED_BOOST = 0.5f;
     private static final float EDGE_SCALE_MIN = 0.97f;
@@ -2912,7 +2912,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 (edgeScaleSpeed - floor) / Math.max(1f, dp(EDGE_SCALE_SPEED_MAX_DP_PER_SEC) - floor)));
         s = s * (2f - s);
         float zone = Math.max(1f, Math.min(dp(EDGE_SCALE_ZONE_DP) * (1f + EDGE_SCALE_ZONE_SPEED_BOOST * s),
-                viewport * 0.1f));
+                viewport * 0.05f));
         float minScale = EDGE_SCALE_MIN + (EDGE_SCALE_MIN_AT_SPEED - EDGE_SCALE_MIN) * s;
         float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
         // Keep frames coming until the speed has died down, or the lines stay at a fling's size.
@@ -2932,10 +2932,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             if (height <= 0) continue;
             float top = hostTop + row.getTop() - scrollY;
             boolean upper = top + height / 2f < anchor;
-            // How deep the line's outer edge is into the edge zone, on its own side of the focus:
-            // 0 at the zone's inner end, 1 once it touches (or passes) the area's edge.
+            // Distance of the line's outer edge from the area's edge, on its own side of the focus
+            // (negative once it is crossing): 0 at the zone's inner end, 1 when the line is half out.
             float toEdge = upper ? top : viewport - (top + height);
-            float f = Math.max(0f, Math.min(1f, 1f - toEdge / zone));
+            float f = Math.max(0f, Math.min(1f, (zone - toEdge) / (zone + height * 0.5f)));
             f = f * f * (3f - 2f * f);
             float target = 1f - (1f - minScale) * f;
             Float known = edgeScales.get(row);
