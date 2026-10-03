@@ -2862,8 +2862,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  size toward the middle - the scroll reads as a list receding rather than rows being cut
      *  off. A line shrinks the moment it nears the edge but grows back at a fixed speed, so in a
      *  very fast scroll the lines streaming in stay small, and a little more of them shows. */
-    /** Where along the way from the focus line to the screen edge the shrinking starts. */
-    private static final float EDGE_SCALE_START = 0.15f;
+    /** Where along the way from the focus line to the lyrics area's top edge the shrinking starts:
+     *  everything between the focus and here keeps its size; only the last stretch before the
+     *  edge (and beyond it) is small. */
+    private static final float EDGE_SCALE_START = 0.65f;
     private static final float EDGE_SCALE_MIN = 0.7f;
     private static final float EDGE_SCALE_GROW_PER_SEC = 1.8f;
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
