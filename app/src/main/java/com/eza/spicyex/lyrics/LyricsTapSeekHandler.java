@@ -27,6 +27,9 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
     private float lastTapY;
     private float lastTapX;
     private boolean longPressFired;
+    /** Taps before this time continue the run of taps that began with a double-tap like. */
+    private long likeChainUntilMs;
+    private int likeChainTaps;
     private DoubleTapCallback doubleTapCallback;
     /** A single-tap seek waiting to see whether a second tap makes it a double tap. */
     private final Runnable pendingSeek = this::runPendingSeek;
@@ -89,10 +92,23 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
                     // double-tap window has passed; the tap that completes a double tap does not.
                     long now = SystemClock.elapsedRealtime();
                     long window = ViewConfiguration.getDoubleTapTimeout();
-                    if (now - lastTapAtMs < window && Math.abs(event.getY() - lastTapY) < dp(40)
+                    if (now < likeChainUntilMs) {
+                        // Still tapping after a like: these taps never seek. Every second one
+                        // is another double tap (the burst plays again); the ones between are
+                        // swallowed instead of becoming a single tap that jumps to a line.
+                        longPressHandler.removeCallbacks(pendingSeek);
+                        likeChainUntilMs = now + window;
+                        lastTapAtMs = 0;
+                        likeChainTaps++;
+                        if (likeChainTaps % 2 == 0) {
+                            doubleTapCallback.onDoubleTap(event.getX(), event.getY());
+                        }
+                    } else if (now - lastTapAtMs < window && Math.abs(event.getY() - lastTapY) < dp(40)
                             && Math.abs(event.getX() - lastTapX) < dp(40)) {
                         lastTapAtMs = 0;
                         longPressHandler.removeCallbacks(pendingSeek);
+                        likeChainUntilMs = now + window;
+                        likeChainTaps = 0;
                         doubleTapCallback.onDoubleTap(event.getX(), event.getY());
                     } else {
                         lastTapAtMs = now;
