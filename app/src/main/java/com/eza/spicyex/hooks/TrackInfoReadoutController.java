@@ -1026,7 +1026,9 @@ final class TrackInfoReadoutController {
         if (headerTitle != null) headerTitle.setVisibility(header ? View.GONE : View.VISIBLE);
     }
 
-    /** PiP shows only lyrics, regardless of the stored track-info position. */
+    /** PiP shows only lyrics, regardless of the stored track-info position - except the
+     *  landscape window, which keeps the artwork and song info column beside the lyrics so it is
+     *  not one very wide strip of text. */
     void setPipPresentation() {
         pipPresentation = true;
         setMode("Off");
