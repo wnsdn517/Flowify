@@ -185,6 +185,13 @@ public final class SpotifyConnectHook {
     }
 
     private static volatile boolean localTakeoverSent;
+    /** The web player is what is sounding: a hand-off was confirmed and the phone has not
+     *  started playing locally since (read by DeviceChangeBanner for the device's name). */
+    private static volatile boolean webPlayerCarrying;
+
+    static boolean webPlayerCarrying() {
+        return webPlayerCarrying;
+    }
 
     private static final long LOCAL_SILENCE_MAX_MS = 12_000L;
     private static final long HANDOFF_ANSWER_MS = 40_000L; // past the player's device-id wait (WebPlayerService.DEVICE_ID_POLL_MAX)
@@ -197,6 +204,7 @@ public final class SpotifyConnectHook {
         String mode = autoSwitchMode(app);
         if (!SWITCH_ON_FIRST_PLAY.equals(mode) && !SWITCH_ON_START.equals(mode)) return;
         localTakeoverSent = true;
+        webPlayerCarrying = false;
         XpLog.log("[SpicyConnect] local playback started, handing it to the web player");
         // The phone's own copy of this playback is about to move: keep it silent meanwhile, so
         // the hand-off isn't heard as the song starting on the phone first. Anything but a
@@ -233,6 +241,7 @@ public final class SpotifyConnectHook {
                 // moved playback: confirm the web player really is the account's active device.
                 verifyActive(app, deviceId, 0, ok -> {
                     if (ok) {
+                        webPlayerCarrying = true;
                         silence.keepUntilStopped();
                     } else {
                         localTakeoverSent = false;

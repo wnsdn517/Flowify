@@ -773,4 +773,8 @@
     <string name="settings_about_device">기기</string>
     <string name="settings_about_framework">프레임워크</string>
     <string name="settings_about_build">빌드</string>
+    <string name="settings_label_lyrics_device_change_banner">재생 기기가 바뀌면 알림</string>
+    <string name="lyrics_device_phone">이 휴대폰</string>
+    <string name="lyrics_device_other">다른 기기</string>
+    <string name="lyrics_device_now_playing_on">지금 재생 중인 기기</string>
 </resources>

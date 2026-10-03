@@ -331,6 +331,11 @@ final class PlaybackBridge {
         }
     }
 
+    /** Spotify's media session has been seen, so local/remote reads mean something. */
+    boolean sessionKnown() {
+        return transportController() != null;
+    }
+
     private MediaController transportController() {
         MediaSession session = currentMediaSession == null ? null : currentMediaSession.get();
         if (session == null) return null;

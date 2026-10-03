@@ -75,6 +75,10 @@ final class NativeSpicyShellView extends FrameLayout {
         return delegate.agentSelectElement(name);
     }
 
+    void agentDeviceBanner(String device) {
+        delegate.agentDeviceBanner(device);
+    }
+
     boolean agentSettings(String action) {
         return delegate.agentSettings(action);
     }

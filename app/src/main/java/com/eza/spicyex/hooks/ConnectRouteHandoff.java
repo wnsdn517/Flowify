@@ -65,6 +65,25 @@ final class ConnectRouteHandoff {
 
     enum Result { SWITCHED, SKIPPED, FAILED }
 
+    /** The Connect device Spotify has selected through Android's router, by name; null when none. */
+    static String selectedConnectRouteName(Context context) {
+        if (Build.VERSION.SDK_INT < 30 || context == null) return null;
+        try {
+            Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
+            MediaRouter2 r = MediaRouter2.getInstance(app);
+            for (MediaRouter2.RoutingController controller : r.getControllers()) {
+                if (controller == r.getSystemController()) continue;
+                for (MediaRoute2Info route : controller.getSelectedRoutes()) {
+                    if (route.getFeatures().contains(FEATURE) && route.getName() != null) {
+                        return route.getName().toString();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
     interface Done {
         void onDone(Result result);
     }

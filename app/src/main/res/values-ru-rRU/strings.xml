@@ -384,4 +384,8 @@
     <string name="settings_about_device">Устройство</string>
     <string name="settings_about_framework">Фреймворк</string>
     <string name="settings_about_build">Сборка</string>
+    <string name="settings_label_lyrics_device_change_banner">Сообщать о смене устройства</string>
+    <string name="lyrics_device_phone">Этот телефон</string>
+    <string name="lyrics_device_other">Другое устройство</string>
+    <string name="lyrics_device_now_playing_on">Сейчас играет на</string>
 </resources>

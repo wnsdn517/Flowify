@@ -424,4 +424,8 @@
     <string name="settings_about_device">设备</string>
     <string name="settings_about_framework">框架</string>
     <string name="settings_about_build">构建</string>
+    <string name="settings_label_lyrics_device_change_banner">播放设备变更时提示</string>
+    <string name="lyrics_device_phone">本机</string>
+    <string name="lyrics_device_other">其他设备</string>
+    <string name="lyrics_device_now_playing_on">正在播放的设备</string>
 </resources>

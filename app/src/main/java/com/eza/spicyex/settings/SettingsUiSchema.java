@@ -54,6 +54,7 @@ public final class SettingsUiSchema {
             Settings.AUTO_SKIP_INTRO_OUTRO,
             Settings.STATUS_BAR_HIDDEN_MODE,
             Settings.TRANSITION_FEEL,
+            Settings.DEVICE_CHANGE_BANNER,
             Settings.SYNC_OFFSET_MS,
             Settings.MINI_PLAYER_LYRICS_ICON,
             Settings.HYPERGLOW_ENABLED,
@@ -137,7 +138,7 @@ public final class SettingsUiSchema {
         group("general_language", Settings.UI_LANGUAGE);
         group("general_lyrics", Settings.STAY_IN_LYRICS, Settings.AUTO_RESUME_FOLLOW,
                 Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS, Settings.AUTO_SKIP_INTRO_OUTRO,
-                Settings.STATUS_BAR_HIDDEN_MODE, Settings.TRANSITION_FEEL);
+                Settings.STATUS_BAR_HIDDEN_MODE, Settings.TRANSITION_FEEL, Settings.DEVICE_CHANGE_BANNER);
         group("general_timing", Settings.SYNC_OFFSET_MS);
         group("general_outside", Settings.MINI_PLAYER_LYRICS_ICON, Settings.HYPERGLOW_ENABLED);
         group("gestures_seek", Settings.TAP_SEEK_MODE);

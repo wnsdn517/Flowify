@@ -904,4 +904,8 @@
     <string name="settings_about_build">Build</string>
     <string name="diagnostic_json_copied">Diagnostic JSON copied - paste it into the issue</string>
     <string name="diagnostic_paste_json">(paste the copied JSON here)</string>
+    <string name="settings_label_lyrics_device_change_banner">Show when the playing device changes</string>
+    <string name="lyrics_device_phone">This phone</string>
+    <string name="lyrics_device_other">Another device</string>
+    <string name="lyrics_device_now_playing_on">Now playing on</string>
 </resources>

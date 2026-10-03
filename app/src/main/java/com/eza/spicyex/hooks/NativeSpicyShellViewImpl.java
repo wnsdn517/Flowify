@@ -917,6 +917,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return layoutEditorHandle != null && layoutEditorHandle.agentAction(action, argument);
     }
 
+    void agentDeviceBanner(String device) {
+        if (deviceChangeBanner != null) deviceChangeBanner.preview(device);
+    }
+
     boolean agentSettings(String action) {
         if ("open".equals(action)) return settingsDialogController.show();
         if ("close".equals(action)) return settingsDialogController.close();
@@ -1535,6 +1539,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 activity, frameScheduler, ambientController, host, this::onSettingsClosed,
                 mode -> enterLayoutEditMode(mode == com.eza.spicyex.settings.SettingsPanel.EDITOR_CARD),
                 this::resyncLyricsTiming, TAG);
+        deviceChangeBanner = new DeviceChangeBanner(this, activity, config);
         this.settingsDialogController.setOnTryDoubleTap(this::startDoubleTapTrialInSettings,
                 this::endDoubleTapTrial, this::previewDoubleTapEffect);
         this.emptyStateController = new LyricsShellEmptyStateController(activity, config, textFactory);
@@ -2212,6 +2217,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             trackInfoController.onPlayingChanged(playingNow);
         }
         updateLikedButton(track);
+        // The settings and the layout editor take their accent from the album: follow the song
+        // as it changes, not only when the settings are next built. The editor's preview song
+        // has a fixed colour of its own and is left out.
+        String color = track.color == null ? "" : track.color;
+        if (!color.equals(lastAccentColor) && (track.uri == null || !track.uri.contains("spicyexlayoutpreview"))) {
+            lastAccentColor = color;
+            com.eza.spicyex.settings.PanelStyle.useAlbumAccent(color);
+        }
         long displayedSecond = Math.max(0L, pos) / 1000L;
         if (displayedSecond != lastDisplayedProgressSecond) {
             lastDisplayedProgressSecond = displayedSecond;
@@ -5864,6 +5877,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private View doubleTapFingerHint;
+    private String lastAccentColor;
+    private DeviceChangeBanner deviceChangeBanner;
 
     /**
      * The gesture shown, as on the share panel: a finger dot over the lyrics that taps twice -

@@ -51,6 +51,7 @@ public final class PanelStyle {
      */
     public static void useAlbumAccent(String extractedColor) {
         COL_ACCENT = COL_ACCENT_NEUTRAL;
+        com.eza.spicyex.ui.PanelDialog.COL_ACCENT = COL_ACCENT;
         if (extractedColor == null || extractedColor.trim().isEmpty()) return;
         try {
             int seed = com.eza.spicyex.lyrics.LyricVisuals.parseSpotifyExtractedColor(extractedColor);

@@ -699,4 +699,8 @@
     <string name="settings_about_device">端末</string>
     <string name="settings_about_framework">フレームワーク</string>
     <string name="settings_about_build">ビルド</string>
+    <string name="settings_label_lyrics_device_change_banner">再生デバイスが変わったら表示</string>
+    <string name="lyrics_device_phone">このスマートフォン</string>
+    <string name="lyrics_device_other">別のデバイス</string>
+    <string name="lyrics_device_now_playing_on">再生中のデバイス</string>
 </resources>

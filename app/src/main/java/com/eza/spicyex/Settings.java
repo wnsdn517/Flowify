@@ -180,6 +180,11 @@ public final class Settings {
             0, -5000, 5000, 100
     );
 
+    // A note at the top of the lyrics screen when playback moves to another device.
+    public static final Setting<Boolean> DEVICE_CHANGE_BANNER = boolSetting(
+            "lyrics_device_change_banner", LYRICS, "Show when the playing device changes", true
+    );
+
     public static final Setting<Boolean> HYPERGLOW_ENABLED = boolSetting(
             "lyrics_hyper_aod_lyrics_enabled", LYRICS, "Publish lyrics to HyperGlow", false
     );

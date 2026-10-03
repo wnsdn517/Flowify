@@ -658,6 +658,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             panelTitle.setTextSize(page ? 22 : 26);
         }
         if (searchBar != null) searchBar.setVisibility(page ? View.GONE : View.VISIBLE);
+        // Follows a language change made in this same panel.
+        if (searchField != null) searchField.setHint(uiStrings.get("settings_search_hint", "Search settings"));
         if (backButton != null) {
             backButton.setVisibility(page ? View.VISIBLE : View.GONE);
             String back = uiStrings.get("settings_panel_back", "Back");
