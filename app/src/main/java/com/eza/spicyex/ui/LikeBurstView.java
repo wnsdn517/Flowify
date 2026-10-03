@@ -24,12 +24,14 @@ import android.view.animation.LinearInterpolator;
  *       channel is displaced by a different amount).</li>
  *   <li>Drop to mark - a round drop of glass forms and flows into the mark (a soft-cornered star,
  *       or a heart): the shape is a signed distance field morphing from a circle, its edge
- *       rippling like liquid, the whole drop jiggling on squash-and-stretch springs while it
- *       turns broadly into place.</li>
- *   <li>Glass - inside it the screen is magnified and bent toward the rim, lightly frosted and
- *       tinted with the Liked Songs colour; lit from the top left (a specular highlight on the
- *       lit rim, shade on the far one), a band of light sweeps through, a rainbow fringe runs
- *       round the edge and a soft glow follows the outline outside.</li>
+ *       rippling faintly like liquid, settling on a spring with little bounce and a small,
+ *       unhurried turn.</li>
+ *   <li>Glass - clear crystal, not coloured gel: inside it the screen is magnified a little and
+ *       bent along a narrow bevel, barely frosted, with only a breath of the Liked Songs colour;
+ *       a small sharp highlight where the light from the top left meets the rim, a band of light
+ *       passing through, a faint rainbow along the bevel and a hairline of light on the outline.
+ *       (Squash-and-stretch, a big turn, a gold tint and a glow round the outline all read as a
+ *       toy, and were taken out.)</li>
  *   <li>Melt - it softens back toward a drop, lifts and thins away, sending one last small
  *       ripple out.</li>
  * </ol>
@@ -41,7 +43,7 @@ import android.view.animation.LinearInterpolator;
  * clears the effect from the parent) when done.
  */
 public final class LikeBurstView extends View {
-    private static final long DURATION_MS = 1500L;
+    private static final long DURATION_MS = 1300L;
 
     private static final String LIQUID_AGSL = ""
             + "uniform shader content;"
@@ -95,7 +97,7 @@ public final class LikeBurstView extends View {
             + "      ? sdHeart(float2(q.x, -q.y) * 0.8 + float2(0.0, 0.5)) / 0.8"
             + "      : sdStar(float2(q.x, -q.y));"
             + "  float d = mix(length(q) - 0.7, mark, morph);"
-            + "  return d + wobble * 0.05 * (sin(3.0 * a + time * 7.0) + 0.6 * sin(5.0 * a - time * 5.3));"
+            + "  return d + wobble * 0.025 * (sin(3.0 * a + time * 7.0) + 0.6 * sin(5.0 * a - time * 5.3));"
             + "}"
             // A ripple ring: rp = (radius, amplitude px, width px, unused).
             + "float2 ripple(float2 p, float4 rp) {"
@@ -110,8 +112,8 @@ public final class LikeBurstView extends View {
             + "half4 main(float2 p) {"
             + "  float2 disp = ripple(p, ripA) + ripple(p, ripB);"
             // Dispersion: each channel bends by a different amount.
-            + "  half3 col = half3(at(p + disp * 1.35).r, at(p + disp).g,"
-            + "      at(p + disp * 0.65).b);"
+            + "  half3 col = half3(at(p + disp * 1.2).r, at(p + disp).g,"
+            + "      at(p + disp * 0.8).b);"
             + "  half alpha = at(p).a;"
             + "  if (glass > 0.001) {"
             + "    float2 d = p - center;"
@@ -127,34 +129,37 @@ public final class LikeBurstView extends View {
             + "      n = n / max(length(n), 0.00001);"
             + "      float2 ns = float2(c * n.x + s * n.y, -s * n.x + c * n.y);"
             + "      float inside = smoothstep(0.02, -0.02, sd);"
-            + "      float depth = clamp(-sd / 0.35, 0.0, 1.0);"
+            + "      float depth = clamp(-sd / 0.2, 0.0, 1.0);"
             + "      float edgeK = 1.0 - depth;"
             // Refraction: pulled in hard along the rim, magnified through the middle.
-            + "      float2 sp = p + (-ns * R * scale * 0.38 * edgeK * edgeK + (center - p) * 0.24) * glass;"
-            + "      float ca = R * scale * 0.06 * edgeK * glass;"
+            + "      float2 sp = p + (-ns * R * scale * 0.22 * edgeK * edgeK + (center - p) * 0.12) * glass;"
+            + "      float ca = R * scale * 0.035 * edgeK * glass;"
             + "      half3 g = half3(at(sp + ns * ca).r, at(sp).g, at(sp - ns * ca).b);"
             + "      float f = R * 0.06;"
             + "      half3 frost = (at(sp + float2(f, 0.0)).rgb + at(sp - float2(f, 0.0)).rgb"
             + "          + at(sp + float2(0.0, f)).rgb + at(sp - float2(0.0, f)).rgb) * 0.25;"
-            + "      g = mix(g, frost, 0.38);"
-            + "      g = mix(g, half3(1.0), 0.12);"
-            + "      g = mix(g, tint, 0.17);"
+            + "      g = mix(g, frost, 0.15);"
+            + "      g = mix(g, half3(1.0), 0.16);"
+            + "      g = mix(g, tint, 0.08);"
+            // Glass on a dark backdrop only reads as glass where it catches light: a fresnel sheen
+            // brightening toward the rim.
+            + "      g += half3(0.20 * edgeK * edgeK);"
             // Light from the top left: highlight on the lit rim, shade on the far one.
             + "      float2 L = normalize(float2(-0.45, -0.9));"
-            + "      float spec = pow(clamp(dot(ns, L), 0.0, 1.0), 6.0) * edgeK * edgeK * edgeK;"
+            + "      float spec = pow(clamp(dot(ns, L), 0.0, 1.0), 16.0) * edgeK * edgeK * edgeK;"
             + "      float shade = clamp(dot(ns, -L), 0.0, 1.0) * edgeK * edgeK;"
-            + "      g += half3(spec * 0.95);"
-            + "      g *= half(1.0 - 0.28 * shade);"
+            + "      g += half3(spec * 1.3);"
+            + "      g *= half(1.0 - 0.10 * shade);"
             // A band of light sweeping through the body.
             + "      float z = (q.x + q.y * 0.6 - (time * 1.5 - 1.3)) * 3.0;"
-            + "      g += half3(0.28 * exp(-z * z) * depth);"
+            + "      g += half3(0.2 * exp(-z * z) * depth);"
             // A rainbow fringe running round the rim.
             + "      float hue = atan(q.y, q.x) / 6.2831853 + time * 0.15;"
             + "      half3 iri = half3(0.5 + 0.5 * cos(6.2831853 * (hue + float3(0.0, 0.33, 0.67))));"
-            + "      g += iri * half(0.24 * edgeK * edgeK * edgeK * edgeK);"
+            + "      g += iri * half(0.12 * edgeK * edgeK * edgeK * edgeK);"
             + "      col = mix(col, clamp(g, 0.0, 1.0), half(inside * glass));"
-            // A soft glow that follows the outline outside it.
-            + "      col += tint * half(0.32 * glass * exp(-max(sd, 0.0) * 7.0) * (1.0 - inside));"
+            // A hairline of light along the outline - cut crystal, not a glowing sticker.
+            + "      col += half3(0.5 * glass * exp(-abs(sd) * 45.0));"
             + "    }"
             + "  }"
             + "  return half4(clamp(col, 0.0, 1.0), alpha);"
@@ -185,7 +190,7 @@ public final class LikeBurstView extends View {
         this.star = star;
         this.cx = x;
         this.cy = y;
-        this.radius = size * 0.62f;
+        this.radius = size * 0.5f;
         this.density = context.getResources().getDisplayMetrics().density;
         this.accent = star ? Color.rgb(255, 204, 64) : Color.rgb(255, 90, 120);
         Paint rounder = new Paint();
@@ -277,29 +282,23 @@ public final class LikeBurstView extends View {
 
     /** Pops in on a lively spring (a jelly overshoot), shrinks a little as it melts. */
     private float scale() {
-        return spring(phase(t, 0.03f, 0.7f), 0.42, 11.0) * (1f - 0.35f * exit());
-    }
-
-    /** Squash and stretch, volume kept: x wide while y short and back, dying away. */
-    private float jiggle() {
-        float p = phase(t, 0.03f, 0.85f);
-        return 0.16f * (float) (Math.exp(-4.0 * p) * Math.sin(p * 19.0)) + 0.06f * exit();
+        return spring(phase(t, 0.03f, 0.7f), 0.7, 10.0) * (1f - 0.3f * exit());
     }
 
     /** Circle (0) to mark (1), slightly past it on the way, back toward a drop as it melts. */
     private float morph() {
-        return spring(phase(t, 0.08f, 0.6f), 0.55, 10.0) * (1f - 0.65f * exit());
+        return spring(phase(t, 0.06f, 0.6f), 0.8, 10.0) * (1f - 0.6f * exit());
     }
 
     /** The liquid edge: restless as the drop forms, calm while held, restless as it melts. */
     private float wobble() {
-        return 1.2f * (1f - smooth(phase(t, 0f, 0.5f))) + 0.22f + 0.9f * exit();
+        return 1.0f * (1f - smooth(phase(t, 0f, 0.5f))) + 0.15f + 0.7f * exit();
     }
 
     /** A broad, unhurried turn into place, a little further as it leaves. */
     private float angleDegrees() {
-        float settle = star ? -44f : -14f;
-        return settle * (1f - spring(phase(t, 0f, 0.85f), 0.85, 6.0)) + 16f * exit();
+        float settle = star ? -12f : -6f;
+        return settle * (1f - spring(phase(t, 0f, 0.85f), 0.85, 6.0)) + 5f * exit();
     }
 
     private float presence() {
@@ -329,16 +328,15 @@ public final class LikeBurstView extends View {
         if (Build.VERSION.SDK_INT < 33 || liquid == null || host == null) return;
         android.graphics.RuntimeShader shader = (android.graphics.RuntimeShader) liquid;
         float reach = 0.62f * Math.max(host.getWidth(), host.getHeight());
-        float[] a = t < 0.74f ? ripple(0f, 0.74f, reach, 30f)
-                : ripple(0.74f, 1f, reach * 0.35f, 14f);   // the melt's own small ripple
-        float[] b = ripple(0.1f, 0.86f, reach * 0.85f, 15f);
-        float j = jiggle();
+        float[] a = t < 0.74f ? ripple(0f, 0.74f, reach, 18f)
+                : ripple(0.74f, 1f, reach * 0.35f, 8f);   // the melt's own small ripple
+        float[] b = ripple(0.1f, 0.86f, reach * 0.85f, 9f);
         shader.setFloatUniform("bounds", host.getWidth(), host.getHeight());
         shader.setFloatUniform("center", cx, cy - rise());
         shader.setFloatUniform("R", radius);
         shader.setFloatUniform("scale", Math.max(0.001f, scale()));
-        shader.setFloatUniform("sx", 1f + j);
-        shader.setFloatUniform("sy", 1f / (1f + j));
+        shader.setFloatUniform("sx", 1f);
+        shader.setFloatUniform("sy", 1f);
         shader.setFloatUniform("angle", (float) Math.toRadians(angleDegrees()));
         shader.setFloatUniform("morph", morph());
         shader.setFloatUniform("wobble", wobble());
@@ -363,7 +361,6 @@ public final class LikeBurstView extends View {
         canvas.save();
         canvas.translate(cx, cy - rise());
         canvas.rotate(angleDegrees());
-        canvas.scale(1f + jiggle(), 1f / (1f + jiggle()));
         canvas.translate(-size / 2f, -size / 2f);
         canvas.scale(size / 24f, size / 24f);
         fallbackPaint.setColor(blend(Color.WHITE, accent, 0.3f));
