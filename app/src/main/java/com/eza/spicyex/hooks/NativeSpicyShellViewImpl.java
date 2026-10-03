@@ -403,7 +403,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      */
     private boolean lyricsBelowSongInfo() {
         try {
-            if (pipPresentation) return Boolean.TRUE.equals(config.get(Settings.PIP_SONG_INFO));
+            // The landscape window keeps the song info in a column beside the lyrics: they use the
+            // whole height instead of starting under the artwork.
+            if (pipPresentation) return !twoColumn && Boolean.TRUE.equals(config.get(Settings.PIP_SONG_INFO));
             return !twoColumn && !isLandscape()
                     && "Top".equals(config.get(Settings.TRACK_INFO_POSITION))
                     && "Below".equals(config.get(Settings.TRACK_INFO_LYRICS_FLOW));
