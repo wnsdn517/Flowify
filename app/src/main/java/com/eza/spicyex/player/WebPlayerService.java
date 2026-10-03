@@ -471,6 +471,7 @@ public final class WebPlayerService extends Service {
                 releaseStreamingLocks();
                 destroyPlayer();
                 stopSelf();
+                exitWhenStopped();
                 return;
             }
             main.postDelayed(this, IDLE_CHECK_MS);
@@ -627,6 +628,7 @@ public final class WebPlayerService extends Service {
         releaseStreamingLocks();
         destroyPlayer();
         stopSelf();
+        exitWhenStopped();
     };
 
     /**
@@ -660,6 +662,20 @@ public final class WebPlayerService extends Service {
         main.postDelayed(spotifyGoneStop, SPOTIFY_GONE_STOP_MS);
     }
 
+    /**
+     * Ends the :player process itself once the service has stopped. It exists only for the
+     * player, and a stopped service otherwise leaves it cached with its ~150 MB (the WebView
+     * runtime stays loaded) until the system gets round to it. Not if a command has rebuilt the
+     * player in the meantime.
+     */
+    private void exitWhenStopped() {
+        main.postDelayed(() -> {
+            if (PlayerSession.webview != null) return;
+            Log.i(TAG, "player process exiting");
+            android.os.Process.killProcess(android.os.Process.myPid());
+        }, 1500);
+    }
+
     /** The binder a ResultReceiver carries (it only exposes it through its parcel form). */
     private static IBinder binderOf(android.os.ResultReceiver reply) {
         android.os.Parcel parcel = android.os.Parcel.obtain();
@@ -683,6 +699,7 @@ public final class WebPlayerService extends Service {
         releaseStreamingLocks();
         destroyPlayer();
         stopSelf();
+        exitWhenStopped();
     }
 
     @Override
@@ -856,6 +873,7 @@ public final class WebPlayerService extends Service {
             releaseStreamingLocks();
             destroyPlayer();
             stopSelf();
+            exitWhenStopped();
             return START_NOT_STICKY;
         }
         if (ACTION_WARMUP.equals(action)) {
