@@ -350,7 +350,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return pipLayout == PIP_LAYOUT_LANDSCAPE ? PIP_LANDSCAPE_TEXT_BOOST : 1f;
     }
 
-    private static final float PIP_LANDSCAPE_TEXT_BOOST = 1.45f;
+    private static final float PIP_LANDSCAPE_TEXT_BOOST = 1.2f;
 
     boolean hasLyricsDocument() {
         return document != null;
