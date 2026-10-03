@@ -142,7 +142,9 @@ public final class SpotifyConnectHook {
     private static volatile boolean autoStartArmed;
     private static volatile boolean firstWarmSent;
     private static volatile long lastForegroundWarmElapsed;
-    private static final long FOREGROUND_REWARM_MIN_MS = 5L * 60_000L;
+    // Short: the player can be gone at any time (idle stop, memory trim, its process killed), and
+    // a warm-up of a live player is just a cheap command.
+    private static final long FOREGROUND_REWARM_MIN_MS = 60_000L;
 
     /** Auto-start rides on Spotify's own UI coming to the front rather than on process start:
      *  at process start Spotify isn't foreground yet, so it has no start privilege to lend.
@@ -185,6 +187,7 @@ public final class SpotifyConnectHook {
     private static volatile boolean localTakeoverSent;
 
     private static final long LOCAL_SILENCE_MAX_MS = 12_000L;
+    private static final long HANDOFF_ANSWER_MS = 40_000L; // past the player's device-id wait (WebPlayerService.DEVICE_ID_POLL_MAX)
 
     private static void onLocalPlaybackStarted(Context context, android.media.AudioTrack track) {
         if (localTakeoverSent) return;
@@ -199,20 +202,119 @@ public final class SpotifyConnectHook {
         // the hand-off isn't heard as the song starting on the phone first. Anything but a
         // completed switch gives the sound straight back (and a failsafe does regardless).
         Silence silence = silence(track);
+        // A start refused by the system never answers at all: without this the hand-off would
+        // stay "in progress" until Spotify restarted.
+        boolean[] answered = {false};
+        onMainDelayed(() -> {
+            if (answered[0]) return;
+            XpLog.log("[SpicyConnect] player did not answer, hand-off dropped for now");
+            localTakeoverSent = false;
+            silence.restore();
+        }, HANDOFF_ANSWER_MS);
         // Warm first: the reply confirms the player is up and signed in, and carries the id
         // it registered under, so the hand-off selects exactly our device.
         warm(app, (code, data) -> {
+            answered[0] = true;
             if (code == WARM_STARTING) return;
             if (code != WARM_READY || (data != null && data.getBoolean(EXTRA_PLAYING))) {
+                // Not handed over: the next local play gets another try.
+                localTakeoverSent = false;
                 silence.restore();
                 return;
             }
             String deviceId = data == null ? null : data.getString(EXTRA_DEVICE_ID);
-            ConnectRouteHandoff.transfer(app, deviceId, null, result -> {
-                if (result == ConnectRouteHandoff.Result.SWITCHED) silence.keepUntilStopped();
-                else silence.restore();
+            handOff(app, deviceId, null, result -> {
+                if (result != ConnectRouteHandoff.Result.SWITCHED) {
+                    localTakeoverSent = false;
+                    silence.restore();
+                    return;
+                }
+                // Android's output switcher showing the route selected is not Spotify having
+                // moved playback: confirm the web player really is the account's active device.
+                verifyActive(app, deviceId, 0, ok -> {
+                    if (ok) {
+                        silence.keepUntilStopped();
+                    } else {
+                        localTakeoverSent = false;
+                        silence.restore();
+                    }
+                });
             });
         }, true);
+    }
+
+    private interface Verified {
+        void onResult(boolean ok);
+    }
+
+    /** How long the web player gets to start sounding after the route switch, checked every
+     *  VERIFY_POLL_MS; one release-and-select-again retry follows. */
+    private static final long VERIFY_WINDOW_MS = 9000L;
+    private static final long VERIFY_POLL_MS = 1500L;
+
+    /**
+     * Confirms the hand-off by the only thing that matters to the listener: the web player
+     * actually playing audio. Neither the route showing "selected" in Android's output switcher
+     * nor Spotify's own session turning remote proves that - both were seen on-device while the
+     * server never moved playback, and keeping the phone muted on their word was silence. A
+     * retry releases the route first (re-selecting a selected route does nothing) and is tried
+     * once, after a fair wait: releasing too early cancels a transfer about to land.
+     */
+    private static void verifyActive(Context app, String deviceId, int attempt, Verified done) {
+        long deadline = android.os.SystemClock.elapsedRealtime() + VERIFY_WINDOW_MS;
+        Runnable[] poll = new Runnable[1];
+        poll[0] = () -> warm(app, (code, data) -> {
+            if (code == WARM_STARTING) return;
+            if (code == WARM_READY && data != null && data.getBoolean(EXTRA_PLAYING)) {
+                XpLog.log("[SpicyConnect] hand-off confirmed, the web player is playing");
+                done.onResult(true);
+                return;
+            }
+            if (android.os.SystemClock.elapsedRealtime() < deadline) {
+                onMainDelayed(poll[0], VERIFY_POLL_MS);
+                return;
+            }
+            if (attempt == 0) {
+                XpLog.log("[SpicyConnect] web player silent, selecting it again");
+                reselect(app, deviceId,
+                        r -> verifyActive(app, deviceId, attempt + 1, done));
+                return;
+            }
+            XpLog.log("[SpicyConnect] hand-off not confirmed, the web player never played (player=" + deviceId + ")");
+            done.onResult(false);
+        }, false);
+        onMainDelayed(poll[0], VERIFY_POLL_MS);
+    }
+
+    /**
+     * Spotify's own transfer (what its device picker does) when the web player's device id is
+     * known; Android's output switcher only as the fallback - selecting the route there changes
+     * what the system shows without Spotify's server moving playback.
+     */
+    private static void handOff(Context app, String deviceId, String activeDeviceId,
+                                ConnectRouteHandoff.Done done) {
+        if (deviceId != null && activeDeviceId != null && activeDeviceId.equalsIgnoreCase(deviceId)) {
+            if (done != null) done.onDone(ConnectRouteHandoff.Result.SKIPPED);
+            return;
+        }
+        if (ConnectTransfer.transfer(deviceId)) {
+            if (done != null) done.onDone(ConnectRouteHandoff.Result.SWITCHED);
+            return;
+        }
+        XpLog.log("[SpicyConnect] in-app transfer unavailable (id=" + deviceId + "), using the output switcher");
+        ConnectRouteHandoff.transfer(app, deviceId, activeDeviceId, done);
+    }
+
+    private static void reselect(Context app, String deviceId, ConnectRouteHandoff.Done done) {
+        if (ConnectTransfer.transfer(deviceId)) {
+            if (done != null) done.onDone(ConnectRouteHandoff.Result.SWITCHED);
+            return;
+        }
+        ConnectRouteHandoff.reselect(app, deviceId, null, done);
+    }
+
+    private static void onMainDelayed(Runnable r, long ms) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(r, ms);
     }
 
     /** Local tracks muted for a completed hand-off: they get their volume back only once
@@ -307,38 +409,78 @@ public final class SpotifyConnectHook {
     }
 
     private static void onSpotifyResumed(android.app.Activity activity) {
-        long now = android.os.SystemClock.elapsedRealtime();
-        boolean first = !firstWarmSent;
-        if (!first && now - lastForegroundWarmElapsed < FOREGROUND_REWARM_MIN_MS) return;
         Context app = activity.getApplicationContext();
         if (app == null || !Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(app)
                 .get(com.eza.spicyex.Settings.CONNECT_ENABLED))) return;
-        lastForegroundWarmElapsed = now;
-        firstWarmSent = true;
         String mode = autoSwitchMode(app);
+        boolean auto = SWITCH_ON_START.equals(mode) || SWITCH_ON_FIRST_PLAY.equals(mode);
+        long now = android.os.SystemClock.elapsedRealtime();
+        boolean first = !firstWarmSent;
         // Routes take a few seconds to show up once discovery starts; begin now so they are
         // known by the time a hand-off needs them.
-        if (first && (SWITCH_ON_START.equals(mode) || SWITCH_ON_FIRST_PLAY.equals(mode))) {
-            ConnectRouteHandoff.prepare(app);
-        }
-        if (first && SWITCH_ON_START.equals(mode) && isPlayingHere(app)) {
-            // Already playing on the phone as Spotify comes up: move it over right away.
-            // With nothing playing there is nothing to move: a Connect switch always starts
-            // playback on its target, and every way of stopping that again left the web
-            // player wedged (claiming to play a stream that never starts) often enough to be
-            // unusable. The player is started and its route discovered now, and the moment
-            // playback starts, it is handed over (see onLocalPlaybackStarted).
-            XpLog.log("[SpicyConnect] foreground warm-up, moving current playback to the web player");
-            localTakeoverSent = true;
-            warm(app, (code, data) -> {
-                if (code != WARM_READY || data == null || data.getBoolean(EXTRA_PLAYING)) return;
-                ConnectRouteHandoff.transfer(app, data.getString(EXTRA_DEVICE_ID),
-                        data.getString(EXTRA_ACTIVE_DEVICE_ID), null);
-            }, true);
+        if (first && auto) ConnectRouteHandoff.prepare(app);
+        // Still playing on the phone as Spotify comes to the front: move it over now. This also
+        // catches a hand-off that could not run earlier - playback started from the background
+        // (notification, headset, lock screen), where Android hides Spotify's Connect routes
+        // from Spotify itself, so the web player's route was never found.
+        // With nothing playing there is nothing to move: a Connect switch always starts
+        // playback on its target, and every way of stopping that again left the web player
+        // wedged often enough to be unusable. The player is warmed instead, and the moment
+        // playback starts it is handed over (see onLocalPlaybackStarted).
+        if (auto && !localTakeoverSent && isPlayingHere(app)) {
+            XpLog.log("[SpicyConnect] playing on the phone as Spotify comes up, moving it to the web player");
+            firstWarmSent = true;
+            lastForegroundWarmElapsed = now;
+            onLocalPlaybackStarted(app, null);
             return;
         }
+        if (!first && now - lastForegroundWarmElapsed < FOREGROUND_REWARM_MIN_MS) return;
+        lastForegroundWarmElapsed = now;
+        firstWarmSent = true;
+        // Coming back to Spotify after a while: the player may have been recycled meanwhile, and
+        // the next local play is a fresh start worth handing over again.
+        if (!first) localTakeoverSent = false;
         XpLog.log("[SpicyConnect] foreground warm-up");
-        warm(app, null, false);
+        foregroundWarm(app, new java.lang.ref.WeakReference<>(activity), 0);
+    }
+
+    /** Last time the player answered anything at all: proof that a start went through. */
+    private static volatile long lastPlayerReplyElapsed;
+    private static final long FOREGROUND_WARM_SETTLE_MS = 1200L;
+    private static final long FOREGROUND_WARM_ANSWER_MS = 10_000L;
+    private static final int FOREGROUND_WARM_ATTEMPTS = 3;
+
+    /**
+     * Starts the player on Spotify's foreground privilege. Android lends that privilege only once
+     * Spotify's window is really up: a start sent the instant the activity resumes - before its
+     * first frame - is refused ("Background started FGS: Disallowed"), silently, since the refusal
+     * happens inside the system. So the start waits for the window to settle, and when the
+     * player has not answered a few seconds later it is sent again, while Spotify is still in
+     * front.
+     */
+    private static void foregroundWarm(Context app, java.lang.ref.WeakReference<android.app.Activity> ref, int attempt) {
+        onMainDelayed(() -> {
+            android.app.Activity activity = ref.get();
+            if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+            if (!activity.hasWindowFocus() && attempt < FOREGROUND_WARM_ATTEMPTS) {
+                foregroundWarm(app, ref, attempt + 1);
+                return;
+            }
+            long sentAt = android.os.SystemClock.elapsedRealtime();
+            warm(app, null, false);
+            onMainDelayed(() -> {
+                if (lastPlayerReplyElapsed >= sentAt) return;
+                android.app.Activity current = ref.get();
+                boolean inFront = current != null && !current.isFinishing() && current.hasWindowFocus();
+                if (attempt + 1 < FOREGROUND_WARM_ATTEMPTS && inFront) {
+                    XpLog.log("[SpicyConnect] player did not start, asking again");
+                    foregroundWarm(app, ref, attempt + 1);
+                } else {
+                    XpLog.log("[SpicyConnect] player did not start; trying again on the next return to Spotify");
+                    lastForegroundWarmElapsed = 0L;
+                }
+            }, FOREGROUND_WARM_ANSWER_MS);
+        }, attempt == 0 ? FOREGROUND_WARM_SETTLE_MS : 600L);
     }
 
     public interface WarmStateListener {
@@ -394,6 +536,7 @@ public final class SpotifyConnectHook {
                 new android.os.Handler(android.os.Looper.getMainLooper())) {
             @Override
             protected void onReceiveResult(int resultCode, android.os.Bundle resultData) {
+                if (resultCode != WARM_NEEDS_KICK) lastPlayerReplyElapsed = android.os.SystemClock.elapsedRealtime();
                 if (resultCode == WARM_NEEDS_KICK) {
                     if (fireKick(app, resultData)) return;
                     resultCode = WARM_FAILED;
@@ -408,7 +551,7 @@ public final class SpotifyConnectHook {
                     // The player reconnected after a network change as a new device while
                     // music was playing: select it again, as the user had it.
                     XpLog.log("[SpicyConnect] player reconnected, selecting it again");
-                    ConnectRouteHandoff.transfer(app,
+                    handOff(app,
                             resultData == null ? null : resultData.getString(EXTRA_DEVICE_ID), null, null);
                     return;
                 }
@@ -419,440 +562,6 @@ public final class SpotifyConnectHook {
                 }
             }
         };
-    }
-
-    private static final int TAG_PICKER_WEBVIEW_BUTTON = 0x53504C57; // SPLW
-    private static final long[] PICKER_RETRY_DELAYS_MS = {400L, 900L, 1600L, 2800L, 4500L};
-
-    /** Watches every Dialog Spotify shows; when the Connect device picker appears, appends a
-     *  "start web player service" button so a device lost to a network switch can be brought
-     *  back right from the picker instead of digging through settings. */
-    public static void installPickerButton() {
-        try {
-            XpHooks.findAfter(android.app.Dialog.class, "show", "connect:Dialog#show", param -> {
-                try {
-                    if (!(param.thisObject instanceof android.app.Dialog)) return;
-                    if (!isAvailable()) return;
-                    schedulePickerScan((android.app.Dialog) param.thisObject, 0);
-                } catch (Throwable ignored) {
-                }
-            });
-        } catch (Throwable t) {
-            XpLog.log("[SpicyConnect] picker button hook failed type=" + t.getClass().getName());
-        }
-    }
-
-    private static void schedulePickerScan(android.app.Dialog dialog, int attempt) {
-        try {
-            android.view.Window window = dialog.getWindow();
-            View decor = window == null ? null : window.getDecorView();
-            if (decor == null || attempt >= PICKER_RETRY_DELAYS_MS.length) return;
-            final int next = attempt + 1;
-            decor.postDelayed(() -> {
-                try {
-                    if (!dialog.isShowing()) return;
-                    if (injectPickerButton(dialog)) return;
-                    schedulePickerScan(dialog, next);
-                } catch (Throwable ignored) {
-                }
-            }, PICKER_RETRY_DELAYS_MS[attempt]);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private static boolean injectPickerButton(android.app.Dialog dialog) {
-        try {
-            android.view.Window window = dialog.getWindow();
-            View content = window == null ? null : window.findViewById(android.R.id.content);
-            if (!(content instanceof ViewGroup)) return false;
-            ViewGroup group = (ViewGroup) content;
-            if (group.findViewWithTag(TAG_PICKER_WEBVIEW_BUTTON) != null) return true;
-            String match = pickerMatch(dialog, group);
-            if (match == null) return false;
-            XpLog.log("[SpicyConnect] picker matched by [" + match + "]");
-            android.widget.Button button = makePickerButton(dialog.getContext());
-            group.addView(button, new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            XpLog.log("[SpicyConnect] inserted webview start button in device picker");
-            return true;
-        } catch (Throwable t) {
-            XpLog.log("[SpicyConnect] picker inject failed type=" + t.getClass().getName());
-            return false;
-        }
-    }
-
-    private static final String PICKER_BUTTON_LABEL = "\u266A Start web player service";
-    private static final String PICKER_BUTTON_WAITING = "\u266A Waiting for device\u2026";
-    private static final long PICKER_BUTTON_TIMEOUT_MS = 20000L;
-
-    private static android.widget.Button makePickerButton(Context context) {
-        android.widget.Button button = new android.widget.Button(context);
-        button.setTag(TAG_PICKER_WEBVIEW_BUTTON);
-        button.setAllCaps(false);
-        button.setText(PICKER_BUTTON_LABEL);
-        try {
-            button.setBackgroundColor(0xFF2A2A2A);
-            button.setTextColor(0xFFFFFFFF);
-        } catch (Throwable ignored) {
-        }
-        button.setOnClickListener(v -> {
-            android.widget.Button b = (android.widget.Button) v;
-            final boolean[] settled = {false};
-            Runnable timeout = () -> {
-                if (settled[0]) return;
-                settled[0] = true;
-                restorePickerButton(b);
-            };
-            b.setEnabled(false);
-            b.setText(PICKER_BUTTON_WAITING);
-            try {
-                b.postDelayed(timeout, PICKER_BUTTON_TIMEOUT_MS);
-            } catch (Throwable ignored) {
-            }
-            startWebViewService(v.getContext(), code -> {
-                if (settled[0]) return;
-                if (code == WARM_READY) {
-                    settled[0] = true;
-                    try {
-                        b.removeCallbacks(timeout);
-                    } catch (Throwable ignored) {
-                    }
-                    b.setVisibility(View.GONE);
-                } else if (code == WARM_FAILED) {
-                    settled[0] = true;
-                    try {
-                        b.removeCallbacks(timeout);
-                    } catch (Throwable ignored) {
-                    }
-                    restorePickerButton(b);
-                } else if (code == WARM_LOGIN_REQUIRED) {
-                    settled[0] = true;
-                    try {
-                        b.removeCallbacks(timeout);
-                    } catch (Throwable ignored) {
-                    }
-                    b.setEnabled(true);
-                    b.setText("♫ Login required");
-                    b.setOnClickListener(login -> openLogin(login.getContext()));
-                }
-            });
-        });
-        return button;
-    }
-
-    private static void restorePickerButton(android.widget.Button button) {
-        try {
-            button.setEnabled(true);
-            button.setText(PICKER_BUTTON_LABEL);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    /** Embedded (non-dialog) pickers live inside the activity's own view tree - the 2s layout
-     *  watcher calls this, so a sheet that appears later still gets the button.
-     *  Root is the window decor, NOT android.R.id.content: the Connect bottom sheet is a
-     *  sibling overlay outside content (confirmed via hierarchy dump), so content-scoped
-     *  scans never see it. */
-    public static void scanActivityForPicker(android.app.Activity activity) {
-        try {
-            if (activity == null || activity.isFinishing()) return;
-            if (!isAvailable()) return;
-            android.view.Window window = activity.getWindow();
-            View decor = window == null ? null : window.getDecorView();
-            if (!(decor instanceof ViewGroup)) return;
-            ViewGroup group = (ViewGroup) decor;
-            // Cheap tag sweep first: when the sheet button is already in, skip the two
-            // resource-resolving walks below entirely.
-            if (group.findViewWithTag(TAG_PICKER_WEBVIEW_BUTTON) != null) return;
-            if (isConnectPickerPage(activity)) {
-                if (injectPickerPageButton(activity, group)) return;
-                scheduleSheetRescan(activity, 0);
-                return;
-            } else if (injectSheetButton(activity, group)) return;
-            View anchor = pickerAnchor(group);
-            if (anchor == null) {
-                if (findViewByResourceEntry(group, "bottom_sheet_container") != null) {
-                    scheduleSheetRescan(activity, 0);
-                }
-                return;
-            }
-            if (!(anchor.getParent() instanceof ViewGroup)) return;
-            ViewGroup parent = (ViewGroup) anchor.getParent();
-            if (parent.findViewWithTag(TAG_PICKER_WEBVIEW_BUTTON) != null) return;
-            parent.addView(makePickerButton(activity), parent.indexOfChild(anchor) + 1,
-                    new ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT));
-            XpLog.log("[SpicyConnect] inserted webview start button in activity picker by ["
-                    + describeAnchor(anchor) + "]");
-        } catch (Throwable t) {
-            XpLog.log("[SpicyConnect] activity picker scan failed type=" + t.getClass().getName());
-        }
-    }
-
-    /** Precise signal: Spotify opens the device tab as a page with this deep link (confirmed
-     *  via dumpsys: dat=spotify:connect-device-picker on PageActivity). No text guessing. */
-    private static boolean isConnectPickerPage(android.app.Activity activity) {
-        try {
-            android.content.Intent intent = activity == null ? null : activity.getIntent();
-            android.net.Uri data = intent == null ? null : intent.getData();
-            if (data == null) return false;
-            return data.toString().toLowerCase(java.util.Locale.ROOT).contains("connect");
-        } catch (Throwable ignored) {
-            return false;
-        }
-    }
-
-    /** Inserts the start row right below the sheet's drag handle inside a confirmed picker
-     *  page. Appending at the container end pushed it off-screen (the Compose list above
-     *  fills the whole sheet) - verified visually via screenshot. */
-    private static boolean injectPickerPageButton(android.app.Activity activity, ViewGroup decor) {
-        try {
-            View sheet = findViewByResourceEntry(decor, "bottom_sheet_container");
-            if (!(sheet instanceof ViewGroup)) return false;
-            ViewGroup sheetGroup = (ViewGroup) sheet;
-            View grapple = findViewByResourceEntry(sheetGroup, "bottom_sheet_grapple");
-            int desired = grapple != null && grapple.getParent() == sheetGroup
-                    ? sheetGroup.indexOfChild(grapple) + 1 : 0;
-            View existing = sheetGroup.findViewWithTag(TAG_PICKER_WEBVIEW_BUTTON);
-            if (existing != null) {
-                if (sheetGroup.indexOfChild(existing) == desired) return true;
-                sheetGroup.removeView(existing);
-            }
-            sheetGroup.addView(makePickerButton(activity), desired, new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            XpLog.log("[SpicyConnect] inserted webview start button in connect picker page");
-            return true;
-        } catch (Throwable t) {
-            XpLog.log("[SpicyConnect] picker page inject failed type=" + t.getClass().getName());
-            return false;
-        }
-    }
-
-    /** The Connect sheet is a bottom_sheet_container in the activity window (confirmed via
-     *  hierarchy dump) - append the button as its last child so it sits at the sheet bottom.
-     *  Other bottom sheets share the container id, so the Connect header text is required too. */
-    private static boolean injectSheetButton(android.app.Activity activity, ViewGroup content) {
-        try {
-            View sheet = findViewByResourceEntry(content, "bottom_sheet_container");
-            if (!(sheet instanceof ViewGroup)) return false;
-            ViewGroup sheetGroup = (ViewGroup) sheet;
-            if (sheetGroup.findViewWithTag(TAG_PICKER_WEBVIEW_BUTTON) != null) return true;
-            if (!subtreeHasConnectHeader(sheetGroup)) return false;
-            sheetGroup.addView(makePickerButton(activity), new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            XpLog.log("[SpicyConnect] inserted webview start button in connect sheet");
-            return true;
-        } catch (Throwable t) {
-            XpLog.log("[SpicyConnect] sheet inject failed type=" + t.getClass().getName());
-            return false;
-        }
-    }
-
-    private static final java.util.WeakHashMap<android.app.Activity, Boolean> sheetRescanActive =
-            new java.util.WeakHashMap<>();
-    private static final android.os.Handler sheetRescanHandler =
-            new android.os.Handler(android.os.Looper.getMainLooper());
-    private static final long[] SHEET_RESCAN_DELAYS_MS = {1000L, 2000L, 4000L};
-
-    /** A fully-open static sheet fires no more layouts, so the watcher alone can catch it
-     *  half-inflated and then go silent. Bounded re-scan chain (container present but
-     *  unmatched only) - layout passes restart it for free once the flag clears. */
-    private static void scheduleSheetRescan(android.app.Activity activity, int attempt) {
-        try {
-            if (activity == null || activity.isFinishing() || attempt >= SHEET_RESCAN_DELAYS_MS.length) return;
-            synchronized (sheetRescanActive) {
-                if (attempt == 0 && sheetRescanActive.containsKey(activity)) return;
-                sheetRescanActive.put(activity, Boolean.TRUE);
-            }
-            final int next = attempt + 1;
-            final java.lang.ref.WeakReference<android.app.Activity> ref =
-                    new java.lang.ref.WeakReference<>(activity);
-            sheetRescanHandler.postDelayed(() -> {
-                try {
-                    android.app.Activity a = ref.get();
-                    if (a == null || a.isFinishing()) {
-                        synchronized (sheetRescanActive) {
-                            sheetRescanActive.remove(activity);
-                        }
-                        return;
-                    }
-                    scanActivityForPicker(a);
-                    if (next >= SHEET_RESCAN_DELAYS_MS.length) {
-                        synchronized (sheetRescanActive) {
-                            sheetRescanActive.remove(a);
-                        }
-                    } else {
-                        scheduleSheetRescan(a, next);
-                    }
-                } catch (Throwable ignored) {
-                }
-            }, SHEET_RESCAN_DELAYS_MS[attempt]);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private static View findViewByResourceEntry(View root, String entryName) {
-        if (root == null) return null;
-        if (root.getId() != View.NO_ID) {
-            try {
-                String name = root.getResources().getResourceEntryName(root.getId());
-                if (entryName.equals(name)) return root;
-            } catch (Throwable ignored) {
-            }
-        }
-        if (root instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) root;
-            int count = group.getChildCount();
-            for (int i = 0; i < count; i++) {
-                View res = findViewByResourceEntry(group.getChildAt(i), entryName);
-                if (res != null) return res;
-            }
-        }
-        return null;
-    }
-
-    private static boolean subtreeHasConnectHeader(View root) {
-        if (root == null) return false;
-        if (root instanceof TextView) {
-            CharSequence raw = ((TextView) root).getText();
-            if (raw != null) {
-                String text = raw.toString().trim().toLowerCase(java.util.Locale.ROOT);
-                if (text.contains("connect") || text.contains("\uc5f0\uacb0")) return true;
-            }
-        }
-        if (root instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) root;
-            int count = group.getChildCount();
-            for (int i = 0; i < count; i++) {
-                if (subtreeHasConnectHeader(group.getChildAt(i))) return true;
-            }
-        }
-        return false;
-    }
-
-    /** Returns the matched signal, or null when this dialog is not the device picker. */
-    private static String pickerMatch(android.app.Dialog dialog, View root) {
-        String route = mediaRouteMatch(dialog);
-        if (route != null) return route;
-        View anchor = pickerAnchor(root);
-        return anchor == null ? null : describeAnchor(anchor);
-    }
-
-    /** Spotify routes Connect/cast picking through MediaRouter - the chooser/controller dialogs
-     *  keep their framework class names even when everything else is obfuscated. */
-    private static String mediaRouteMatch(android.app.Dialog dialog) {
-        try {
-            Class<?> c = dialog.getClass();
-            while (c != null && c != Object.class) {
-                String simple = c.getSimpleName();
-                if (simple.contains("MediaRouteChooserDialog")
-                        || simple.contains("MediaRouteControllerDialog")) {
-                    return "class:" + simple;
-                }
-                c = c.getSuperclass();
-            }
-        } catch (Throwable ignored) {
-        }
-        return null;
-    }
-
-    private static class PickerScanState {
-        View connectHeader = null;
-        View deviceText = null;
-        View firstDeviceEntry = null;
-    }
-
-    /** Finds the picker header view, or null. Skips our own injected UI so the settings
-     *  panel ("Device name" row under a "Spotify Connect" header) never self-matches.
-     *  Calibrated against the real sheet: header "Connect" plus either device-ish text
-     *  ("No devices found on this network") or a device entry. The mini player has device
-     *  entries but no Connect header, so it no longer matches. */
-    private static View pickerAnchor(View root) {
-        if (root == null) return null;
-        PickerScanState state = new PickerScanState();
-        View directMatch = fillPickerAnchorState(root, state);
-        if (directMatch != null) return directMatch;
-        if (state.connectHeader != null && (state.deviceText != null || state.firstDeviceEntry != null)) {
-            return state.connectHeader;
-        }
-        return null;
-    }
-
-    private static View fillPickerAnchorState(View view, PickerScanState state) {
-        if (view == null || isOwnView(view)) return null;
-        if (view instanceof TextView) {
-            CharSequence raw = ((TextView) view).getText();
-            if (raw != null) {
-                String text = raw.toString().trim().toLowerCase(java.util.Locale.ROOT);
-                boolean connectWord = text.contains("connect") || text.contains("\uc5f0\uacb0");
-                boolean deviceWord = text.contains("device") || text.contains("\uae30\uae30")
-                        || text.contains("\ub514\ubc14\uc774\uc2a4");
-                if ((connectWord && deviceWord)
-                        || text.contains("no devices found")
-                        || text.equals("devices") || text.equals("\uae30\uae30")
-                        || text.equals("\ub514\ubc14\uc774\uc2a4")) {
-                    return view;
-                }
-                if (state.connectHeader == null && connectWord) state.connectHeader = view;
-                if (state.deviceText == null && deviceWord) state.deviceText = view;
-            }
-        } else if (view.getId() != View.NO_ID && view.isLaidOut()) {
-            try {
-                String entry = view.getResources().getResourceEntryName(view.getId())
-                        .toLowerCase(java.util.Locale.ROOT);
-                if (entry.contains("device") && state.firstDeviceEntry == null) {
-                    state.firstDeviceEntry = view;
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-            int count = group.getChildCount();
-            for (int i = 0; i < count; i++) {
-                View match = fillPickerAnchorState(group.getChildAt(i), state);
-                if (match != null) return match;
-            }
-        }
-        return null;
-    }
-
-    private static boolean isOwnView(View view) {
-        try {
-            Object tag = view.getTag();
-            if (tag instanceof Integer) {
-                int id = (Integer) tag;
-                // SPLW (this button), SPLX/SPLH (lyrics entry buttons in LyricsActivityTakeoverHook).
-                if (id == TAG_PICKER_WEBVIEW_BUTTON || id == 0x53504C58 || id == 0x53504C48) {
-                    return true;
-                }
-            }
-            if (tag instanceof String) {
-                String s = (String) tag;
-                if (s.startsWith("card:") || s.startsWith("hdr:")) return true;
-            }
-        } catch (Throwable ignored) {
-        }
-        return false;
-    }
-
-    private static String describeAnchor(View anchor) {
-        try {
-            if (anchor instanceof TextView) {
-                CharSequence raw = ((TextView) anchor).getText();
-                if (raw != null) return "text:" + truncate(raw.toString().trim());
-            }
-            if (anchor.getId() != View.NO_ID) {
-                return "entry:" + anchor.getResources().getResourceEntryName(anchor.getId());
-            }
-        } catch (Throwable ignored) {
-        }
-        return anchor.getClass().getSimpleName();
-    }
-
-    private static String truncate(String s) {
-        return s.length() > 40 ? s.substring(0, 40) + "\u2026" : s;
     }
 
     static boolean isMainProcess(Context context) {

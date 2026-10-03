@@ -180,7 +180,10 @@ public final class WebPlayerService extends Service {
             + "function guard(h){return function(e){if(isLogout(e&&e.data)){drop();return;}return h.apply(this,arguments);};}"
             + "var of=window.fetch;"
             + "window.fetch=function(i,o){var u='';try{u=String(i&&i.url||i);"
-            + "var m=/track-playback.v1.devices.([0-9a-f]{40})/.exec(u);if(m)window.__spicyDev=m[1];"
+            // The id shows in the track-playback registration and in the Connect state calls
+            // (".../connect-state/v1/devices/hobs_<id>"); a page does not always make the first
+            // soon, and a hand-off waiting on it timed out with the device unknown.
+            + "var m=/track-playback.v1.devices.([0-9a-f]{40})/.exec(u)||/connect-state.v1.devices.hobs_([0-9a-f]{40})/.exec(u);if(m)window.__spicyDev=m[1];"
             + "if(o&&typeof o.body==='string'&&/track-playback.v1.devices|connect-state.v1.devices/.test(u)){"
             + "o.body=o.body.replace(/\"name\":\"Web Player \\([^\"]*\\)\"/g,'\"name\":\"Spicy Connect\"');}"
             + "}catch(e){}"
@@ -202,10 +205,12 @@ public final class WebPlayerService extends Service {
      *  player's media element is never attached to the document, so listeners go on the
      *  element itself the first time it is played.
      *
-     *  <p>Volume: the web player applies its volume cubed (volume = p&sup3;, its desktop
-     *  "cubicVolume" curve), so a phone at 50% set it to 12.5% - and Android's media volume
-     *  attenuates on top of that. Here the element gets p itself; the phone's own volume
-     *  already provides the perceptual curve. Never louder than what was asked for at 100%.
+     *  <p>Volume: the element always plays at full level and the Connect volume (the page sets it
+     *  cubed, p&sup3;; p is reported as "vol:p") becomes the phone's media volume instead (see
+     *  {@link #onConnectVolume}). Both used to apply at once - Spotify's volume on the element
+     *  and Android's media volume on top - so with the phone's media volume low, Spotify at
+     *  100% was still barely audible, and the volume keys (which move Spotify's volume while
+     *  it plays remotely) could not fix it.
      *
      *  <p>Also here, because they need the same elements:
      *  <ul>
@@ -224,10 +229,11 @@ public final class WebPlayerService extends Service {
             + "var P=HTMLMediaElement.prototype,els=[],hush=false,fadeT=0;"
             + "var vd=Object.getOwnPropertyDescriptor(P,'volume');"
             + "function level(el){var v=el.__spicyVol;if(v===undefined)return el.__spicyPre!==undefined?el.__spicyPre:1;"
-            + "return Math.cbrt(Math.max(0,Math.min(1,+v||0)));}"
+            + "return 1;}"
             + "if(vd&&vd.set)Object.defineProperty(P,'volume',{configurable:true,enumerable:vd.enumerable,"
             + "get:function(){return this.__spicyVol!==undefined?this.__spicyVol:vd.get.call(this);},"
-            + "set:function(v){this.__spicyVol=v;vd.set.call(this,hush?0:level(this));}});"
+            + "set:function(v){this.__spicyVol=v;vd.set.call(this,hush?0:level(this));"
+            + "try{if(window.spicyPlayer)spicyPlayer.postMessage('vol:'+Math.cbrt(Math.max(0,Math.min(1,+v||0))));}catch(e){}}});"
             + "window.__spicyHush=function(on){if(!vd||!vd.set)return;on=!!on;if(on===hush)return;hush=on;clearInterval(fadeT);"
             + "if(on){els.forEach(function(e){try{if(e.__spicyVol===undefined)e.__spicyPre=vd.get.call(e);vd.set.call(e,0);}catch(x){}});return;}"
             + "var k=0;fadeT=setInterval(function(){k++;var f=Math.min(1,k/12);f=f*f*(3-2*f);"
@@ -789,6 +795,7 @@ public final class WebPlayerService extends Service {
             }
         }
         if (nowPlaying) {
+            playingSinceElapsed = SystemClock.elapsedRealtime();
             acquireStreamingLocks();
             main.removeCallbacks(wakeRenew);
             main.postDelayed(wakeRenew, WAKE_LOCK_RENEW_MS);
@@ -1057,6 +1064,10 @@ public final class WebPlayerService extends Service {
                     if (dev == null && needDevice && ++tries < DEVICE_ID_POLL_MAX) {
                         main.postDelayed(this, DEVICE_ID_POLL_MS);
                         return;
+                    }
+                    if (dev == null && needDevice) {
+                        Log.w(TAG, "device id still unknown after the wait, page=" + PlayerSession.lastPageUrl
+                                + " raw=" + value);
                     }
                     android.os.Bundle data = new android.os.Bundle();
                     if (dev != null) data.putString(EXTRA_DEVICE_ID, dev);
@@ -1374,6 +1385,49 @@ public final class WebPlayerService extends Service {
         }
     }
 
+    /** The last Connect volume seen while playing here; -1 until the first one. */
+    private float lastConnectVolume = -1f;
+    /** When audio last started here; volume settling right after a hand-off is not the user's. */
+    private long playingSinceElapsed;
+    private static final long VOLUME_SETTLE_MS = 2500L;
+
+    /**
+     * Spotify's volume for this device, followed on the phone's media volume - as changes only.
+     * The absolute value is never copied: a fresh Connect device reports 100%, and copying that
+     * threw the phone to full volume the moment playback moved here. The first value of a
+     * playback is just the reference; each later change (the volume keys move Spotify's
+     * volume while it plays remotely) moves the phone's media volume by the same share of its
+     * range, at least one step, so the keys keep working and nothing ever jumps.
+     */
+    private void onConnectVolume(String value) {
+        float p;
+        try {
+            p = Math.max(0f, Math.min(1f, Float.parseFloat(value)));
+        } catch (NumberFormatException e) {
+            return;
+        }
+        float previous = lastConnectVolume;
+        lastConnectVolume = p;
+        if (!playing || previous < 0f || Math.abs(p - previous) < 0.005f
+                || SystemClock.elapsedRealtime() - playingSinceElapsed < VOLUME_SETTLE_MS) return;
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return;
+            int max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+            int current = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+            int steps = Math.round((p - previous) * max);
+            if (steps == 0) steps = p > previous ? 1 : -1;
+            int index = Math.max(0, Math.min(max, current + steps));
+            if (p <= 0f) index = 0;
+            if (index == current) return;
+            am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, index, 0);
+            Log.i(TAG, "Connect volume " + Math.round(previous * 100) + "% -> " + Math.round(p * 100)
+                    + "%, media volume " + current + " -> " + index + "/" + max);
+        } catch (Throwable t) {
+            Log.e(TAG, "volume apply failed type=" + t.getClass().getName());
+        }
+    }
+
     private void installMediaBridge(WebView w) {
         java.util.Set<String> player = Collections.singleton("https://open.spotify.com");
         try {
@@ -1396,6 +1450,7 @@ public final class WebPlayerService extends Service {
                             else if ("ad-ending".equals(data)) onAdEnding();
                             else if ("ad-end".equals(data)) onAdEnd();
                             else if (data != null && data.startsWith("ad-ids:")) onAdIds(data.substring(7));
+                            else if (data != null && data.startsWith("vol:")) onConnectVolume(data.substring(4));
                             else if ("logout-blocked".equals(data)) {
                                 Log.w(TAG, "ignored a remote sign-out command for this device");
                             }

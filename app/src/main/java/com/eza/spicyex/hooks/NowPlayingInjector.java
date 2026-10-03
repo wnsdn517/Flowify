@@ -544,12 +544,7 @@ final class NowPlayingInjector {
     }
 
     private String resourceEntryName(View view) {
-        if (view == null || view.getId() == View.NO_ID) return "";
-        try {
-            return view.getResources().getResourceEntryName(view.getId());
-        } catch (Throwable ignored) {
-            return "";
-        }
+        return ViewIds.entryName(view);
     }
 
     private void cancelRetry(Activity activity) {
@@ -662,23 +657,6 @@ final class NowPlayingInjector {
 
     private View findViewByResourceEntryName(View root, String entryName) {
         if (root == null || isBlank(entryName)) return null;
-        ArrayDeque<View> queue = new ArrayDeque<>();
-        queue.add(root);
-        while (!queue.isEmpty()) {
-            View view = queue.removeFirst();
-            int id = view.getId();
-            if (id != View.NO_ID) {
-                try {
-                    String name = view.getResources().getResourceEntryName(id);
-                    if (entryName.equals(name)) return view;
-                } catch (Throwable ignored) {
-                }
-            }
-            if (view instanceof ViewGroup) {
-                ViewGroup group = (ViewGroup) view;
-                for (int i = 0; i < group.getChildCount(); i++) queue.addLast(group.getChildAt(i));
-            }
-        }
-        return null;
+        return ViewIds.findByEntry(root, entryName);
     }
 }

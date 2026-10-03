@@ -48,6 +48,7 @@ final class ConnectRouteHandoff {
     // Main thread only.
     private static MediaRouter2 router;
     private static MediaRouter2.RouteCallback discovery;
+    private static MediaRouter2.TransferCallback transferLog;
 
     private ConnectRouteHandoff() {
     }
@@ -91,6 +92,37 @@ final class ConnectRouteHandoff {
         });
     }
 
+    /**
+     * Selects the web player again after a transfer that Android reports as done but Spotify did
+     * not carry out: the route stays "selected" in the output switcher, and selecting a selected
+     * route does nothing. Releasing the Connect controller first makes the next selection a real
+     * one.
+     */
+    static void reselect(Context context, String deviceId, String activeDeviceId, Done done) {
+        if (Build.VERSION.SDK_INT < 30) {
+            if (done != null) done.onDone(Result.FAILED);
+            return;
+        }
+        MAIN.post(() -> {
+            MAIN.removeCallbacks(STOP_DISCOVERY);
+            startDiscovery(context);
+            if (router == null) {
+                if (done != null) done.onDone(Result.FAILED);
+                return;
+            }
+            try {
+                for (MediaRouter2.RoutingController controller : router.getControllers()) {
+                    if (controller == router.getSystemController()) continue;
+                    XpLog.log(TAG + " releasing the Connect output before selecting it again");
+                    controller.release();
+                }
+            } catch (Throwable t) {
+                XpLog.log(TAG + " release failed type=" + t.getClass().getName());
+            }
+            MAIN.postDelayed(new Attempt(deviceId, activeDeviceId, done), 1500L);
+        });
+    }
+
     private static void startDiscovery(Context context) {
         if (discovery != null) return;
         try {
@@ -100,6 +132,26 @@ final class ConnectRouteHandoff {
             };
             router.registerRouteCallback(MAIN::post, discovery,
                     new RouteDiscoveryPreference.Builder(Collections.singletonList(FEATURE), true).build());
+            if (transferLog == null) {
+                transferLog = new MediaRouter2.TransferCallback() {
+                    @Override
+                    public void onTransfer(MediaRouter2.RoutingController oldController,
+                                           MediaRouter2.RoutingController newController) {
+                        XpLog.log(TAG + " transfer done: " + newController.getSelectedRoutes());
+                    }
+
+                    @Override
+                    public void onTransferFailure(MediaRoute2Info requestedRoute) {
+                        XpLog.log(TAG + " transfer refused by the system for " + requestedRoute.getName());
+                    }
+
+                    @Override
+                    public void onStop(MediaRouter2.RoutingController controller) {
+                        XpLog.log(TAG + " routing stopped");
+                    }
+                };
+                router.registerTransferCallback(MAIN::post, transferLog);
+            }
         } catch (Throwable t) {
             discovery = null;
             XpLog.log(TAG + " route discovery unavailable type=" + t.getClass().getName());
@@ -220,7 +272,7 @@ final class ConnectRouteHandoff {
         return null;
     }
 
-    /** Exact device id first (route ids embed it); by name only when it is unambiguous. */
+    /** Exact device id (route ids embed it); by name only when the id is unknown and it is unambiguous. */
     private static MediaRoute2Info pick(List<MediaRoute2Info> routes, String deviceId, boolean log) {
         MediaRoute2Info byName = null;
         int nameMatches = 0;
@@ -237,6 +289,8 @@ final class ConnectRouteHandoff {
                 nameMatches++;
             }
         }
-        return nameMatches == 1 ? byName : null;
+        // Past page loads leave "Spicy Connect" entries behind in Spotify's list for a while, so
+        // a name proves nothing once the live device's id is known: wait for that exact route.
+        return id == null && nameMatches == 1 ? byName : null;
     }
 }

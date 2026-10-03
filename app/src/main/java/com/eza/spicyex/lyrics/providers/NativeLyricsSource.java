@@ -196,7 +196,7 @@ public final class NativeLyricsSource implements LyricsRepository.NativeLyricsPr
                     : candidate.getClass().getName());
             synchronized (UNPARSED_COUNTS) {
                 int seen = UNPARSED_COUNTS.containsKey(key) ? UNPARSED_COUNTS.get(key) : 0;
-                if (seen >= 3) return;
+                if (seen >= 1) return;
                 UNPARSED_COUNTS.put(key, seen + 1);
             }
             XpLog.log(TAG + " native candidate unparsed source=" + safe(sourceTag) + " class=" + key);

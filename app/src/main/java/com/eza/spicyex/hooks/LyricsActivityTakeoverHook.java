@@ -40,6 +40,9 @@ import com.eza.spicyex.xposed.XpReflect;
 
 /** Owns Spotify activity takeover, entry injection, keepalive, and native shell root mount. */
 final class LyricsActivityTakeoverHook {
+    private final java.util.Map<Activity, Boolean> miniPlayerWaitLogged =
+            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
     private static final String LYRICS_FULLSCREEN_ACTIVITY =
             "com.spotify.lyrics.fullscreenview.page.LyricsFullscreenPageActivity";
     private static final int TAG_NATIVE_SPICY_ROOT = 0x53504C53; // SPLS
@@ -519,9 +522,12 @@ final class LyricsActivityTakeoverHook {
                 return true;
             }
             if (!barLaidOut && !sidebarLaidOut) {
-                XpLog.log(NativeSpicyLyricsHook.TAG
-                        + " mini player: now_playing_bar_layout not laid out yet in "
-                        + activity.getClass().getName());
+                // Retried on a timer until the bar lays out: say so once per screen, not per try.
+                if (miniPlayerWaitLogged.put(activity, Boolean.TRUE) == null) {
+                    XpLog.log(NativeSpicyLyricsHook.TAG
+                            + " mini player: now_playing_bar_layout not laid out yet in "
+                            + activity.getClass().getName());
+                }
                 return false;
             }
             if (sidebarLaidOut) {
@@ -761,24 +767,7 @@ final class LyricsActivityTakeoverHook {
 
     private View findViewByResourceEntryName(View root, String entryName) {
         if (root == null || isBlank(entryName)) return null;
-        ArrayDeque<View> queue = new ArrayDeque<>();
-        queue.add(root);
-        while (!queue.isEmpty()) {
-            View view = queue.removeFirst();
-            int id = view.getId();
-            if (id != View.NO_ID) {
-                try {
-                    String name = view.getResources().getResourceEntryName(id);
-                    if (entryName.equals(name)) return view;
-                } catch (Throwable ignored) {
-                }
-            }
-            if (view instanceof ViewGroup) {
-                ViewGroup group = (ViewGroup) view;
-                for (int i = 0; i < group.getChildCount(); i++) queue.addLast(group.getChildAt(i));
-            }
-        }
-        return null;
+        return ViewIds.findByEntry(root, entryName);
     }
 
     private boolean isLikelyNowPlayingScreen(Activity activity, View root) {

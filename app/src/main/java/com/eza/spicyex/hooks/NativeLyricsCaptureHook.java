@@ -470,11 +470,11 @@ final class NativeLyricsCaptureHook {
         if (candidate instanceof java.util.Collection) return;
         // Throttled invocation trace: proves whether the hooked Spotify lyrics path fires at
         // all on the installed Spotify build, independent of whether parsing succeeds.
-        // First five sightings per hook source; steady state stays quiet.
+        // First sighting per hook source; steady state stays quiet.
         try {
             synchronized (seenCounts) {
                 int seen = seenCounts.containsKey(sourceTag) ? seenCounts.get(sourceTag) : 0;
-                if (seen < 5) {
+                if (seen < 1) {
                     seenCounts.put(sourceTag, seen + 1);
                     XpLog.log(NativeSpicyLyricsHook.TAG + " native lyrics hook fired source="
                             + safe(sourceTag) + " class="
