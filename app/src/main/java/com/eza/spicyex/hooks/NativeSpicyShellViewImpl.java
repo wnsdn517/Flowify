@@ -3057,11 +3057,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     /** Height of the stretch just inside the area's top and bottom edge where a line shrinks
      *  at rest: full size until its outer edge enters it, smallest once that edge reaches the
      *  area's edge. Everything further in keeps its size. */
-    private static final int EDGE_SCALE_ZONE_DP = 72;
+    private static final int EDGE_SCALE_ZONE_DP = 40;
     /** How much further in the zone reaches at full scroll speed, as a multiple of the above. */
-    private static final float EDGE_SCALE_ZONE_SPEED_BOOST = 1.5f;
-    private static final float EDGE_SCALE_MIN = 0.93f;
-    private static final float EDGE_SCALE_MIN_AT_SPEED = 0.86f;
+    private static final float EDGE_SCALE_ZONE_SPEED_BOOST = 0.5f;
+    private static final float EDGE_SCALE_MIN = 0.97f;
+    private static final float EDGE_SCALE_MIN_AT_SPEED = 0.95f;
     /** Scroll speeds below this read as resting (an auto-follow step); full effect at the max. */
     private static final int EDGE_SCALE_SPEED_FLOOR_DP_PER_SEC = 500;
     private static final int EDGE_SCALE_SPEED_MAX_DP_PER_SEC = 4000;
@@ -3103,7 +3103,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 (edgeScaleSpeed - floor) / Math.max(1f, dp(EDGE_SCALE_SPEED_MAX_DP_PER_SEC) - floor)));
         s = s * (2f - s);
         float zone = Math.max(1f, Math.min(dp(EDGE_SCALE_ZONE_DP) * (1f + EDGE_SCALE_ZONE_SPEED_BOOST * s),
-                viewport * 0.3f));
+                viewport * 0.1f));
         float minScale = EDGE_SCALE_MIN + (EDGE_SCALE_MIN_AT_SPEED - EDGE_SCALE_MIN) * s;
         float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
         // Keep frames coming until the speed has died down, or the lines stay at a fling's size.
