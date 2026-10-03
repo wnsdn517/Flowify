@@ -153,6 +153,8 @@ const BUG_RE = new RegExp(
     "won'?t (open|load|start|launch)", "\\bbroken\\b", "force ?close", "\\banr\\b", "keeps? (crashing|freezing|stopping)",
     "stuck on", "\\bfreez(e|es|ing)\\b", "\\bregression\\b", "stack ?trace", "\\bexception\\b", "null ?pointer",
     "throws? an error", "error:", "doesn'?t load", "fails? to",
+    "\\bproblem\\b", "\\bissue\\b", "was discovered", "doesn'?t follow", "out of sync", "\\bglitch",
+    "mis[- ]?align", "\\bincorrect(ly)?\\b", "\\bwrong(ly)?\\b", "\\bunexpected\\b",
   ].join("|"),
   "i"
 );
