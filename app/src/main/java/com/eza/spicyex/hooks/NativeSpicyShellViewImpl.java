@@ -3060,15 +3060,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private static final float EDGE_SCALE_START = 0.65f;
     private static final float EDGE_SCALE_MIN = 0.7f;
     private static final float EDGE_SCALE_GROW_PER_SEC = 1.8f;
-    private static final class XpLogEdge {
-        static int count;
-        static void interference(int i, float expected, float actual) {
-            if (++count % 20 == 1) {
-                com.eza.spicyex.xposed.XpLog.log("[SpotifyPlusSpicy] edge-scale interference #" + count
-                        + " row=" + i + " expected=" + expected + " actual=" + actual);
-            }
-        }
-    }
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
     private long edgeScaleAtMs;
     private boolean edgeScaleSettling;
@@ -3106,19 +3097,26 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             f = f * f * (3f - 2f * f);
             float target = 1f - (1f - EDGE_SCALE_MIN) * f;
             Float known = edgeScales.get(row);
-            if (known != null && Math.abs(row.getScaleX() - known) > 0.02f) {
-                XpLogEdge.interference(i, known, row.getScaleX());
+            if (known != null) {
+                Float pr = pressScales.get(row);
+                float expectedNow = pr == null ? known : known * pr;
+                if (Math.abs(row.getScaleX() - expectedNow) > 0.02f) {
+                    com.eza.spicyex.xposed.XpLog.log("[SpotifyPlusSpicy] edge-scale interference row=" + i
+                            + " expected=" + expectedNow + " actual=" + row.getScaleX());
+                }
             }
             float current = known == null ? target : known;
             // Shrinks with the edge at once; grows back no faster than the fixed rate.
             current = target <= current ? target : Math.min(target, current + grow);
             if (current < target) edgeScaleSettling = true;
             edgeScales.put(row, current);
-            if (Math.abs(row.getScaleX() - current) < 0.002f) continue;
+            Float pressed = pressScales.get(row);
+            float applied = pressed == null ? current : current * pressed;
+            if (Math.abs(row.getScaleX() - applied) < 0.002f) continue;
             row.setPivotX(row.getWidth() * 0.5f);
             row.setPivotY(height * 0.5f);
-            row.setScaleX(current);
-            row.setScaleY(current);
+            row.setScaleX(applied);
+            row.setScaleY(applied);
         }
     }
 
@@ -3854,11 +3852,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private final Runnable shrinkPressedLyric = () -> {
         View row = pressedLyricRow;
         if (row == null || !row.isAttachedToWindow()) return;
-        // Held down, the line sinks a little, as in Apple Music, until the sheet opens. (No
-        // cancel(): a new scale animation replaces only the scale, not the row's other motion.)
-        row.animate().scaleX(0.94f).scaleY(0.94f)
-                .setDuration(Math.max(160, android.view.ViewConfiguration.getLongPressTimeout() - 60))
-                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
+        // Held down, the line sinks a little, as in Apple Music, until the sheet opens.
+        animatePress(row, 0.94f,
+                Math.max(160, android.view.ViewConfiguration.getLongPressTimeout() - 60),
+                new android.view.animation.DecelerateInterpolator(1.6f));
     };
 
     /**
@@ -3903,8 +3900,38 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         pressedLyricRow = null;
         if (row == null) return;
         row.removeCallbacks(shrinkPressedLyric);
-        row.animate().scaleX(1f).scaleY(1f).setDuration(460)
-                .setInterpolator(new android.view.animation.OvershootInterpolator(2.2f)).start();
+        animatePress(row, 1f, 460, new android.view.animation.OvershootInterpolator(2.2f));
+    }
+
+    /** The press feedback's own factor on a row's size. It is multiplied with the edge scale in
+     *  applyEdgeRowScale rather than animated on the view's scale directly: two writers on one
+     *  property overrode each other, and the lines jumped whenever a finger touched the list. */
+    private final java.util.WeakHashMap<View, Float> pressScales = new java.util.WeakHashMap<>();
+    private final java.util.WeakHashMap<View, android.animation.ValueAnimator> pressAnimators =
+            new java.util.WeakHashMap<>();
+
+    private void animatePress(View row, float to, long durationMs,
+                              android.animation.TimeInterpolator interpolator) {
+        android.animation.ValueAnimator running = pressAnimators.remove(row);
+        if (running != null) running.cancel();
+        Float from = pressScales.get(row);
+        android.animation.ValueAnimator animator = android.animation.ValueAnimator.ofFloat(
+                from == null ? 1f : from, to);
+        animator.setDuration(durationMs);
+        animator.setInterpolator(interpolator);
+        animator.addUpdateListener(a -> {
+            pressScales.put(row, (Float) a.getAnimatedValue());
+            applyEdgeRowScale(0f);
+        });
+        animator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator animation) {
+                if (pressAnimators.get(row) == animation) pressAnimators.remove(row);
+                if (to >= 1f) pressScales.remove(row);
+                applyEdgeRowScale(0f);
+            }
+        });
+        pressAnimators.put(row, animator);
+        animator.start();
     }
 
     /**
