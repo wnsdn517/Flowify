@@ -3050,19 +3050,28 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 document.appliedLines, anchor, NativeRuntime.LYRIC_WINDOW_EDGE_BUFFER);
     }
 
-    /** Lines near the top and bottom edge are smaller the closer they are to it, easing to full
-     *  size toward the middle - the scroll reads as a list receding rather than rows being cut
-     *  off. A line shrinks the moment it nears the edge but grows back at a fixed speed, so in a
-     *  very fast scroll the lines streaming in stay small, and a little more of them shows. */
-    /** Height of the stretch just inside the lyrics area's top (the header / fade) and bottom edge,
-     *  where lines shrink: full size at its inner end, smallest at the edge itself, where they
-     *  stop being visible. Everything further in keeps its size. */
-    private static final int EDGE_SCALE_ZONE_DP = 120;
-    private static final float EDGE_SCALE_MIN = 0.7f;
-    private static final float EDGE_SCALE_GROW_PER_SEC = 1.8f;
+    /** Lines near the top and bottom edge are slightly smaller as they start leaving the lyrics
+     *  area - the scroll reads as a list receding rather than rows being cut off. The faster the
+     *  list moves (either way), the further in the effect reaches and the deeper it goes; it
+     *  eases back as the scroll slows. Shrinking and growing follow the target at the same pace. */
+    /** Height of the stretch just inside the area's top and bottom edge where a line shrinks
+     *  at rest: full size until its outer edge enters it, smallest once that edge reaches the
+     *  area's edge. Everything further in keeps its size. */
+    private static final int EDGE_SCALE_ZONE_DP = 72;
+    /** How much further in the zone reaches at full scroll speed, as a multiple of the above. */
+    private static final float EDGE_SCALE_ZONE_SPEED_BOOST = 1.5f;
+    private static final float EDGE_SCALE_MIN = 0.93f;
+    private static final float EDGE_SCALE_MIN_AT_SPEED = 0.86f;
+    /** Scroll speeds below this read as resting (an auto-follow step); full effect at the max. */
+    private static final int EDGE_SCALE_SPEED_FLOOR_DP_PER_SEC = 500;
+    private static final int EDGE_SCALE_SPEED_MAX_DP_PER_SEC = 4000;
+    /** Time constant of a line's size following its target, both directions. */
+    private static final float EDGE_SCALE_EASE_SEC = 0.09f;
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
     private long edgeScaleAtMs;
     private boolean edgeScaleSettling;
+    private int edgeScaleLastScrollY = Integer.MIN_VALUE;
+    private float edgeScaleSpeed;
 
     private void applyEdgeRowScale() {
         long now = SystemClock.uptimeMillis();
@@ -3078,40 +3087,74 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (viewport <= 0) return;
         // Measured from the edge where lines stop being visible (under the header at the top,
         // the screen's bottom), not from the focus line.
-        float zone = Math.max(1f, Math.min(dp(EDGE_SCALE_ZONE_DP), viewport * 0.3f));
-        float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
         int scrollY = lyricsScroll.getScrollY();
+        // Sampled once a frame at most: the scroll listener also calls in between, and a few
+        // pixels over a millisecond or two read as a fling.
+        if (dt >= 0.008f) {
+            float instant = edgeScaleLastScrollY == Integer.MIN_VALUE
+                    ? 0f : Math.abs(scrollY - edgeScaleLastScrollY) / dt;
+            edgeScaleLastScrollY = scrollY;
+            // Rises quickly with a fling, falls away a little slower so the lines settle softly.
+            float k = instant > edgeScaleSpeed ? 0.5f : 0.15f;
+            edgeScaleSpeed += (instant - edgeScaleSpeed) * k;
+        }
+        float floor = dp(EDGE_SCALE_SPEED_FLOOR_DP_PER_SEC);
+        float s = Math.max(0f, Math.min(1f,
+                (edgeScaleSpeed - floor) / Math.max(1f, dp(EDGE_SCALE_SPEED_MAX_DP_PER_SEC) - floor)));
+        s = s * (2f - s);
+        float zone = Math.max(1f, Math.min(dp(EDGE_SCALE_ZONE_DP) * (1f + EDGE_SCALE_ZONE_SPEED_BOOST * s),
+                viewport * 0.3f));
+        float minScale = EDGE_SCALE_MIN + (EDGE_SCALE_MIN_AT_SPEED - EDGE_SCALE_MIN) * s;
+        float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
+        // Keep frames coming until the speed has died down, or the lines stay at a fling's size.
+        if (s > 0f) edgeScaleSettling = true;
+        // No time passed (a press step recomposing): sizes hold, only the press factor changes.
+        float ease = dt <= 0f ? 0f : 1f - (float) Math.exp(-dt / EDGE_SCALE_EASE_SEC);
+        // Up to the scroll view itself: lyricsColumn sits at the scroll's (large, centring) top
+        // padding, and leaving that out put every line that far above where it really is.
         int hostTop = 0;
-        for (View v = mountedRowsHost; v != null && v != lyricsColumn; ) {
+        for (View v = mountedRowsHost; v != null && v != lyricsScroll; ) {
             hostTop += v.getTop();
             v = v.getParent() instanceof View ? (View) v.getParent() : null;
         }
-        float grow = EDGE_SCALE_GROW_PER_SEC * dt;
         for (int i = 0; i < mountedRowsHost.getChildCount(); i++) {
             View row = mountedRowsHost.getChildAt(i);
             int height = row.getHeight();
             if (height <= 0) continue;
-            float center = hostTop + row.getTop() + height / 2f - scrollY;
-            // How deep into the edge zone this line is, on its own side of the focus: 0 at the
-            // zone's inner end, 1 at (or past) the edge itself.
-            float toEdge = center < anchor ? center : viewport - center;
+            float top = hostTop + row.getTop() - scrollY;
+            boolean upper = top + height / 2f < anchor;
+            // How deep the line's outer edge is into the edge zone, on its own side of the focus:
+            // 0 at the zone's inner end, 1 once it touches (or passes) the area's edge.
+            float toEdge = upper ? top : viewport - (top + height);
             float f = Math.max(0f, Math.min(1f, 1f - toEdge / zone));
             f = f * f * (3f - 2f * f);
-            float target = 1f - (1f - EDGE_SCALE_MIN) * f;
+            float target = 1f - (1f - minScale) * f;
             Float known = edgeScales.get(row);
-            float current = known == null ? target : known;
-            // Shrinks with the edge at once; grows back no faster than the fixed rate.
-            current = target <= current ? target : Math.min(target, current + grow);
-            if (current < target) edgeScaleSettling = true;
+            float current = known == null ? target : known + (target - known) * ease;
+            if (Math.abs(target - current) < 0.001f) current = target;
+            else edgeScaleSettling = true;
             edgeScales.put(row, current);
             Float pressed = pressScales.get(row);
             float applied = pressed == null ? current : current * pressed;
             if (Math.abs(row.getScaleX() - applied) < 0.002f) continue;
-            row.setPivotX(row.getWidth() * 0.5f);
-            row.setPivotY(height * 0.5f);
+            // Shrinks toward the text's own alignment edge (lines are start- or end-aligned, so a
+            // centre pivot slid them sideways) and toward the list, so the gap to the next line
+            // stays even instead of opening up on both sides.
+            row.setPivotX(rowAlignmentPivotX(row));
+            // Blended by depth so the pivot never jumps (the long-press shrink stays centred).
+            row.setPivotY(height * (0.5f + (upper ? 0.5f : -0.5f) * f));
             row.setScaleX(applied);
             row.setScaleY(applied);
         }
+    }
+
+    private static float rowAlignmentPivotX(View row) {
+        if (!(row instanceof LinearLayout)) return row.getWidth() * 0.5f;
+        int g = Gravity.getAbsoluteGravity(((LinearLayout) row).getGravity(), row.getLayoutDirection())
+                & Gravity.HORIZONTAL_GRAVITY_MASK;
+        if (g == Gravity.RIGHT) return row.getWidth();
+        if (g == Gravity.LEFT) return 0f;
+        return row.getWidth() * 0.5f;
     }
 
     private void scheduleScrollSettleRemeasure() {
