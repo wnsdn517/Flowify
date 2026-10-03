@@ -11,17 +11,17 @@ Xiaomi HyperOS 3 lockscreen/AOD integration: [HyperGlow](https://github.com/amar
 </div>
 ---
 
-<div align="center">💬 Join the Conversation
+<div align="center">
 
-Music is better when it's shared.
+### Join the community
 
-Have an idea, found a bug, or just want to talk?
+Have an idea, found a bug, or just want to talk? Pick a channel.
 
-Join the SpicyEX community and help make the experience better.
+<a href="https://t.me/spicy_ex"><img src="https://img.shields.io/badge/Announcements-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Announcements"></a> <a href="https://t.me/spicy_ex_discussion"><img src="https://img.shields.io/badge/Discussion-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Discussion"></a> <a href="https://t.me/spicy_ex_ci"><img src="https://img.shields.io/badge/CI_builds-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="CI_builds"></a> <a href="https://github.com/wnsdn517/spicy-ex/discussions"><img src="https://img.shields.io/badge/GitHub_Discussions-181818?style=for-the-badge&logo=github&logoColor=white" alt="GitHub_Discussions"></a>
 
-<br><a href="https://github.com/wnsdn517/spicy-ex/discussions">
-  <img src="https://img.shields.io/badge/Explore-Discussions-181818?style=for-the-badge&logo=github&logoColor=white" alt="Explore Discussions">
-</a></div>
+<sub>Bot in Discussion: <code>/release</code> · <code>/beta</code> · <code>/ci</code></sub>
+
+</div>
 
 ---
 
@@ -87,12 +87,6 @@ versioned archive with `:app:packageLanguageModelPack` (JMdict sources live in
 `-PLANGUAGE_MODEL_PACK_SHA256=...`.
 
 Docs-only changes do not require unit/device testing. Device behavior remains the final validation path for UI, hook, and Spotify-host integration changes.
-
-## Community
-- [Announcements](https://t.me/spicy_ex) — release news
-- [Discussion](https://t.me/spicy_ex_discussion) — chat and support. Bot commands: `/release`, `/beta`, `/ci`
-- [CI builds](https://t.me/spicy_ex_ci) — every CI build APK is posted here automatically
-- [CI discussion](https://t.me/spicy_ex_ci) — see the CI channel
 
 ## Credits
 - [LeNerd46/SpotifyPlus](https://github.com/LeNerd46/SpotifyPlus)
