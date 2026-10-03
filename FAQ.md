@@ -1,55 +1,85 @@
 # Spicy EX FAQ
 
+This FAQ is for this fork ([wnsdn517/spicy-ex](https://github.com/wnsdn517/spicy-ex)). See the
+[feature guide](FEATURES_USER.md) for what it adds over upstream.
+
 ### It does not work with my Spotify version
 
-Spicy EX compatibility depends on the Spotify version.
-
-This release was built and tested against Spotify **9.1.68.1888** (`versionCode 144192416`) from
-Google Play. Older, beta, ReVanced, or modified builds may not work.
+Hooks depend on the Spotify version. This fork is currently tested on **9.1.88** from Google Play.
+Older, beta, ReVanced or otherwise modified builds may not work. After a Spotify update, check for a
+new fork release before reporting a problem.
 
 ### What is included?
 
-- Translation, transliteration, romanization, dictionaries, extra fonts, and the
-	renderer are included in the single APK.
-- The now-playing card, settings, and HyperGlow bridge are included as well.
-- Language models (Japanese/Chinese dictionaries, language detection) are downloaded
-	on demand from Settings instead of being bundled.
+- One APK with the lyric renderer, transliteration, translation, extra fonts, Spotify Connect,
+  ad handling, picture-in-picture, share cards and the HyperGlow bridge.
+- Language models (Japanese/Chinese dictionaries, language detection) are downloaded on demand from
+  Settings instead of being bundled. Lyrics work without them; readings need them.
 
 ### Which LSPosed scope?
 
-Spotify only.
+Spotify only (`com.spotify.music`).
 
-After install or update:
-
-1. Force-stop Spotify.
-2. Reopen Spotify.
+After installing or updating the module, force-stop Spotify and reopen it.
 
 ### Spicy EX settings are missing
 
-Check:
+Check that:
 
-- Module enabled.
-- Spotify selected in LSPosed scope.
-- Spotify fully restarted.
-- Spotify build compatible with current hooks.
+- the module is enabled,
+- Spotify is selected in the LSPosed scope,
+- Spotify was fully restarted,
+- your Spotify build is one the current hooks support.
 
-Still broken? Submit a compatibility report.
+Still broken? Open an issue with your Spotify version and the module version.
 
-### Does LSPatch work?
+### Where do I change the lyric screen's look?
 
-Possible, but less reliable. Patched Spotify may fail Play Integrity or login.
-Follow the [downgrade-login-upgrade method](README.md#install) in the Install section.
+In the **Layout Editor**: open the lyrics screen and edit the artwork, track text, focus point,
+background, chips, top controls or now-playing card in place. Those settings are deliberately not
+repeated in the Settings panel, which holds everything else (sources, readings, translation,
+double-tap like, picture-in-picture, AI, ad-free listening, diagnostics).
+
+### How do I choose where lyrics come from?
+
+Settings → **Lyrics Sources**. Pick the source (Apple, Spotify native, AMLL, LRCLIB, QQ Music,
+NetEase, Musixmatch) and manage stored lyrics there. Availability and timing quality vary by track
+and source.
+
+### Double-tap like
+
+Double-tap the lyrics to like the song. Choose the effect and mark in Settings and use **Try it** to
+preview without liking anything. It never removes a like. If you want double-tap to seek instead,
+turn double-tap like off — the two cannot share the gesture.
+
+### Ads and Spicy Connect
+
+- **Ads**: Settings → Ad-free listening → mute, or play generated music during the break.
+- **Spicy Connect**: a background web player that shows up as a Connect device. Sign in from Settings.
+  It needs Spotify's web player to keep working, so it can break when Spotify changes it.
+- Both are fork-only features and are not part of upstream.
 
 ### Lyrics are missing, wrong, or delayed
 
-Lyric availability, text, language, and timing quality can vary by track and upstream source.
+Try another source in Settings → Lyrics Sources. Playback sync follows Spotify's audio clock; if
+lyrics are consistently early or late on your device, adjust the sync offset (±5000 ms).
+
+### Does LSPatch work?
+
+Possible, but less reliable. A patched Spotify may fail Play Integrity at login; follow the
+[downgrade-login-upgrade method](readme.md#install). The [non-root plan](docs/NON_ROOT_PLAN.md)
+describes how this is meant to get easier.
 
 ### HyperGlow
 
-Optional.
+Optional. It publishes lyrics to HyperGlow for HyperOS 3 lockscreen/AOD rendering.
 
 ### How do I update?
 
-Install the new APK over the old installation. Then restart Spotify.
+Install the new APK from this fork's [Releases](https://github.com/wnsdn517/spicy-ex/releases) over
+the old one, then restart Spotify. With LSPatch, enable **Override version code**.
 
-If you use LSPatch, enable **Override version code**.
+### Is it affiliated with upstream or Spotify?
+
+No. It is an unofficial community fork of [amarinne/spicy-ex](https://github.com/amarinne/spicy-ex)
+and is not affiliated with Spotify or Spicy Lyrics.

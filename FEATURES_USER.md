@@ -1,145 +1,146 @@
 # Spicy EX Feature Guide
 
-Spicy EX is an Xposed/LSPosed module that adds a Spicy Lyrics-style experience to Spotify. It
-replaces the basic lyric surface with a richer fullscreen lyric screen, a live now-playing lyric
-card, language-learning helpers, translation, and visual customization.
+This is the feature list of this fork ([wnsdn517/spicy-ex](https://github.com/wnsdn517/spicy-ex)).
+It tracks the upstream project ([amarinne/spicy-ex](https://github.com/amarinne/spicy-ex)) and adds
+its own features on top; items marked **Fork** are not in upstream.
 
-This is the user-facing feature list.
+Spicy EX is an Xposed/LSPosed module that replaces Spotify's basic lyric surface with a fullscreen
+Spicy Lyrics / Apple Music-style lyric screen, a live now-playing lyric card, reading aids,
+translation, and a lot of visual customization. Everything is configured from a settings panel
+inside Spotify.
 
 ## APK Contents
 
-- The APK includes transliteration, romanization, translation, language dictionaries,
-  extra fonts, the complete lyric renderer, and the HyperGlow bridge.
+One APK carries the lyric renderer, transliteration, translation, extra fonts, Spotify Connect and
+the HyperGlow bridge. The Japanese/Chinese language models are a separate pack that is downloaded
+from Settings when you want readings.
 
 ## Lyrics Experience
 
-- Fullscreen synced lyrics inside Spotify.
-- Spicy-style karaoke wash that follows the current lyric timing.
-- Line-, word- and syllable-timed lyrics when the source provides them.
-- Top-to-bottom, block-horizontal and sentence-horizontal lyric fill.
-- Spotlight, glow and interlude animation.
-- Static/unsynced lyric fallback when line timing is unavailable.
-- Interlude indicators between sung lines, using dots or a music note.
-- Loading, empty, error, and no-lyrics states.
-- Optional "stay in lyrics" behavior so the lyric screen remains open across track changes.
-- Tap-to-seek on lyric rows, configurable as off, single tap, or double tap.
-- Manual sync offset from -5000 ms to +5000 ms.
-- Jump back to the current lyric after manual scrolling.
-- Dedicated lyrics entry when Spotify does not expose its native lyric card.
+- Fullscreen synced lyrics inside Spotify, with line-, word- and syllable-timed lyrics when the
+  source provides them.
+- Two animation styles: Spicy karaoke wash / spotlight, and an Apple Music-style motion with
+  cascade, spring, lift, line slide and word bounce.
+- Static fallback for unsynced lyrics; loading, empty, error and no-lyrics states; interlude
+  indicators (dots or a note).
+- Optional "stay in lyrics" across track changes.
+- Tap-to-seek on lyric rows (off, single tap or double tap), manual sync offset of ±5000 ms, and a
+  follow chip that jumps back to the current line after you scroll away (waveform icon, collapses
+  to a round button).
+- **Fork** — Playback sync follows Spotify's audio clock (heard position, speed-aware), so lyrics
+  stay on the beat across seeks and pauses.
+- **Fork** — Scroll with momentum between swipes, a smooth hand-over between fingers, and lines
+  that dissolve into the background at the screen edge.
+- **Fork** — Outro skip chip that seeks to the end of the song, so it also works on free accounts.
+- **Fork** — Empty-state screen when no lyrics are available instead of a blank surface.
+
+## Lyrics Sources
+
+- **Fork** — A source catalog with a picker: Apple, Spotify native, AMLL, LRCLIB, QQ Music and
+  NetEase. Choose per song which source's lyrics to show.
+- **Fork** — Musixmatch as an additional source, with word-by-word timing.
+- **Fork** — Stored lyrics browser on the Lyrics Sources page to look at and manage cached lyrics.
+
+## Layout Editor
+
+- **Fork** — Edit the lyric screen in place: tap artwork, track text, focus point, text, background,
+  skip chip, follow chip, the top controls dock or the now-playing card and change its position,
+  size and style live.
+- Covers text size, font, weight, spacing, blur, glow, background style and quality, interlude
+  icon, song-info header (including lyrics starting below it), and adaptive/landscape layout.
+
+## Double-Tap Like — Fork
+
+- Double-tap the lyrics to like the song; a burst plays where the finger landed. It never removes a
+  like.
+- 14 selectable effect styles (Aurora, Glow, Pulse, Watercolor, Radiant, Stardust, Gravity,
+  Crystal, Liquid, Lens, Pearl, Prism, Bloom, Classic) and a mark of Like button, Heart or Star.
+- A **Try it** action in Settings opens a trial bar with the gesture hint, lets you switch styles
+  live and plays the effect without liking anything.
+- Taps right after a like never seek, so a double tap does not jump a line.
+
+## Share Cards
+
+- Share a lyric line as an image card with several designs (Glass, Classic, Minimal, Polaroid,
+  Poster, Vinyl, Ticket), a blur, lyrics or artist-photo backdrop, an optional Spotify code, save
+  to gallery, and story sharing buttons.
+- **Fork** — The card opens without waiting on the blur and thumbnail, and the next-line hint chip
+  keeps one width.
+
+## Picture-in-Picture — Fork
+
+- Continue the lyrics in a PiP window from a dedicated button, or when leaving the lyrics screen
+  (option).
+- Song info header with artwork and title, landscape layout with an artwork column and larger
+  text, lighter and faster to open, and the mini player opens Spotify's own page.
 
 ## Now-Playing Lyrics
 
-- Live current lyric line in Spotify's now-playing view.
-- Placeholder display for tracks without lyrics.
-- Configurable single- or double-tap shortcut to fullscreen lyrics.
-- Main, transliteration, translation or combined secondary line.
-- Independent size, weight, animation, glow, fill, overflow and transition settings.
+- Live current lyric line in Spotify's now-playing view, with a placeholder on tracks without
+  lyrics.
+- Configurable tap shortcut to fullscreen lyrics.
+- Main, transliteration, translation or combined secondary line; independent size, weight,
+  animation, glow, fill, overflow and transition settings.
 
 ## Transliteration And Reading Aids
 
-- Global transliteration toggle.
-- Optional per-word transliteration attached under lyrics.
-- In-lyrics transliteration chip that can cycle modes.
-- Cycle modes remember the last selected language mode.
+- Global toggle, optional per-word readings, and an in-lyrics chip that cycles modes.
+- Japanese (furigana, romaji, both), Chinese (pinyin or jyutping, with tone marks/numbers),
+  Korean (readable romanization or pronunciation with sound changes), Cyrillic (Russian or
+  Ukrainian, optional hard/soft sign) and Greek (static table).
 
-Supported reading modes:
+## Translation And AI
 
-- Japanese:
-  - furigana only
-  - furigana + romaji
-  - romaji only
-  - off/cycle
-- Chinese:
-  - Mandarin pinyin
-  - Cantonese jyutping
-  - optional pinyin tone marks and jyutping tone numbers
-  - off/cycle
-- Korean:
-  - letter-by-letter readable romanization
-  - pronunciation mode with sound changes
-  - off/cycle
-- Cyrillic:
-  - Russian mode
-  - Ukrainian mode
-  - optional hard/soft sign display
-  - off/cycle
-- Greek:
-  - static table romanization.
-
-## Translation
-
-- Optional lyric translation.
-- Google unofficial translation backend.
-- Batched translation for faster line processing.
-- Configurable target language.
-- Translation brightness: dimmed or bright.
-- Translation cache avoids repeated requests.
-
-Translation uses an unofficial Google endpoint. Eligible lyric text is sent only when translation
-is enabled.
-
-## Visual Customization
-
-- Lyric text size: small, normal, large, xlarge or custom.
-- Lyric font: Spotify Mix or Apple font.
-- Lyric weight: regular, medium, bold.
-- Line spacing: compact, default, spacious, more, max or custom.
-- Interlude indicator: dots or note.
-- Animation style:
-  - gradient wash
-  - spotlight
-- Lyric fill direction:
-  - top to bottom
-  - left to right block
-  - left to right sentence
-- Text glow toggle (on by default).
-- Blur distant lines toggle.
+- Google unofficial translation backend, batched, with a target language and a cache.
+- Optional AI features: separate Meaning and Sound lanes, Gemini, OpenAI and OpenAI-compatible
+  providers, a Google preliminary result superseded by an accepted AI result, and reusable cached
+  results. AI is opt-in and uses your own credentials.
+- Translation text is sent to the service only while translation is enabled.
 
 ## Backgrounds
 
-- Optional animated lyric background.
-- Smooth album-art ambient background.
-- Force-dark background mode.
-- Fallback gradient background when album-art colors are too low contrast.
+- Animated album-art ambient background, force-dark and extra-dark modes, fallback gradient for
+  low-contrast art, and a render-quality option.
+
+## Ad-Free Listening — Fork
+
+- Mute Spotify's ads, or replace the ad break with soft generated music (Lofi, Cafe jazz, Bossa
+  nova, Ambient, or random). Only Spotify's own audio is muted; the phone's media volume is not
+  touched.
+- An ad card on the lyrics screen during breaks.
+
+## Spicy Connect — Fork
+
+- A background web player appears as a Spotify Connect device you can cast to, with its ads
+  stripped.
+- Sign in from Settings, choose when Spotify hands playback to it (on app start, on first play,
+  never), and optionally reconnect after network changes. The player stops with Spotify and exits
+  when idle.
 
 ## HyperGlow Integration
 
-- Publishes synchronized lyrics to HyperGlow for HyperOS 3 lockscreen/AOD rendering.
-- Publishes original lyrics, timing, metadata, generated transliteration, and
-  translation together with the playback lifecycle.
-- No Spotify bearer token is sent to HyperGlow.
+- Publishes synchronized lyrics, timing, metadata, transliteration and translation to HyperGlow for
+  HyperOS 3 lockscreen/AOD rendering. No Spotify token is sent.
 
 ## In-Spotify Settings
 
-- Settings panel inside Spotify.
-- English and Simplified Chinese settings/report UI. The `Interface language` row stays English so
-  it remains findable after a language change.
-- Controls grouped by lyrics, transliteration, translation, now-playing, text, animation, and
-  background.
-- Cache actions:
-  - clear translation cache
-  - clear lyrics response cache
-- Status panel with last lyric state and build version.
-- User-triggered private problem reports with a 30-minute privacy-safe event capture, readable JSON
-  preview, public data-policy link, and a report ID for a separately opened formatted GitHub issue.
-- Reports may include the current track identity and bounded current lyric lines shown in preview.
-  They never include Spotify tokens, full logcat, LSPosed logs, or screenshots. Upload is manual and
-  is never performed in the background.
-- `app/translation/strings-template.xml` provides the complete XML key set for new translations.
+- Settings panel grouped by behavior, lyrics sources, reading, translation, layout
+  editor, Apple animation style, now-playing, picture-in-picture, AI, ad-free listening and
+  diagnostics. Anything the Layout Editor can change is edited there, not duplicated in the panel.
+- Cache actions for translation and lyric responses, a status panel, and English, Korean, Japanese, Russian
+  and Simplified Chinese interface languages.
+- User-triggered private problem reports with a readable preview; see the
+  [data policy](DIAGNOSTIC_DATA_POLICY.md). Nothing is uploaded in the background.
 
-## Installation And Distribution
+## Installation
 
-- Rooted install through LSPosed.
-- Non-root LSPatch flow documented for patched Spotify APKs.
-- APK releases published to the public Spicy EX repository.
-- Listed through the LSPosed Modules Repo.
+- Rooted: LSPosed, scoped to Spotify. Non-root: the LSPatch flow in the [readme](readme.md#install).
+- APKs are published on this fork's [Releases](https://github.com/wnsdn517/spicy-ex/releases).
 
 ## Current Limits
 
-- Spotify login behavior under non-root LSPatch still depends on the documented downgrade-login-upgrade
-  flow.
-- Japanese song-specific custom readings can still be wrong when the written lyric uses an artistic
-  reading that dictionaries cannot know.
-- Mandarin pinyin still has known polyphone/context limits.
-- Russian/Ukrainian Cyrillic is romanization, not full pronunciation.
-- Greek support is a static romanization table, not a full Greek phonology engine.
+- Spotify compatibility depends on the version; the fork is currently tested on **9.1.88**.
+- Non-root login still needs the downgrade-login-upgrade flow.
+- Artistic Japanese readings and Mandarin polyphones can still be wrong; Cyrillic is romanization,
+  not pronunciation; Greek is a static table.
+- Spicy Connect and ad handling rely on Spotify's web player and can break when it changes.
