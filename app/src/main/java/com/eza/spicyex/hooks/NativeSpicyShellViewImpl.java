@@ -3051,8 +3051,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  size toward the middle - the scroll reads as a list receding rather than rows being cut
      *  off. A line shrinks the moment it nears the edge but grows back at a fixed speed, so in a
      *  very fast scroll the lines streaming in stay small, and a little more of them shows. */
-    private static final float EDGE_SCALE_ZONE = 0.3f;
-    private static final float EDGE_SCALE_MIN = 0.8f;
+    private static final float EDGE_SCALE_ZONE = 0.11f;
+    private static final float EDGE_SCALE_MIN = 0.78f;
     private static final float EDGE_SCALE_GROW_PER_SEC = 0.55f;
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
     private long edgeScaleAtMs;
