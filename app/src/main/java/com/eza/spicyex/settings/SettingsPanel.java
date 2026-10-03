@@ -1027,9 +1027,11 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 for (int i = 0; list != null && i < list.length(); i++) {
                     org.json.JSONObject candidate = list.optJSONObject(i);
                     if (candidate == null || candidate.optBoolean("draft")) continue;
-                    if (candidate.optString("tag_name", "").matches("v?[0-9]+[.][0-9]+[.][0-9]+.*")) {
+                    // The list is not in date order: keep the most recently published version tag.
+                    if (!candidate.optString("tag_name", "").matches("v?[0-9]+[.][0-9]+[.][0-9]+.*")) continue;
+                    if (release == null || candidate.optString("published_at", "")
+                            .compareTo(release.optString("published_at", "")) > 0) {
                         release = candidate;
-                        break;
                     }
                 }
                 if (release != null) {
