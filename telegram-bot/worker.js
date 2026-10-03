@@ -64,16 +64,36 @@ async function sendCi(env, chatId, replyTo) {
   return tgCall(env, "sendMediaGroup", { chat_id: chatId, media, reply_to_message_id: replyTo });
 }
 
+// Release list cached in KV (GitHub's unauthenticated API is rate limited on shared Worker IPs);
+// a stale copy is used if GitHub errors out.
+async function releases(env) {
+  const hit = JSON.parse((await env.CI.get("releases")) || "null");
+  if (hit && Date.now() - hit.at < 120000) return hit.list;
+  try {
+    const list = await gh(env, "/releases?per_page=30");
+    if (Array.isArray(list)) {
+      await env.CI.put("releases", JSON.stringify({ at: Date.now(), list }));
+      return list;
+    }
+  } catch (e) {}
+  return hit ? hit.list : null;
+}
+
 async function command(env, cmd, msg) {
   const chatId = msg.chat.id, replyTo = msg.message_id;
-  if (cmd === "ci") return sendCi(env, chatId, replyTo);
-  const list = await gh(env, "/releases?per_page=30");
-  const published = (list || []).filter((r) => !r.draft && r.tag_name !== "ci-latest");
-  if (cmd === "release") return sendRelease(env, chatId, replyTo, "Latest release", published.find((r) => !r.prerelease));
-  // /beta = the newest build of any kind, so it never comes back empty when a stable release is newer.
-  if (cmd === "beta") {
+  const say = (text) => tgCall(env, "sendMessage", { chat_id: chatId, text, reply_to_message_id: replyTo });
+  try {
+    tgCall(env, "sendChatAction", { chat_id: chatId, action: "upload_document" }); // instant "sending..." feedback
+    if (cmd === "ci") return await sendCi(env, chatId, replyTo);
+    const list = await releases(env);
+    if (!list) return await say("GitHub is not answering right now. Please try again in a minute.");
+    const published = list.filter((r) => !r.draft && r.tag_name !== "ci-latest");
+    if (cmd === "release") return await sendRelease(env, chatId, replyTo, "Latest release", published.find((r) => !r.prerelease));
+    // /beta = the newest build of any kind, so it never comes back empty when a stable release is newer.
     const newest = published[0];
-    return sendRelease(env, chatId, replyTo, newest?.prerelease ? "Latest beta" : "Latest (stable)", newest);
+    return await sendRelease(env, chatId, replyTo, newest?.prerelease ? "Latest beta" : "Latest (stable)", newest);
+  } catch (e) {
+    await say("Something went wrong while sending the build. Please try again.");
   }
 }
 
