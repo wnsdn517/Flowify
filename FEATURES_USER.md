@@ -2,7 +2,8 @@
 
 This is the feature list of this fork ([wnsdn517/spicy-ex](https://github.com/wnsdn517/spicy-ex)).
 It tracks the upstream project ([amarinne/spicy-ex](https://github.com/amarinne/spicy-ex)) and adds
-its own features on top; items marked **Fork** are not in upstream.
+its own features on top; items marked **Fork** were built in this fork (several were later
+merged upstream through pull requests).
 
 Spicy EX is an Xposed/LSPosed module that replaces Spotify's basic lyric surface with a fullscreen
 Spicy Lyrics / Apple Music-style lyric screen, a live now-playing lyric card, reading aids,
@@ -19,12 +20,12 @@ from Settings when you want readings.
 
 - Fullscreen synced lyrics inside Spotify, with line-, word- and syllable-timed lyrics when the
   source provides them.
-- Two animation styles: Spicy karaoke wash / spotlight, and an Apple Music-style motion with
-  cascade, spring, lift, line slide and word bounce.
+- Spicy karaoke wash / spotlight animation.
+- **Fork** — Apple Music-style motion with cascade, spring, lift, line slide and word bounce.
 - Static fallback for unsynced lyrics; loading, empty, error and no-lyrics states; interlude
   indicators (dots or a note).
 - Optional "stay in lyrics" across track changes.
-- Tap-to-seek on lyric rows (off, single tap or double tap), manual sync offset of ±5000 ms, and a
+- **Fork** — Tap-to-seek on lyric rows (off, single tap or double tap), manual sync offset of ±5000 ms, and a
   follow chip that jumps back to the current line after you scroll away (waveform icon, collapses
   to a round button).
 - **Fork** — Playback sync follows Spotify's audio clock (heard position, speed-aware), so lyrics
@@ -36,12 +37,12 @@ from Settings when you want readings.
 
 ## Lyrics Sources
 
-- **Fork** — A source catalog with a picker: Apple, Spotify native, AMLL, LRCLIB, QQ Music and
-  NetEase. Choose per song which source's lyrics to show.
+- A source catalog with a picker: Apple, Spotify native, AMLL, LRCLIB, QQ Music and
+  NetEase. Choose per song which source's lyrics to show. **Fork** — the NetEase and QQ sources.
 - **Fork** — Musixmatch as an additional source, with word-by-word timing.
 - **Fork** — Stored lyrics browser on the Lyrics Sources page to look at and manage cached lyrics.
 
-## Layout Editor
+## Layout Editor — Fork
 
 - **Fork** — Edit the lyric screen in place: tap artwork, track text, focus point, text, background,
   skip chip, follow chip, the top controls dock or the now-playing card and change its position,
@@ -59,7 +60,7 @@ from Settings when you want readings.
   live and plays the effect without liking anything.
 - Taps right after a like never seek, so a double tap does not jump a line.
 
-## Share Cards
+## Share Cards — Fork
 
 - Share a lyric line as an image card with several designs (Glass, Classic, Minimal, Polaroid,
   Poster, Vinyl, Ticket), a blur, lyrics or artist-photo backdrop, an optional Spotify code, save
@@ -99,7 +100,7 @@ from Settings when you want readings.
 
 ## Backgrounds
 
-- Animated album-art ambient background, force-dark and extra-dark modes, fallback gradient for
+- **Fork** — Audio-reactive animated background, album-art ambient colours, force-dark and extra-dark modes, fallback gradient for
   low-contrast art, and a render-quality option.
 
 ## Ad-Free Listening — Fork
