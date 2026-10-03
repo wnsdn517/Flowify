@@ -19,9 +19,11 @@ import android.view.animation.LinearInterpolator;
  * shader (a RenderEffect on the parent, API 33+):
  *
  * <ol>
- *   <li>Ripples - two waves run out from the finger across the whole screen; the lyrics and the
- *       backdrop really bend in them, and their slopes split into a faint rainbow (each colour
- *       channel is displaced by a different amount).</li>
+ *   <li>Gravitational lens - the space round the mark bends like light round a mass: the lyrics
+ *       and backdrop near it are pushed outward and stretched round it (the point-mass lens
+ *       equation, softened at the core), easing back to untouched a few radii out, with a faint
+ *       dispersion (each colour channel bent a little differently). Only near the mark: waves
+ *       running across the whole screen were too much.</li>
  *   <li>Drop to mark - a round drop of glass forms and flows into the mark (a soft-cornered star,
  *       or a heart): the shape is a signed distance field morphing from a circle, its edge
  *       rippling faintly like liquid, settling on a spring with little bounce and a small,
@@ -32,8 +34,7 @@ import android.view.animation.LinearInterpolator;
  *       passing through, a faint rainbow along the bevel and a hairline of light on the outline.
  *       (Squash-and-stretch, a big turn, a gold tint and a glow round the outline all read as a
  *       toy, and were taken out.)</li>
- *   <li>Melt - it softens back toward a drop, lifts and thins away, sending one last small
- *       ripple out.</li>
+ *   <li>Melt - it softens back toward a drop, lifts and thins away, the lens relaxing with it.</li>
  * </ol>
  *
  * <p>Below API 33 a plain frosted mark plays instead. The small form (around the like button,
@@ -47,7 +48,6 @@ public final class LikeBurstView extends View {
 
     private static final String LIQUID_AGSL = ""
             + "uniform shader content;"
-            + "uniform float2 origin;"
             + "uniform float2 center;"
             + "uniform float R;"
             + "uniform float scale;"
@@ -58,12 +58,13 @@ public final class LikeBurstView extends View {
             + "uniform float wobble;"
             + "uniform float glass;"
             + "uniform float time;"
-            + "uniform float4 ripA;"
-            + "uniform float4 ripB;"
+            + "uniform float lensR;"
+            + "uniform float lens;"
+            + "uniform float swirl;"
             + "uniform half3 tint;"
             + "uniform float heart;"
             + "uniform float2 bounds;"
-            // Every sample stays inside the view: past its edge there is nothing, and the ripples
+            // Every sample stays inside the view: past its edge there is nothing, and bent samples
             // pulled that nothing in as dark seams along the sides.
             + "half4 at(float2 q) { return content.eval(clamp(q, float2(0.5), bounds - 0.5)); }"
 
@@ -99,21 +100,29 @@ public final class LikeBurstView extends View {
             + "  float d = mix(length(q) - 0.7, mark, morph);"
             + "  return d + wobble * 0.025 * (sin(3.0 * a + time * 7.0) + 0.6 * sin(5.0 * a - time * 5.3));"
             + "}"
-            // A ripple ring: rp = (radius, amplitude px, width px, unused).
-            + "float2 ripple(float2 p, float4 rp) {"
-            + "  if (rp.y <= 0.01) return float2(0.0);"
-            + "  float2 v = p - origin;"
-            + "  float r = length(v);"
-            + "  if (r < 0.001) return float2(0.0);"
-            + "  float x = (r - rp.x) / rp.z;"
-            + "  return (v / r) * rp.y * exp(-x * x) * sin(x * 2.4);"
+            // Point-mass lens: a pixel at v from the mass shows what lies at v - E^2 v / |v|^2
+            // (E the Einstein radius), softened at the core and faded out a few radii away.
+            + "float2 lensing(float2 p) {"
+            + "  if (lens <= 0.001) return float2(0.0);"
+            + "  float2 v = p - center;"
+            + "  float r2 = dot(v, v);"
+            + "  float e2 = lensR * lensR;"
+            + "  float soft = lensR * 0.75;"
+            + "  float fall = exp(-r2 / (e2 * 18.0));"
+            + "  float k = e2 / (r2 + soft * soft);"
+            // Frame dragging: space round the mass is twisted, most near it, by `swirl` radians.
+            + "  float w = swirl * k * fall;"
+            + "  float cw = cos(w);"
+            + "  float sw = sin(w);"
+            + "  float2 tw = float2(cw * v.x - sw * v.y, sw * v.x + cw * v.y);"
+            + "  return (tw - v) - tw * (lens * k) * fall;"
             + "}"
 
             + "half4 main(float2 p) {"
-            + "  float2 disp = ripple(p, ripA) + ripple(p, ripB);"
-            // Dispersion: each channel bends by a different amount.
-            + "  half3 col = half3(at(p + disp * 1.2).r, at(p + disp).g,"
-            + "      at(p + disp * 0.8).b);"
+            + "  float2 disp = lensing(p);"
+            // Dispersion: each channel bends by a slightly different amount.
+            + "  half3 col = half3(at(p + disp * 1.03).r, at(p + disp).g,"
+            + "      at(p + disp * 0.97).b);"
             + "  half alpha = at(p).a;"
             + "  if (glass > 0.001) {"
             + "    float2 d = p - center;"
@@ -205,7 +214,6 @@ public final class LikeBurstView extends View {
                 shader.setFloatUniform("tint", Color.red(accent) / 255f,
                         Color.green(accent) / 255f, Color.blue(accent) / 255f);
                 shader.setFloatUniform("heart", star ? 0f : 1f);
-                shader.setFloatUniform("origin", x, y);
                 liquid = shader;
             } catch (Throwable t) {
                 // AGSL compiles on the device: a shader error shows up here, not at build time.
@@ -301,6 +309,22 @@ public final class LikeBurstView extends View {
         return settle * (1f - spring(phase(t, 0f, 0.85f), 0.85, 6.0)) + 5f * exit();
     }
 
+    /** A damped breath, +1 first: the lens's shock as the drop lands, dying out by the hold. */
+    private float pulse() {
+        float p = phase(t, 0.04f, 0.75f);
+        if (p <= 0f || p >= 1f) return 0f;
+        return (float) (Math.exp(-4.5 * p) * Math.sin(p * 17.0 + 0.4));
+    }
+
+    /** The twist of space round the mark: wound in hard as it forms, springing back past zero
+     *  and settling; a second, gentler turn as it melts. Radians at the core. */
+    private float swirl() {
+        float in = phase(t, 0f, 0.8f);
+        float wind = in >= 1f ? 0f
+                : (float) (2.4 * Math.exp(-5.0 * in) * Math.cos(in * 9.0));
+        return (star ? 1f : -1f) * (wind + 0.9f * exit()) * presence();
+    }
+
     private float presence() {
         return smooth(phase(t, 0.02f, 0.14f)) * (1f - exit());
     }
@@ -310,27 +334,11 @@ public final class LikeBurstView extends View {
         return density * 42f * e * e;
     }
 
-    /** A ripple ring (radius, amplitude, width, -): runs out over [start, end], fading. */
-    private float[] ripple(float start, float end, float reach, float ampDp) {
-        float p = phase(t, start, end);
-        if (p <= 0f || p >= 1f) return new float[]{0f, 0f, 1f, 0f};
-        float fade = (1f - p);
-        return new float[]{
-                reach * decelerate(p),
-                density * ampDp * fade * (float) Math.sqrt(fade) * Math.min(1f, p * 8f),
-                density * (26f + 70f * p),
-                0f};
-    }
-
     // -- drawing -----------------------------------------------------------------------------
 
     private void applyLiquid() {
         if (Build.VERSION.SDK_INT < 33 || liquid == null || host == null) return;
         android.graphics.RuntimeShader shader = (android.graphics.RuntimeShader) liquid;
-        float reach = 0.62f * Math.max(host.getWidth(), host.getHeight());
-        float[] a = t < 0.74f ? ripple(0f, 0.74f, reach, 18f)
-                : ripple(0.74f, 1f, reach * 0.35f, 8f);   // the melt's own small ripple
-        float[] b = ripple(0.1f, 0.86f, reach * 0.85f, 9f);
         shader.setFloatUniform("bounds", host.getWidth(), host.getHeight());
         shader.setFloatUniform("center", cx, cy - rise());
         shader.setFloatUniform("R", radius);
@@ -342,8 +350,14 @@ public final class LikeBurstView extends View {
         shader.setFloatUniform("wobble", wobble());
         shader.setFloatUniform("glass", presence());
         shader.setFloatUniform("time", t * DURATION_MS / 1000f);
-        shader.setFloatUniform("ripA", a[0], a[1], a[2], a[3]);
-        shader.setFloatUniform("ripB", b[0], b[1], b[2], b[3]);
+        // The lens reaches a little past the mark and breathes with it: it swells in as the
+        // drop forms, holds, and relaxes as it melts.
+        // A shock as the drop lands: the lens swells past itself and breathes back a few times,
+        // while the space round it is wound up and springs back the other way.
+        float pulse = pulse();
+        shader.setFloatUniform("lensR", radius * Math.max(0.2f, scale()) * (1.4f + 0.45f * pulse));
+        shader.setFloatUniform("lens", presence() * (0.75f + 0.35f * pulse));
+        shader.setFloatUniform("swirl", swirl());
         host.setRenderEffect(android.graphics.RenderEffect.createRuntimeShaderEffect(shader, "content"));
     }
 
@@ -384,10 +398,6 @@ public final class LikeBurstView extends View {
 
     private static float smooth(float p) {
         return p * p * (3f - 2f * p);
-    }
-
-    private static float decelerate(float p) {
-        return 1f - (1f - p) * (1f - p);
     }
 
     /** A spring from 0 to 1 over p in [0, 1]; damping/omega set its bounce and pace. */
