@@ -1,5 +1,6 @@
 // Cloudflare Worker for the Spicy EX Telegram bot.
-//  - Telegram webhook: /release, /beta, /ci in the discussion group; each answers with the APK itself.
+//  - Telegram webhook: /release, /beta, /ci, /help in the discussion group; each release reply has a
+//    "Full notes here" button that prints the untouched release body in-chat (not just a GitHub link).
 //  - Feature-request detection: a keyword match in the discussion group gets a "File as GitHub issue"
 //    button; clicking it (original author or a group admin) files the issue, deduped by message text.
 //  - POST /ci-update (from CI, header X-CI-Secret): stores the Telegram file_ids of the newest CI build.
@@ -34,20 +35,25 @@ function releaseCaption(label, r, apk) {
   const mb = apk ? ` · ${(apk.size / 1048576).toFixed(1)} MB` : "";
   let c = `<b>${esc(label)}  ${esc(r.name || r.tag_name)}</b>\n<code>${esc(r.tag_name)}</code> · ${date}${mb}\n`;
   const h = highlights(r.body);
-  if (h) c += `\n${h}\n`;
-  c += `\n<a href="${r.html_url}">Full release notes</a>`;
+  if (h) c += `\n${h}`;
   return c.length > 1024 ? c.slice(0, 1000) + "…" : c;
+}
+
+// Open on GitHub, or print the untouched release body right here (the caption above is a trimmed summary).
+function releaseButtons(r) {
+  return { inline_keyboard: [[{ text: "🔗 Open on GitHub", url: r.html_url }, { text: "📄 Full notes here", callback_data: `full:${r.tag_name}` }]] };
 }
 
 async function sendRelease(env, chatId, replyTo, label, r) {
   if (!r) return tgCall(env, "sendMessage", { chat_id: chatId, text: `No ${label.toLowerCase()} found.`, reply_to_message_id: replyTo });
   const apk = (r.assets || []).find((a) => a.name.endsWith(".apk"));
   const caption = releaseCaption(label, r, apk);
-  if (!apk) return tgCall(env, "sendMessage", { chat_id: chatId, text: caption, parse_mode: "HTML", reply_to_message_id: replyTo, disable_web_page_preview: true });
+  const reply_markup = releaseButtons(r);
+  if (!apk) return tgCall(env, "sendMessage", { chat_id: chatId, text: caption, parse_mode: "HTML", reply_to_message_id: replyTo, disable_web_page_preview: true, reply_markup });
   const key = `rel:${r.tag_name}:${apk.id}`;
   const cached = await env.CI.get(key);
   if (cached) {
-    return tgCall(env, "sendDocument", { chat_id: chatId, document: cached, caption, parse_mode: "HTML", reply_to_message_id: replyTo });
+    return tgCall(env, "sendDocument", { chat_id: chatId, document: cached, caption, parse_mode: "HTML", reply_to_message_id: replyTo, reply_markup });
   }
   const file = await fetch(apk.browser_download_url);
   const form = new FormData();
@@ -55,11 +61,25 @@ async function sendRelease(env, chatId, replyTo, label, r) {
   form.set("caption", caption);
   form.set("parse_mode", "HTML");
   form.set("reply_to_message_id", String(replyTo));
+  form.set("reply_markup", JSON.stringify(reply_markup));
   form.set("document", new File([await file.arrayBuffer()], `spicy-ex-${r.tag_name}.apk`, { type: "application/vnd.android.package-archive" }));
   const res = await fetch(TG(env, "sendDocument"), { method: "POST", body: form }).then((x) => x.json());
   const id = res.result?.document?.file_id;
   if (id) await env.CI.put(key, id);
   return res;
+}
+
+// "Full notes here" button: re-fetch that one release and print its untouched body as plain messages,
+// split under Telegram's 4096-char limit, instead of just linking out to GitHub.
+async function sendFullNotes(env, cq, tag) {
+  const answer = (text) => tgCall(env, "answerCallbackQuery", { callback_query_id: cq.id, text });
+  const r = await gh(env, `/releases/tags/${encodeURIComponent(tag)}`);
+  if (!r?.body) return answer("Couldn't load the full notes right now.");
+  await answer("Sending…");
+  const chunks = r.body.match(/[\s\S]{1,3500}/g) || [r.body]; // chunk raw text first so no HTML entity is split across messages
+  for (const chunk of chunks) {
+    await tgCall(env, "sendMessage", { chat_id: cq.message.chat.id, reply_to_message_id: cq.message.message_id, text: `<pre>${esc(chunk)}</pre>`, parse_mode: "HTML" });
+  }
 }
 
 async function sendCi(env, chatId, replyTo) {
@@ -88,10 +108,24 @@ async function releases(env) {
   return hit ? hit.list : null;
 }
 
+const HELP_TEXT = [
+  "<b>Spicy EX bot</b>",
+  "",
+  "<b>/release</b> — latest stable release (signed APK)",
+  "<b>/beta</b> — newest build, stable or pre-release, whichever is newer",
+  "<b>/ci</b> — latest CI build (release + debug APK)",
+  "<b>/help</b> — this message",
+  "",
+  "Every release reply has a <b>Full notes here</b> button that prints the untouched release notes in this chat, and an <b>Open on GitHub</b> link.",
+  "",
+  "Write something like \"feature request: …\", \"could you add …\" or \"it'd be nice if …\" and I'll offer a button to file it as a GitHub issue — nothing is filed without that confirmation.",
+].join("\n");
+
 async function command(env, cmd, msg) {
   const chatId = msg.chat.id, replyTo = msg.message_id;
   const say = (text) => tgCall(env, "sendMessage", { chat_id: chatId, text, reply_to_message_id: replyTo });
   try {
+    if (cmd === "help") return await tgCall(env, "sendMessage", { chat_id: chatId, text: HELP_TEXT, parse_mode: "HTML", reply_to_message_id: replyTo, disable_web_page_preview: true });
     tgCall(env, "sendChatAction", { chat_id: chatId, action: "upload_document" }); // instant "sending..." feedback
     if (cmd === "ci") return await sendCi(env, chatId, replyTo);
     const list = await releases(env);
@@ -218,14 +252,19 @@ export default {
     if (req.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.WEBHOOK_SECRET) return new Response("forbidden", { status: 403 });
     const update = await req.json();
 
-    if (update.callback_query?.data?.startsWith("fr:")) {
-      ctx.waitUntil(fileIssue(env, update.callback_query));
+    const cq = update.callback_query;
+    if (cq?.data?.startsWith("fr:")) {
+      ctx.waitUntil(fileIssue(env, cq));
+      return new Response("ok");
+    }
+    if (cq?.data?.startsWith("full:")) {
+      ctx.waitUntil(sendFullNotes(env, cq, cq.data.slice("full:".length)));
       return new Response("ok");
     }
 
     const msg = update.message;
     if (!msg?.text || msg.from?.is_bot) return new Response("ok");
-    const m = msg.text.match(/^\/(release|beta|ci)(@\w+)?(\s|$)/i);
+    const m = msg.text.match(/^\/(release|beta|ci|help)(@\w+)?(\s|$)/i);
     if (m) ctx.waitUntil(command(env, m[1].toLowerCase(), msg));
     else ctx.waitUntil(maybeOfferFeatureRequest(env, msg));
     return new Response("ok");
