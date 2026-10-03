@@ -1560,11 +1560,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
         int chromeButton = chromeButtonDp();
         likedMode = config.get(Settings.LIKED_SONGS_BUTTON);
-<<<<<<< HEAD
         doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
-=======
         chromeLayoutMode = config.get(Settings.CHROME_CLUSTER_LAYOUT);
->>>>>>> upstream/main
         LyricsShellChromeController.ChromeViews chrome = LyricsShellChromeController.attach(
                 activity,
                 this,
@@ -2028,7 +2025,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         StringBuilder text = new StringBuilder();
         AdBreakInfo info = AdBreakInfo.current(track.uri);
         if (info != null && info.known()) {
-            text.append(com.eza.spicyex.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
+            text.append(com.eza.spicyex.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
                     .get("lyrics_ad_position", "%1$d of %2$d")
                     .replace("%1$d", String.valueOf(info.index))
                     .replace("%2$d", String.valueOf(info.count)));
@@ -2042,7 +2039,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             String clock = (left / 60) + ":" + (left % 60 < 10 ? "0" : "") + (left % 60);
             if (text.length() > 0) text.append("  ·  ");
             text.append(wholeBreak
-                    ? com.eza.spicyex.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
+                    ? com.eza.spicyex.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
                             .get("lyrics_ad_break_left", "%1$s left in the break").replace("%1$s", clock)
                     : clock);
         }

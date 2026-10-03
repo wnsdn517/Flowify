@@ -4304,12 +4304,12 @@ public final class LyricsShareCardController {
                         ? metaArtist.substring("spotify:artist:".length()) : null;
                 if (artistId == null) {
                     XpLog.log(TAG + " artist: no artist_uri in metadata, trying Web API");
-                    SpotifyTokenState.Authorized auth = SpotifyTokenStore.authorization(System.currentTimeMillis());
-                    if (auth == null) {
+                    String authToken = com.eza.spicyex.hooks.SpotifyWebApiToken.current();
+                    if (authToken == null) {
                         XpLog.log(TAG + " artist: no Web API token either");
                     } else {
                         org.json.JSONObject trackJson = getJson(
-                                "https://api.spotify.com/v1/tracks/" + trackId, auth.token());
+                                "https://api.spotify.com/v1/tracks/" + trackId, authToken);
                         artistId = trackJson == null ? null
                                 : trackJson.getJSONArray("artists").getJSONObject(0).optString("id", null);
                     }
@@ -4394,9 +4394,9 @@ public final class LyricsShareCardController {
     /** The artist's largest image from the Web API, with Spotify's own captured token. */
     private static Bitmap artistImageFromWebApi(String artistId) {
         try {
-            SpotifyTokenState.Authorized auth = SpotifyTokenStore.authorization(System.currentTimeMillis());
-            if (auth == null) return null;
-            org.json.JSONObject artist = getJson("https://api.spotify.com/v1/artists/" + artistId, auth.token());
+            String authToken = com.eza.spicyex.hooks.SpotifyWebApiToken.current();
+            if (authToken == null) return null;
+            org.json.JSONObject artist = getJson("https://api.spotify.com/v1/artists/" + artistId, authToken);
             org.json.JSONArray images = artist == null ? null : artist.optJSONArray("images");
             if (images == null || images.length() == 0) return null;
             String best = null;
@@ -4429,36 +4429,6 @@ public final class LyricsShareCardController {
 
     // ---------------------------------------------------------------- share / save
 
-<<<<<<< HEAD:app/src/main/java/com/eza/spicyex/hooks/LyricsShareCardController.java
-    /** The shared card, drawn once however often it is shared or saved. */
-    private static final class CardRecipe {
-        interface Maker {
-            Bitmap make(boolean rounded) throws Exception;
-        }
-
-        private final Maker make;
-        private Bitmap square;
-        private Bitmap rounded;
-
-        CardRecipe(Maker make) {
-            this.make = make;
-        }
-
-        /** The image shared, saved and sent to chats: square corners, the backdrop to the edge. */
-        synchronized Bitmap get() throws Exception {
-            if (square == null) square = make.make(false);
-            return square;
-        }
-
-        /** A story sticker: the card's own rounded shape, floating on the story's background. */
-        synchronized Bitmap sticker() throws Exception {
-            if (rounded == null) rounded = make.make(true);
-            return rounded;
-        }
-    }
-
-=======
->>>>>>> upstream/main:app/src/main/java/com/eza/spicyex/sharecard/LyricsShareCardController.java
     private void saveOnly() {
         CardRecipe recipe = currentRecipe;
         if (recipe == null) return;
