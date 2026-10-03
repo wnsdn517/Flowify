@@ -1463,12 +1463,13 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float dt = deltaTimeSeconds <= 0d ? (1f / 60f) : (float) Math.max(0.001d, Math.min(0.08d, deltaTimeSeconds));
         // Order matters: the reveal publishes this frame's alpha factor, then updateState() runs
         // the renderer, which reads it. Stepping it after would show every row one frame stale.
-        // Lines still growing back after the scroll stopped finish on the frame clock.
-        if (this.edgeScaleSettling) applyEdgeRowScale(dt);
         stepLoadEntrance(dt);
         stepRowCascade(dt);
         stepScrollSpring(dt);
         updateState(dt);
+        // Last, so that nothing earlier in the frame (a cascade ending resets its rows' scale)
+        // leaves a row at the wrong size for the frame that is drawn.
+        applyEdgeRowScale();
     });
 
     /** Not in a picture-in-picture host. */
@@ -3059,6 +3060,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private static final float EDGE_SCALE_START = 0.65f;
     private static final float EDGE_SCALE_MIN = 0.7f;
     private static final float EDGE_SCALE_GROW_PER_SEC = 1.8f;
+    private static final class XpLogEdge {
+        static int count;
+        static void interference(int i, float expected, float actual) {
+            if (++count % 20 == 1) {
+                com.eza.spicyex.xposed.XpLog.log("[SpotifyPlusSpicy] edge-scale interference #" + count
+                        + " row=" + i + " expected=" + expected + " actual=" + actual);
+            }
+        }
+    }
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
     private long edgeScaleAtMs;
     private boolean edgeScaleSettling;
@@ -3096,6 +3106,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             f = f * f * (3f - 2f * f);
             float target = 1f - (1f - EDGE_SCALE_MIN) * f;
             Float known = edgeScales.get(row);
+            if (known != null && Math.abs(row.getScaleX() - known) > 0.02f) {
+                XpLogEdge.interference(i, known, row.getScaleX());
+            }
             float current = known == null ? target : known;
             // Shrinks with the edge at once; grows back no faster than the fixed rate.
             current = target <= current ? target : Math.min(target, current + grow);
