@@ -27,6 +27,7 @@ final class LyricsSettingsDialogController {
     private final Runnable onClosed;
     private final java.util.function.IntConsumer onOpenLayoutEditor;
     private final Runnable onResyncTiming;
+    private Runnable onTryDoubleTap;
     private final String logTag;
     private Dialog currentDialog;
     private PanelSurface currentSurface;
@@ -53,6 +54,11 @@ final class LyricsSettingsDialogController {
 
     // Sticky across opens: half mode anchors the panel to the top so lyrics preview underneath.
     private static boolean halfMode;
+
+    /** Run after the panel closed from its "Try it" action under the double-tap effect. */
+    void setOnTryDoubleTap(Runnable onTry) {
+        onTryDoubleTap = onTry;
+    }
 
     boolean show() {
         if (isShowing()) return true;
@@ -94,6 +100,8 @@ final class LyricsSettingsDialogController {
                     mode -> openLayoutEditorPending[0] = mode,
                     host::clearLyricsCache, onResyncTiming);
             panel.setLyricsHost(host);
+            boolean[] tryDoubleTapPending = {false};
+            if (onTryDoubleTap != null) panel.setOnTryDoubleTapEffect(() -> tryDoubleTapPending[0] = true);
             final View panelView = panel.build();
             panelRef[0] = panelView;
 
@@ -134,6 +142,10 @@ final class LyricsSettingsDialogController {
                 // current track from stored candidates instead of waiting for the next track.
                 host.reconcileLyricsSources();
                 onClosed.run();
+                if (tryDoubleTapPending[0]) {
+                    tryDoubleTapPending[0] = false;
+                    if (onTryDoubleTap != null) onTryDoubleTap.run();
+                }
                 if (openLayoutEditorPending[0] != 0) {
                     int mode = openLayoutEditorPending[0];
                     openLayoutEditorPending[0] = 0;

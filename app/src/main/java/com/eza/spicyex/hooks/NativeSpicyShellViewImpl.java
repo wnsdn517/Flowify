@@ -124,6 +124,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private String likedMode;
     /** Settings.DOUBLE_TAP_LIKE_MARK, cached with likedMode. */
     private String doubleTapMark;
+    /** Settings.DOUBLE_TAP_LIKE_EFFECT, cached with likedMode. */
+    private String doubleTapEffect;
     private Boolean lastLikedSaved;
     private com.eza.spicyex.ui.ActionIconDrawable.Kind lastLikedKind;
     private String pendingLikedUri = "";
@@ -589,6 +591,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         applyStatusBarPreference();
         likedMode = config.get(Settings.LIKED_SONGS_BUTTON);
         doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
+        doubleTapEffect = config.get(Settings.DOUBLE_TAP_LIKE_EFFECT);
         refreshLikedButton(currentTrackThrottled());
         applyRenderConfigChanges("preference changed", false);
         ambientController.applySettings(renderConfig.backgroundStyle, renderConfig.forceDarkBackground,
@@ -1520,6 +1523,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 activity, frameScheduler, ambientController, host, this::onSettingsClosed,
                 mode -> enterLayoutEditMode(mode == com.eza.spicyex.settings.SettingsPanel.EDITOR_CARD),
                 this::resyncLyricsTiming, TAG);
+        this.settingsDialogController.setOnTryDoubleTap(this::startDoubleTapTrial);
         this.emptyStateController = new LyricsShellEmptyStateController(activity, config, textFactory);
         this.shellLifecycle = new LyricsShellLifecycle(activity, () -> {
             if (consumeShareSheetBack() || consumeLayoutEditorBack()) return;
@@ -1602,6 +1606,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         int chromeButton = chromeButtonDp();
         likedMode = config.get(Settings.LIKED_SONGS_BUTTON);
         doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
+        doubleTapEffect = config.get(Settings.DOUBLE_TAP_LIKE_EFFECT);
         chromeLayoutMode = config.get(Settings.CHROME_CLUSTER_LAYOUT);
         LyricsShellChromeController.ChromeViews chrome = LyricsShellChromeController.attach(
                 activity,
@@ -1695,7 +1700,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             holdScrollAnchor();
             return true;
         });
-        LyricsTapSeekHandler tapSeekHandler = new LyricsTapSeekHandler(
+        tapSeekHandler = new LyricsTapSeekHandler(
                 activity,
                 config,
                 followState::holdUntil,
@@ -5777,7 +5782,64 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      * where the finger was, and the song is added to Liked Songs. It only ever adds - double
      * tapping a song already liked just plays the burst again.
      */
+    private LyricsTapSeekHandler tapSeekHandler;
+    /** "Try it" from the settings: until then, double taps only play the effect. */
+    private long doubleTapTrialUntilMs;
+    private View doubleTapHint;
+    private static final long DOUBLE_TAP_TRIAL_MS = 10_000L;
+    private final Runnable endDoubleTapTrial = () -> {
+        doubleTapTrialUntilMs = 0L;
+        if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(false);
+        hideDoubleTapHint();
+    };
+
+    /** Shows a double-tap hint; double taps then play the chosen effect without liking. */
+    private void startDoubleTapTrial() {
+        removeCallbacks(endDoubleTapTrial);
+        doubleTapTrialUntilMs = SystemClock.uptimeMillis() + DOUBLE_TAP_TRIAL_MS;
+        if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(true);
+        postDelayed(endDoubleTapTrial, DOUBLE_TAP_TRIAL_MS);
+        hideDoubleTapHint();
+        View hint = new com.eza.spicyex.ui.DoubleTapHintView(activity,
+                uiText("lyrics_double_tap_try_hint", "Double-tap anywhere to try it"));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+        lp.bottomMargin = dp(120);
+        hint.setAlpha(0f);
+        hint.setTranslationY(dp(12));
+        addView(hint, lp);
+        hint.animate().alpha(1f).translationY(0f).setDuration(260).start();
+        doubleTapHint = hint;
+    }
+
+    private void hideDoubleTapHint() {
+        View hint = doubleTapHint;
+        doubleTapHint = null;
+        if (hint == null) return;
+        hint.animate().alpha(0f).translationY(dp(8)).setDuration(200)
+                .withEndAction(() -> removeView(hint)).start();
+    }
+
     private void likeFromDoubleTap(View source, float x, float y) {
+        if (SystemClock.uptimeMillis() < doubleTapTrialUntilMs) {
+            // Trial: the effect only, no Liked Songs action; each try extends it.
+            String mode = SpotifyCollectionAction.enabled(likedMode) ? likedMode : "Heart";
+            String mark = "Heart".equals(doubleTapMark) || "Star".equals(doubleTapMark) ? doubleTapMark : mode;
+            int[] here = new int[2];
+            int[] from = new int[2];
+            getLocationInWindow(here);
+            source.getLocationInWindow(from);
+            playLikeBurst(com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(mark)
+                            == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR,
+                    from[0] - here[0] + x, from[1] - here[1] + y);
+            performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
+            hideDoubleTapHint();
+            removeCallbacks(endDoubleTapTrial);
+            doubleTapTrialUntilMs = SystemClock.uptimeMillis() + DOUBLE_TAP_TRIAL_MS;
+            postDelayed(endDoubleTapTrial, DOUBLE_TAP_TRIAL_MS);
+            return;
+        }
         SpotifyTrack track = currentTrackThrottled();
         if (track == null || !SpotifyCollectionAction.isSong(track)) return;
         String mode = SpotifyCollectionAction.enabled(likedMode) ? likedMode : "Heart";
@@ -5806,10 +5868,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
     }
 
-    /** The double-tap acknowledgement at (x, y) in this view: the backdrop behind the lyrics
-     *  bends and takes the colour, the lyrics catch the light (see LikeBurstView). */
+    /** The double-tap acknowledgement at (x, y) in this view, in the chosen style
+     *  (Settings.DOUBLE_TAP_LIKE_EFFECT): styles that answer through the backdrop behind the
+     *  lyrics or the lyrics themselves get those views (see LikeBursts). */
     void playLikeBurst(boolean star, float x, float y) {
-        new com.eza.spicyex.ui.LikeBurstView(activity, star, true, x, y, dp(92))
+        playLikeBurst(doubleTapEffect, star, x, y);
+    }
+
+    void playLikeBurst(String style, boolean star, float x, float y) {
+        com.eza.spicyex.ui.LikeBursts.create(style, activity, star, true, x, y, dp(92))
                 .play(this, ambientController == null ? null : ambientController.backgroundView(),
                         lyricsFrame);
     }
@@ -5845,8 +5912,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float cx = button[0] - here[0] + likeButton.getWidth() / 2f;
         float cy = button[1] - here[1] + likeButton.getHeight() / 2f;
         // Starts as the button springs back out, not while it is pressed.
-        postDelayed(() -> new com.eza.spicyex.ui.LikeBurstView(activity, star, false, cx, cy,
-                Math.max(likeButton.getWidth(), dp(36)) * 1.2f).play(this), 90);
+        postDelayed(() -> com.eza.spicyex.ui.LikeBursts.create(doubleTapEffect, activity, star,
+                false, cx, cy, Math.max(likeButton.getWidth(), dp(36)) * 1.2f)
+                .play(this, null, null), 90);
     }
 
     private void updateLikedButton(SpotifyTrack track) {

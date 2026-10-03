@@ -553,5 +553,22 @@
     <string name="settings_option_lyrics_double_tap_like_mark_like_button">좋아요 버튼과 같게</string>
     <string name="settings_option_lyrics_double_tap_like_mark_heart">하트</string>
     <string name="settings_option_lyrics_double_tap_like_mark_star">별</string>
+    <string name="settings_label_lyrics_double_tap_like_effect">두 번 탭 효과</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_aurora">오로라 - 빛나는 가장자리와 반짝이는 점</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_glow">글로우 - 차분한 빛의 별</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_pulse">펄스 - 두 번 뛰는 빛</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_watercolor">수채화 - 번져 드는 물감</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_radiant">레디언트 - 빛살, 고리, 반짝임</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_stardust">별가루 - 모여드는 빛 알갱이</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_gravity">중력 - 주변 공간이 휨</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_crystal">크리스털 - 투명한 유리 별</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_liquid">리퀴드 - 유리 물방울과 물결</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_lens">렌즈 - 일렁이는 유리 렌즈</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_pearl">펄 - 은은한 진주빛 별</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_prism">프리즘 - 무지갯빛 고리와 불꽃</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_bloom">블룸 - 부드러운 빛과 반짝임</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_classic">클래식 - 고리와 점</string>
+    <string name="settings_action_try_double_tap_effect">테스트해보기</string>
+    <string name="lyrics_double_tap_try_hint">화면을 두 번 탭해 보세요</string>
     <string name="settings_search_lyrics_double_tap_like">하트, 좋아요 추가, 이중탭, 더블탭</string>
 </resources>

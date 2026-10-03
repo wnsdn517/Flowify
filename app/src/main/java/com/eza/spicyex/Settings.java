@@ -71,6 +71,15 @@ public final class Settings {
                     "Like button", "Heart", "Star"
             );
 
+    // How the double-tap like is acknowledged on screen. Each style is its own design (see
+    // com.eza.spicyex.ui.LikeBursts); looks only.
+    public static final StringSetting DOUBLE_TAP_LIKE_EFFECT =
+            (StringSetting) enumSetting(
+                    "lyrics_double_tap_like_effect", LYRICS, "Double-tap effect", "Aurora",
+                    "Aurora", "Glow", "Pulse", "Watercolor", "Radiant", "Stardust", "Gravity",
+                    "Crystal", "Liquid", "Lens", "Pearl", "Prism", "Bloom", "Classic"
+            );
+
     // When on, the lyric screen stays open across track changes (Spotify's implicit finish() on
     // song change is suppressed) and reloads for the new track; explicit back/header-close still exits.
     public static final Setting<Boolean> STAY_IN_LYRICS = boolSetting(

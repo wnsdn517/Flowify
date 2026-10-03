@@ -456,6 +456,17 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             downloadLanguageModelsRow(content);
             return;
         }
+        if (setting == Settings.DOUBLE_TAP_LIKE_EFFECT) {
+            rows.selectorRow(content, (Settings.StringSetting) setting);
+            if (onTryDoubleTapEffect != null) {
+                rows.actionRow(content, Kind.SPARKLES,
+                        uiStrings.get("settings_action_try_double_tap_effect", "Try it"), v -> {
+                            onTryDoubleTapEffect.run();
+                            if (onClose != null) onClose.run();
+                        });
+            }
+            return;
+        }
         // Renderer dispatch follows the UI schema; composite rows above stay hand-built.
         SettingUiSpec.RowKind kind = SettingsUiSchema.kindOf(setting);
         if (kind == SettingUiSpec.RowKind.TOGGLE && setting instanceof Settings.BooleanSetting) {
@@ -1236,6 +1247,13 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     }
 
     /** Session access for the current-song lyrics item; unset when hosted without a hook. */
+    private Runnable onTryDoubleTapEffect;
+
+    /** Shows a "Try it" action under the double-tap effect choice; it runs this, then closes. */
+    public void setOnTryDoubleTapEffect(Runnable onTry) {
+        onTryDoubleTapEffect = onTry;
+    }
+
     public void setLyricsHost(com.eza.spicyex.hooks.LyricsHost host) {
         lyricsHost = host;
     }

@@ -37,8 +37,11 @@ final class NativeSpicyShellView extends FrameLayout {
     }
 
     /** The double-tap like acknowledgement alone (agent preview): no Liked Songs action. */
-    void previewLikeBurst(boolean star) {
-        delegate.playLikeBurst(star, delegate.getWidth() / 2f, delegate.getHeight() * 0.42f);
+    void previewLikeBurst(String style, boolean star) {
+        float x = delegate.getWidth() / 2f;
+        float y = delegate.getHeight() * 0.42f;
+        if (style == null) delegate.playLikeBurst(star, x, y);
+        else delegate.playLikeBurst(style, star, x, y);
     }
 
     /** Lyrics (or a no-lyrics state) are on screen, not just the empty shell. */

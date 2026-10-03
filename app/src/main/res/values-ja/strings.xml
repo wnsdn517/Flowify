@@ -530,4 +530,21 @@
     <string name="settings_option_lyrics_double_tap_like_mark_like_button">いいねボタンと同じ</string>
     <string name="settings_option_lyrics_double_tap_like_mark_heart">ハート</string>
     <string name="settings_option_lyrics_double_tap_like_mark_star">スター</string>
+    <string name="settings_label_lyrics_double_tap_like_effect">ダブルタップのエフェクト</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_aurora">オーロラ - 光る縁ときらめく点</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_glow">グロウ - 穏やかな光の星</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_pulse">パルス - 二度脈打つ光</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_watercolor">水彩 - にじむ絵の具</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_radiant">レディアント - 光芒、リング、きらめき</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_stardust">スターダスト - 集まる光の粒</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_gravity">重力 - 周りの空間がゆがむ</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_crystal">クリスタル - 透明なガラスの星</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_liquid">リキッド - ガラスのしずくと波紋</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_lens">レンズ - 揺らめくガラスのレンズ</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_pearl">パール - 控えめな真珠色の星</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_prism">プリズム - 虹色のリングと火花</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_bloom">ブルーム - やわらかな光ときらめき</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_classic">クラシック - リングと点</string>
+    <string name="settings_action_try_double_tap_effect">試してみる</string>
+    <string name="lyrics_double_tap_try_hint">画面をダブルタップして試せます</string>
 </resources>

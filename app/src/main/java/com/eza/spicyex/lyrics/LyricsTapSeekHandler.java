@@ -31,6 +31,8 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
     private long likeChainUntilMs;
     private int likeChainTaps;
     private DoubleTapCallback doubleTapCallback;
+    /** Double taps reach the callback even with "Double-tap to like" off (a "Try it" trial). */
+    private boolean doubleTapForced;
     /** A single-tap seek waiting to see whether a second tap makes it a double tap. */
     private final Runnable pendingSeek = this::runPendingSeek;
     private float pendingSeekY;
@@ -87,7 +89,7 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
             if (dy < dp(10) && held < 600) {
                 String mode = config == null ? "" : config.get(Settings.TAP_SEEK_MODE);
                 if (doubleTapCallback != null && config != null
-                        && Boolean.TRUE.equals(config.get(Settings.DOUBLE_TAP_LIKE))) {
+                        && (doubleTapForced || Boolean.TRUE.equals(config.get(Settings.DOUBLE_TAP_LIKE)))) {
                     // Double tap likes. A single tap still seeks in "Single tap" mode, once the
                     // double-tap window has passed; the tap that completes a double tap does not.
                     long now = SystemClock.elapsedRealtime();
@@ -177,6 +179,10 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
     /** Receives double taps when "Double-tap to like" is on (they no longer seek then). */
     public void setDoubleTapCallback(DoubleTapCallback callback) {
         doubleTapCallback = callback;
+    }
+
+    public void setDoubleTapForced(boolean forced) {
+        doubleTapForced = forced;
     }
 
     private int dp(int value) {

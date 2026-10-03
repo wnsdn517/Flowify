@@ -647,5 +647,22 @@
     <string name="settings_option_lyrics_double_tap_like_mark_like_button">Same as like button</string>
     <string name="settings_option_lyrics_double_tap_like_mark_heart">Heart</string>
     <string name="settings_option_lyrics_double_tap_like_mark_star">Star</string>
+    <string name="settings_label_lyrics_double_tap_like_effect">Double-tap effect</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_aurora">Aurora - glowing edges, sparkling dots</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_glow">Glow - a calm mark of light</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_pulse">Pulse - light that beats twice</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_watercolor">Watercolor - paint soaking in</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_radiant">Radiant - rays, ring and glints</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_stardust">Stardust - points of light gather</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_gravity">Gravity - space bends round it</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_crystal">Crystal - clear glass mark</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_liquid">Liquid - glass drop and ripples</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_lens">Lens - rippling glass lens</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_pearl">Pearl - quiet pearly mark</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_prism">Prism - iridescent ring and sparks</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_bloom">Bloom - soft bloom and glints</string>
+    <string name="settings_option_lyrics_double_tap_like_effect_classic">Classic - ring and dots</string>
+    <string name="settings_action_try_double_tap_effect">Try it</string>
+    <string name="lyrics_double_tap_try_hint">Double-tap anywhere to try it</string>
     <string name="settings_search_lyrics_double_tap_like">heart, add to liked songs, instagram</string>
 </resources>

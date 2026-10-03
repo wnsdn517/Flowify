@@ -330,7 +330,15 @@ final class AgentCommandChannel {
                             reply("error", verb, "no lyrics screen", correlation);
                             return;
                         }
-                        shell.previewLikeBurst(!"heart".equals(commandArgument));
+                        // "like-burst [heart|star] [Style]": the chosen style unless named.
+                        String style = null;
+                        boolean heart = false;
+                        for (String word : commandArgument.split("\\s+")) {
+                            if (word.isEmpty()) continue;
+                            if ("heart".equalsIgnoreCase(word)) heart = true;
+                            else if (!"star".equalsIgnoreCase(word)) style = word;
+                        }
+                        shell.previewLikeBurst(style, !heart);
                         reply("ok", verb, "played", correlation);
                     });
                     return;
