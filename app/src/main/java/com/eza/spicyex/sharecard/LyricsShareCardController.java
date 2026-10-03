@@ -2745,10 +2745,12 @@ public final class LyricsShareCardController {
         // The image that is shared: drawn only when it is actually shared or saved - every
         // render used to copy and redraw a full-size card for it, most of them never used.
         // The code as it is when shared: the stand-in is swapped for the real one if it came.
+        // The story sticker (the rounded form) is drawn without the translation.
         CardRecipe recipe = new CardRecipe(rounded -> {
             Bitmap shared = wantCode ? cachedCode(t, onPaper(d)) : null;
             return renderCard(d, style, b, shared, art, artist, lyricsBg,
-                    quotes, translations, safe(t.title), safe(t.artist), true, true, rounded);
+                    quotes, rounded ? new ArrayList<String>() : translations,
+                    safe(t.title), safe(t.artist), true, true, rounded);
         });
         RENDER.execute(() -> {
             Bitmap base;
