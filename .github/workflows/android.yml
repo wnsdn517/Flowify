@@ -81,4 +81,6 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CI_CHAT_ID: ${{ secrets.TELEGRAM_CI_CHAT_ID }}
+          CI_NOTIFY_SECRET: ${{ secrets.CI_NOTIFY_SECRET }}
+          CI_BOT_URL: https://spicy-ex-bot.hodujw05.workers.dev
         run: bash scripts/ci-telegram.sh

@@ -36,9 +36,12 @@ media=$(jq -nc --arg c "$caption" '[
   {type: "document", media: "attach://debug", caption: $c, parse_mode: "HTML"}
 ]')
 
-curl -sS --fail -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup" \
-  --form-string chat_id="$TELEGRAM_CI_CHAT_ID" \
-  --form-string media="$media" \
-  -F "release=@${rel};filename=spicy-ex-${version}-${short}-release.apk" \
-  -F "debug=@${dbg};filename=spicy-ex-${version}-${short}-debug.apk" > /dev/null
+resp=$(curl -sS --fail -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup"   --form-string chat_id="$TELEGRAM_CI_CHAT_ID"   --form-string media="$media"   -F "release=@${rel};filename=spicy-ex-${version}-${short}-release.apk"   -F "debug=@${dbg};filename=spicy-ex-${version}-${short}-debug.apk")
 echo "Sent ${version} (${code}) ${short} to Telegram."
+
+# Hand the file ids to the bot so /ci in the discussion group can resend this build as-is.
+if [ -n "${CI_BOT_URL:-}" ] && [ -n "${CI_NOTIFY_SECRET:-}" ]; then
+  files=$(echo "$resp" | jq -c '[.result[].document.file_id]')
+  jq -nc --arg c "$caption" --argjson f "$files" '{caption: $c, files: $f}'     | curl -sS --fail -X POST "${CI_BOT_URL}/ci-update" -H "X-CI-Secret: ${CI_NOTIFY_SECRET}"         -H "Content-Type: application/json" --data-binary @- > /dev/null
+  echo "Bot updated for /ci."
+fi

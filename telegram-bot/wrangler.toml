@@ -4,3 +4,7 @@ compatibility_date = "2025-01-01"
 
 [vars]
 GITHUB_REPO = "wnsdn517/spicy-ex"
+
+[[kv_namespaces]]
+binding = "CI"
+id = "a17b3a94e76c41b2bfa31f69340679a0"

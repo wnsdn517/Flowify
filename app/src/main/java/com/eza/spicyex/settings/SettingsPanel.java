@@ -930,12 +930,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         personRow(people, uiStrings.get("settings_about_original", "Original developer"), "amarinne");
         rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_source", "Source code on GitHub"),
                 v -> openUrl("https://github.com/" + FORK_REPO));
-        rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_announcements", "Announcements"),
-                v -> openUrl("https://t.me/spicy_ex"));
-        rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_discussion", "Discussion"),
-                v -> openUrl("https://t.me/spicy_ex_discussion"));
-        rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_ci_channel", "CI builds"),
-                v -> openUrl("https://t.me/spicy_ex_ci"));
+        communityRow(people);
         TextView latest = rows.infoRow(people, uiStrings.get("settings_about_latest", "Latest on GitHub"),
                 uiStrings.get("settings_about_checking", "Checking…"));
         View latestRow = (View) latest.getParent();
@@ -956,6 +951,35 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 com.eza.spicyex.BuildConfig.BUILD_DATE + " · " + com.eza.spicyex.BuildConfig.GIT_SHA
                         + " · B" + com.eza.spicyex.BuildConfig.UPSTREAM_BASE_CODE);
         style.attachCard(parent, system, -1);
+    }
+
+    /** Announcements / discussion / CI channel as one row of three pills instead of three list rows. */
+    private void communityRow(LinearLayout card) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(style.dp(12), style.dp(10), style.dp(12), style.dp(12));
+        String[][] links = {
+                {"settings_about_announcements", "Announcements", "https://t.me/spicy_ex"},
+                {"settings_about_discussion", "Discussion", "https://t.me/spicy_ex_discussion"},
+                {"settings_about_ci_channel", "CI builds", "https://t.me/spicy_ex_ci"},
+        };
+        for (int i = 0; i < links.length; i++) {
+            final String url = links[i][2];
+            TextView pill = style.text(uiStrings.get(links[i][0], links[i][1]), 13, PanelStyle.COL_ACCENT, true);
+            pill.setGravity(Gravity.CENTER);
+            pill.setSingleLine(true);
+            pill.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            pill.setPadding(style.dp(8), style.dp(10), style.dp(8), style.dp(10));
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setCornerRadius(style.dp(14));
+            bg.setColor((PanelStyle.COL_ACCENT & 0x00FFFFFF) | 0x24000000);
+            pill.setBackground(bg);
+            pill.setOnClickListener(v -> openUrl(url));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) lp.leftMargin = style.dp(8);
+            row.addView(pill, lp);
+        }
+        card.addView(row);
     }
 
     /** A GitHub account: round avatar, role, name; opens the profile. */
