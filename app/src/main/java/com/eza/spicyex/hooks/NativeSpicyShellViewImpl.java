@@ -1735,6 +1735,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             }
             frameScheduler.setContinuous(true);
             frameScheduler.requestFrame();
+            applyEdgeRowScale();
             scheduleScrollWindowRender();
             if (applyingLyricScroll) return;
             scrollInProgress = true;
@@ -3008,6 +3009,39 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 document.appliedLines, anchor, NativeRuntime.LYRIC_WINDOW_EDGE_BUFFER);
     }
 
+    /** Lines near the top and bottom edge shrink a little as they leave, easing to full size
+     *  toward the middle - the scroll reads as a list receding rather than rows being cut off. */
+    private static final float EDGE_SCALE_ZONE = 0.24f;
+    private static final float EDGE_SCALE_MIN = 0.9f;
+
+    private void applyEdgeRowScale() {
+        if (mountedRowsHost == null || lyricsScroll == null || lyricsColumn == null) return;
+        int viewport = lyricsScroll.getHeight();
+        if (viewport <= 0) return;
+        float zone = viewport * EDGE_SCALE_ZONE;
+        int scrollY = lyricsScroll.getScrollY();
+        int hostTop = 0;
+        for (View v = mountedRowsHost; v != null && v != lyricsColumn; ) {
+            hostTop += v.getTop();
+            v = v.getParent() instanceof View ? (View) v.getParent() : null;
+        }
+        for (int i = 0; i < mountedRowsHost.getChildCount(); i++) {
+            View row = mountedRowsHost.getChildAt(i);
+            int height = row.getHeight();
+            if (height <= 0) continue;
+            float center = hostTop + row.getTop() + height / 2f - scrollY;
+            float edge = Math.min(center, viewport - center);
+            float f = Math.max(0f, Math.min(1f, edge / zone));
+            f = f * f * (3f - 2f * f);
+            float scale = EDGE_SCALE_MIN + (1f - EDGE_SCALE_MIN) * f;
+            if (Math.abs(row.getScaleX() - scale) < 0.002f) continue;
+            row.setPivotX(row.getWidth() * 0.5f);
+            row.setPivotY(height * 0.5f);
+            row.setScaleX(scale);
+            row.setScaleY(scale);
+        }
+    }
+
     private void scheduleScrollSettleRemeasure() {
         if (!running) return;
         lastScrollEventMs = SystemClock.elapsedRealtime();
@@ -4046,10 +4080,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             if (moved) clearRowCascade();
             return;
         }
-        if (!appleStyle()) {
-            // Not the Apple style: nothing below this line applies. The spring scroll, the row
-            // cascade it complements and the Apple cascade speed/strength editor keys are all
-            // Apple-owned, so this stays on the ScrollView's own smoothScrollTo() as it always was.
+        if (!appleStyle() && !returnToCurrentPending && Math.abs(delta) <= springTravelCapPx()) {
+            // Not the Apple style: the row cascade and the Apple speed/strength editor keys do not
+            // apply, so an ordinary advance stays on the ScrollView's own smoothScrollTo(). A
+            // return from far away falls through to the capped spring below instead, since
+            // smoothScrollTo() would just slide the whole distance as a plain scroll.
             clearRowCascade();
             lyricsScroll.smoothScrollTo(0, target);
             return;
@@ -4103,7 +4138,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // the excess first and springing a fixed, viewport-relative remainder gives every jump
         // the same legible arrival no matter how far it started.
         int start = oldScroll;
-        float maxTravel = springTravelCapPx();
+        // A return springs over a shorter stretch than an ordinary far jump: the rest is skipped
+        // first, so the spring is visibly the arrival rather than a long fast scroll.
+        float maxTravel = returning ? springTravelCapPx() * 0.6f : springTravelCapPx();
         if (Math.abs(target - start) > maxTravel) {
             start = target + Math.round(Math.signum(start - target) * maxTravel);
             applyingLyricScroll = true;
