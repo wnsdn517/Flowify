@@ -51,6 +51,9 @@ public final class ConnectEntry {
                               boolean networkRecovery) {
         Intent command = new Intent("com.eza.spicyex.player.WARMUP");
         if (reply != null) command.putExtra(EXTRA_WARM_REPLY, reply);
+        // Whose process the reply lives in: the player follows Spotify's own lifetime through
+        // it (WebPlayerService.watchSpotify), and only Spotify's.
+        if (context != null) command.putExtra("reply_owner", context.getPackageName());
         if (needDeviceId) command.putExtra("need_device_id", true);
         command.putExtra("network_recovery", networkRecovery);
         send(context, command);

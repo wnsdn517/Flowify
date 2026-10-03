@@ -168,7 +168,7 @@ public final class WebPlayerService extends Service {
             + "window.__spicyListed=t.indexOf(d)>=0;"
             + "var i=t.indexOf('\"active_device_id\"');"
             + "if(i<0){if(t.indexOf('\"player_state\"')>=0&&t.indexOf('\"devices\"')>=0)window.__spicyAct=null;return;}"
-            + "var m=/\"active_device_id\"\\s*:\\s*\"([0-9a-f]*)\"/.exec(t.substr(i,100));if(m)window.__spicyAct=m[1]||null;"
+            + "var m=/\"active_device_id\"\\s*:\\s*\"([0-9a-f]*)\"/.exec(t.substr(i,100));if(m){window.__spicyAct=m[1]||null;window.__spicyActAt=Date.now();}"
             // Another device took over: the next hand-off back here turns shuffle off again.
             + "if(window.__spicyAct!==window.__spicyDev)window.__spicyShufDone=false;}catch(e){}}"
             + "function isLogout(t){try{if(typeof t!=='string')return false;if(t.indexOf('log_out')>=0)return true;"
@@ -250,7 +250,7 @@ public final class WebPlayerService extends Service {
             + "k++;if(n<10)setTimeout(function(){shuffleOff(n+1,seq,k);},1500);}catch(e){}}"
             + "function watch(el){if(el.__spicyM)return;el.__spicyM=true;els.push(el);if(els.length>8)els.shift();"
             + "if(hush&&vd&&vd.set){try{if(el.__spicyVol===undefined)el.__spicyPre=vd.get.call(el);vd.set.call(el,0);}catch(x){}}"
-            + "el.addEventListener('playing',function(){el.__spicyMoved=Date.now();el.__spicyStall=0;post('playing');"
+            + "el.addEventListener('playing',function(){el.__spicyMoved=Date.now();el.__spicyStall=0;window.__spicyPlayAt=Date.now();post('playing');"
             + "if(!window.__spicyShufDone){window.__spicyShufDone=true;setTimeout(function(){shuffleOff(0);},1200);}});"
             + "el.addEventListener('timeupdate',function(){el.__spicyMoved=Date.now();el.__spicyStall=0;"
             + "try{if(window.__spicyAdTick)window.__spicyAdTick(el);}catch(x){}});"
@@ -272,6 +272,16 @@ public final class WebPlayerService extends Service {
             + "try{if(n===1){var p=e.play();if(p&&p.catch)p.catch(function(){});}"
             + "else if(n===3){window.dispatchEvent(new Event('online'));e.currentTime=e.currentTime;}"
             + "else if(n>=6){e.__spicyStall=0;e.__spicyMoved=now;}}catch(x){}}},3000);"
+            // Not the active device any more, yet still sounding: the account moved playback
+            // elsewhere (most often back to the phone after a dropped connection) and this page
+            // missed or ignored it - two copies of the song at once. Only once the account has
+            // said so after this page started playing, and twice in a row, so a hand-off still
+            // landing is never cut.
+            + "var away=0;setInterval(function(){try{var d=window.__spicyDev,a=window.__spicyAct,s=false;"
+            + "for(var j=0;j<els.length;j++)if(!els[j].paused)s=true;"
+            + "if(!s||!d||!a||a===d||(window.__spicyActAt||0)<=(window.__spicyPlayAt||0)){away=0;return;}"
+            + "if(++away<2)return;away=0;els.forEach(function(e){try{if(!e.paused)e.pause();}catch(x){}});"
+            + "post('yielded');}catch(x){}},2000);"
             + "var op=P.play;"
             + "P.play=function(){try{watch(this);}catch(e){}return op.apply(this,arguments);};"
             + "}catch(e){}})();";
@@ -373,6 +383,11 @@ public final class WebPlayerService extends Service {
     private static final String[] UNUSED_CONTENT_MARKERS = {
             "canvaz.scdn.co", "video.akamaized.net", "video-fa.scdn.co", "video-ak.cdn.spotify.com",
             "/color-lyrics/",
+            // Cover art and artist/playlist images: the page hides every image (IDLE_RENDER_JS),
+            // but a hidden image is still fetched and decoded - renderer memory for nothing.
+            "i.scdn.co/image/", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com",
+            "mosaic.scdn.co", "seed-mix-image.spotifycdn.com", "lineup-images.scdn.co",
+            "thisis-images.spotifycdn.com", "pickasso.spotifycdn.com",
     };
     // Ad-specific hosts/paths only: generic ".../audio/<file id>" paths are how every regular
     // track streams too (audio-ak.spotifycdn.com/audio/...), so matching those swapped music.
@@ -393,7 +408,7 @@ public final class WebPlayerService extends Service {
     private static final int LOGIN_POLL_MAX = 16;
     /** Unused this long (nothing played, no command), the player shuts itself down to give
      *  its ~300 MB back; Spotify re-warms it the next time it comes to the front. */
-    private static final long IDLE_STOP_MS = 45 * 60 * 1000L;
+    private static final long IDLE_STOP_MS = 15 * 60 * 1000L;
     private static final long IDLE_CHECK_MS = 5 * 60 * 1000L;
     private static final long DEVICE_ID_POLL_MS = 1500L;
     private static final int DEVICE_ID_POLL_MAX = 20;
@@ -599,6 +614,77 @@ public final class WebPlayerService extends Service {
         return null;
     }
 
+    private static final String SPOTIFY_PACKAGE = "com.spotify.music";
+    /** WARMUP extra: the package whose process the reply lives in (ConnectEntry sets it). */
+    private static final String EXTRA_REPLY_OWNER = "reply_owner";
+    /** After Spotify is gone, how long the player lingers before giving its memory back. */
+    private static final long SPOTIFY_GONE_STOP_MS = 60 * 1000L;
+    private IBinder watchedSpotify;
+    private final IBinder.DeathRecipient spotifyDeath = () -> main.post(this::onSpotifyGone);
+    private final Runnable spotifyGoneStop = () -> {
+        if (playing) return;
+        Log.i(TAG, "Spotify gone, stopping player");
+        releaseStreamingLocks();
+        destroyPlayer();
+        stopSelf();
+    };
+
+    /**
+     * Follows Spotify's own process through the binder behind its WARMUP reply. This device only
+     * stands in for the phone's Spotify: when that is closed or killed, a player still sounding
+     * on its own is just audio nobody can stop from Spotify any more - and with Spotify back, a
+     * second copy of the same song. So it pauses, and shuts down a minute later.
+     */
+    private void watchSpotify(android.os.ResultReceiver reply) {
+        IBinder binder = binderOf(reply);
+        if (binder == null || binder == watchedSpotify) return;
+        main.removeCallbacks(spotifyGoneStop);
+        try {
+            if (watchedSpotify != null) watchedSpotify.unlinkToDeath(spotifyDeath, 0);
+        } catch (Throwable ignored) {
+        }
+        watchedSpotify = null;
+        try {
+            binder.linkToDeath(spotifyDeath, 0);
+            watchedSpotify = binder;
+        } catch (android.os.RemoteException alreadyDead) {
+            main.post(this::onSpotifyGone);
+        }
+    }
+
+    private void onSpotifyGone() {
+        watchedSpotify = null;
+        Log.i(TAG, "Spotify's process is gone" + (playing ? ", pausing" : ""));
+        if (playing) pressPlay(false);
+        main.removeCallbacks(spotifyGoneStop);
+        main.postDelayed(spotifyGoneStop, SPOTIFY_GONE_STOP_MS);
+    }
+
+    /** The binder a ResultReceiver carries (it only exposes it through its parcel form). */
+    private static IBinder binderOf(android.os.ResultReceiver reply) {
+        android.os.Parcel parcel = android.os.Parcel.obtain();
+        try {
+            reply.writeToParcel(parcel, 0);
+            parcel.setDataPosition(0);
+            return parcel.readStrongBinder();
+        } catch (Throwable t) {
+            return null;
+        } finally {
+            parcel.recycle();
+        }
+    }
+
+    /** Memory is short and nothing is playing: give the ~300 MB back; the next warm-up rebuilds. */
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (playing || level < TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_UI_HIDDEN) return;
+        Log.i(TAG, "memory pressure (" + level + ") while idle, stopping player");
+        releaseStreamingLocks();
+        destroyPlayer();
+        stopSelf();
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -781,6 +867,9 @@ public final class WebPlayerService extends Service {
             }
             final android.os.ResultReceiver pending = reply;
             if (reply != null) eventChannel = reply;
+            if (reply != null && SPOTIFY_PACKAGE.equals(intent.getStringExtra(EXTRA_REPLY_OWNER))) {
+                watchSpotify(reply);
+            }
             networkRecovery = intent.getBooleanExtra(EXTRA_NETWORK_RECOVERY, networkRecovery);
             final boolean needDevice = intent.getBooleanExtra(EXTRA_NEED_DEVICE_ID, false);
             if (PlayerSession.webview == null || !PlayerSession.loggedIn || !hasSessionCookie()) {
@@ -1277,6 +1366,10 @@ public final class WebPlayerService extends Service {
                             if ("playing".equals(data)) onMediaState(true);
                             else if ("paused".equals(data)) onMediaState(false);
                             else if ("stuck".equals(data)) onPlaybackStuck();
+                            else if ("yielded".equals(data)) {
+                                Log.i(TAG, "another device is active, stopped this one's audio");
+                                onMediaState(false);
+                            }
                             else if ("shuffle-on".equals(data)) {
                                 Log.i(TAG, "shuffle on here, asking Spotify to turn it off");
                                 sendWarmReply(eventChannel, EVENT_SHUFFLE_OFF, null);

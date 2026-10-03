@@ -121,6 +121,7 @@ final class ConnectRouteHandoff {
         private final Done done;
         private final long findDeadline = SystemClock.elapsedRealtime() + SETTLE_MS + FIND_WINDOW_MS;
         private int attempts;
+        private long transferredAt;
         private boolean logged;
         private MediaRoute2Info target;
 
@@ -176,6 +177,13 @@ final class ConnectRouteHandoff {
                         return;
                     }
                 }
+                // A transfer in flight is checked every POLL_MS rather than once after the whole
+                // VERIFY_MS: the hand-off is confirmed (and the phone's muted copy settled) as soon
+                // as it lands, instead of always three seconds later.
+                if (attempts > 0 && SystemClock.elapsedRealtime() - transferredAt < VERIFY_MS) {
+                    MAIN.postDelayed(this, POLL_MS);
+                    return;
+                }
                 if (attempts++ >= MAX_ATTEMPTS) {
                     XpLog.log(TAG + " hand-off not applied after " + MAX_ATTEMPTS + " attempts");
                     end(Result.FAILED);
@@ -184,7 +192,8 @@ final class ConnectRouteHandoff {
                 XpLog.log(TAG + " handing playback to route \"" + target.getName() + "\" attempt " + attempts
                         + " controllers=" + router.getControllers().size());
                 router.transferTo(target);
-                MAIN.postDelayed(this, VERIFY_MS);
+                transferredAt = SystemClock.elapsedRealtime();
+                MAIN.postDelayed(this, POLL_MS);
             } catch (Throwable t) {
                 XpLog.log(TAG + " route transfer failed type=" + t.getClass().getName());
                 end(Result.FAILED);

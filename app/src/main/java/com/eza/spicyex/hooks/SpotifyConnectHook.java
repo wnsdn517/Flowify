@@ -198,42 +198,112 @@ public final class SpotifyConnectHook {
         // The phone's own copy of this playback is about to move: keep it silent meanwhile, so
         // the hand-off isn't heard as the song starting on the phone first. Anything but a
         // completed switch gives the sound straight back (and a failsafe does regardless).
-        Runnable restore = silence(track);
+        Silence silence = silence(track);
         // Warm first: the reply confirms the player is up and signed in, and carries the id
         // it registered under, so the hand-off selects exactly our device.
         warm(app, (code, data) -> {
             if (code == WARM_STARTING) return;
             if (code != WARM_READY || (data != null && data.getBoolean(EXTRA_PLAYING))) {
-                restore.run();
+                silence.restore();
                 return;
             }
             String deviceId = data == null ? null : data.getString(EXTRA_DEVICE_ID);
             ConnectRouteHandoff.transfer(app, deviceId, null, result -> {
-                if (result != ConnectRouteHandoff.Result.SWITCHED) restore.run();
+                if (result == ConnectRouteHandoff.Result.SWITCHED) silence.keepUntilStopped();
+                else silence.restore();
             });
         }, true);
     }
 
-    /** Mutes a local AudioTrack; returns how to undo that (idempotent, also run on a timer). */
-    private static Runnable silence(android.media.AudioTrack track) {
-        if (track == null) return () -> { };
-        final java.lang.ref.WeakReference<android.media.AudioTrack> ref = new java.lang.ref.WeakReference<>(track);
-        final boolean[] undone = {false};
-        Runnable restore = () -> {
-            if (undone[0]) return;
-            undone[0] = true;
-            android.media.AudioTrack t = ref.get();
-            try {
-                if (t != null && t.getState() == android.media.AudioTrack.STATE_INITIALIZED) t.setVolume(1f);
-            } catch (Throwable ignored) {
-            }
-        };
+    /** Local tracks muted for a completed hand-off: they get their volume back only once
+     *  Spotify itself stops them (see installLocalTrackRelease). */
+    private static final java.util.Set<android.media.AudioTrack> MUTED_UNTIL_STOPPED =
+            java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(
+                    new java.util.WeakHashMap<>()));
+    private static volatile boolean localTrackReleaseInstalled;
+
+    /** A muted local track and how to undo that. */
+    private static final class Silence {
+        private final java.lang.ref.WeakReference<android.media.AudioTrack> ref;
+        private boolean settled;
+
+        Silence(android.media.AudioTrack track) {
+            ref = new java.lang.ref.WeakReference<>(track);
+        }
+
+        /** The hand-off failed or was not tried: the phone plays on, audibly. */
+        void restore() {
+            onMain(() -> {
+                if (settled) return;
+                settled = true;
+                unmute(ref.get());
+            });
+        }
+
+        /**
+         * The hand-off completed. The volume used to come back on the failsafe timer anyway,
+         * and whenever Spotify had not stopped its local copy by then, the song played twice -
+         * here and on the web player. It now stays muted until Spotify pauses or stops that
+         * track, which is also the moment it can be heard again safely.
+         */
+        void keepUntilStopped() {
+            onMain(() -> {
+                if (settled) return;
+                settled = true;
+                android.media.AudioTrack t = ref.get();
+                if (t != null) MUTED_UNTIL_STOPPED.add(t);
+            });
+        }
+
+        /** Failsafe for a hand-off that never answered at all. */
+        void restoreLater() {
+            new android.os.Handler(android.os.Looper.getMainLooper())
+                    .postDelayed(this::restore, LOCAL_SILENCE_MAX_MS);
+        }
+    }
+
+    private static void onMain(Runnable r) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(r);
+    }
+
+    private static void unmute(android.media.AudioTrack t) {
+        try {
+            if (t != null && t.getState() == android.media.AudioTrack.STATE_INITIALIZED) t.setVolume(1f);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** Mutes a local AudioTrack for a hand-off in progress. */
+    private static Silence silence(android.media.AudioTrack track) {
+        Silence silence = new Silence(track);
+        if (track == null) return silence;
+        installLocalTrackRelease();
         try {
             track.setVolume(0f);
         } catch (Throwable ignored) {
         }
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(restore, LOCAL_SILENCE_MAX_MS);
-        return () -> new android.os.Handler(android.os.Looper.getMainLooper()).post(restore);
+        silence.restoreLater();
+        return silence;
+    }
+
+    /** Gives a track muted for a completed hand-off its volume back as Spotify stops it. */
+    private static void installLocalTrackRelease() {
+        if (localTrackReleaseInstalled) return;
+        localTrackReleaseInstalled = true;
+        for (String method : new String[]{"pause", "stop", "flush"}) {
+            try {
+                XpHooks.findAfter(android.media.AudioTrack.class, method, "connect:AudioTrack#" + method,
+                        param -> {
+                            Object t = param.thisObject;
+                            if (t instanceof android.media.AudioTrack && MUTED_UNTIL_STOPPED.remove(t)) {
+                                unmute((android.media.AudioTrack) t);
+                            }
+                        });
+            } catch (Throwable t) {
+                XpLog.log("[SpicyConnect] local track release hook failed (" + method + ") type="
+                        + t.getClass().getName());
+            }
+        }
     }
 
     private static void onSpotifyResumed(android.app.Activity activity) {
