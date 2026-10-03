@@ -764,6 +764,8 @@
     <string name="settings_about_developer">개발자</string>
     <string name="settings_about_original">원작 개발자</string>
     <string name="settings_about_source">GitHub에서 소스 보기</string>
+    <string name="settings_about_share_bug_info">버그 신고용 정보 공유</string>
+    <string name="settings_about_share_info_chooser">앱 정보 공유</string>
     <string name="settings_about_announcements">공지 채널</string>
     <string name="settings_about_discussion">토론방</string>
     <string name="settings_about_ci_channel">CI 빌드 채널</string>

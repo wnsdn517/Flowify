@@ -415,6 +415,8 @@
     <string name="settings_about_developer">开发者</string>
     <string name="settings_about_original">原作开发者</string>
     <string name="settings_about_source">在 GitHub 查看源码</string>
+    <string name="settings_about_share_bug_info">分享用于报错的信息</string>
+    <string name="settings_about_share_info_chooser">分享应用信息</string>
     <string name="settings_about_announcements">公告频道</string>
     <string name="settings_about_discussion">讨论群</string>
     <string name="settings_about_ci_channel">CI 构建频道</string>

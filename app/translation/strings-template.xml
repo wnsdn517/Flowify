@@ -894,6 +894,8 @@
     <string name="settings_about_developer">Developer</string>
     <string name="settings_about_original">Original developer</string>
     <string name="settings_about_source">Source code on GitHub</string>
+    <string name="settings_about_share_bug_info">Share for a bug report</string>
+    <string name="settings_about_share_info_chooser">Share app info</string>
     <string name="settings_about_latest">Latest on GitHub</string>
     <string name="settings_about_checking">Checking…</string>
     <string name="settings_about_update">Update available</string>

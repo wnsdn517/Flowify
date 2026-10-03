@@ -690,6 +690,8 @@
     <string name="settings_about_developer">開発者</string>
     <string name="settings_about_original">オリジナル開発者</string>
     <string name="settings_about_source">GitHubでソースを見る</string>
+    <string name="settings_about_share_bug_info">バグ報告用の情報を共有</string>
+    <string name="settings_about_share_info_chooser">アプリ情報を共有</string>
     <string name="settings_about_announcements">お知らせ</string>
     <string name="settings_about_discussion">ディスカッション</string>
     <string name="settings_about_ci_channel">CIビルド</string>

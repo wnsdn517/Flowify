@@ -183,8 +183,18 @@ async function isAdmin(env, chatId, userId) {
 }
 
 // Asked for bug reports specifically (matches the group rule: version, device, steps to reproduce).
-const BUG_DETAILS_ASK =
-  "Reply to this message with your Spicy EX version, Spotify version, Android version/device, and steps to reproduce — it helps a lot. Then tap File (or tap File now without replying).";
+// The "Share for a bug report" button in Settings > About generates the first three lines, so most
+// people only need to paste that and add steps - the version is never something they have to recall.
+const BUG_DETAILS_ASK = [
+  "Reply to this message with:",
+  "1) Spicy EX version, Spotify version, Android version/device — Settings → About → <b>Share for a bug report</b> generates this for you",
+  "2) Steps to reproduce",
+  "3) A log file, if you have one (attach it to your reply)",
+  "",
+  "Don't include tokens, passwords, or anything else private — this becomes a public issue.",
+  "",
+  "Then tap File (or tap File now without replying).",
+].join("\n");
 
 async function maybeOfferFeatureRequest(env, msg) {
   const text = msg.text || "";
@@ -201,6 +211,8 @@ async function maybeOfferFeatureRequest(env, msg) {
     chat_id: msg.chat.id,
     reply_to_message_id: msg.message_id,
     text: `${intro}${ask}`,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
     reply_markup: { inline_keyboard: [[{ text: label, callback_data: `fr:${id}` }]] },
   });
   await env.CI.put(
@@ -209,6 +221,25 @@ async function maybeOfferFeatureRequest(env, msg) {
     { expirationTtl: 1209600 } // 2 weeks to decide is plenty
   );
   if (sent.result?.message_id) await env.CI.put(`frprompt:${msg.chat.id}:${sent.result.message_id}`, id, { expirationTtl: 1209600 });
+}
+
+const LOG_FILE_RE = /\.(txt|log|json|xml|ya?ml)$/i;
+const LOG_MAX_BYTES = 20000; // embedded verbatim in the issue body, so kept well under GitHub's limit
+const LOG_EMBED_CHARS = 6000;
+
+// A text file attached to a details reply: fetched and embedded verbatim if it looks like a plain-text
+// log and is small enough; otherwise just noted (no public URL exists to link - Telegram's file URLs
+// require the bot token and expire).
+async function captureLogFile(env, document) {
+  const looksLikeText = LOG_FILE_RE.test(document.file_name || "") || (document.mime_type || "").startsWith("text/");
+  if (!looksLikeText || document.file_size > LOG_MAX_BYTES) {
+    return { name: document.file_name || "file", size: document.file_size, note: "attached in Telegram, not embedded (not a small text file)" };
+  }
+  const f = await tgCall(env, "getFile", { file_id: document.file_id });
+  const path = f.result?.file_path;
+  if (!path) return { name: document.file_name || "file", size: document.file_size, note: "attached in Telegram, could not be fetched" };
+  const content = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${path}`).then((r) => r.text());
+  return { name: document.file_name || "log.txt", content: content.length > LOG_EMBED_CHARS ? content.slice(0, LOG_EMBED_CHARS) + "\n…(truncated)" : content };
 }
 
 // A reply to the bot's "add details" prompt: append it to the filed report instead of re-running
@@ -222,9 +253,14 @@ async function maybeCollectDetails(env, msg) {
   if (!entry) return true;
   if (msg.from.id !== entry.authorId && !(await isAdmin(env, msg.chat.id, msg.from.id))) return true;
 
-  entry.details = entry.details ? `${entry.details}\n${msg.text}` : msg.text;
+  const text = msg.text || msg.caption || "";
+  if (text) entry.details = entry.details ? `${entry.details}\n${text}` : text;
+  if (msg.document) entry.logFile = await captureLogFile(env, msg.document);
+  if (!text && !msg.document) return true; // reply had neither text nor a file - nothing to add
+
   await env.CI.put(`fr:${id}`, JSON.stringify(entry), { expirationTtl: 1209600 });
-  await tgCall(env, "sendMessage", { chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "Added to the report. Tap File when ready." });
+  const ack = msg.document && entry.logFile?.content ? `Added, with \`${entry.logFile.name}\` attached. Tap File when ready.` : "Added to the report. Tap File when ready.";
+  await tgCall(env, "sendMessage", { chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: ack, parse_mode: "Markdown" });
   return true;
 }
 
@@ -255,6 +291,8 @@ async function fileIssue(env, cq) {
   const title = prefix + titleBody;
   const bodyParts = [entry.text];
   if (entry.details) bodyParts.push("", "**Additional details:**", entry.details);
+  if (entry.logFile?.content) bodyParts.push("", `**Attached log — \`${entry.logFile.name}\`:**`, "```", entry.logFile.content, "```");
+  else if (entry.logFile) bodyParts.push("", `**Attached file:** \`${entry.logFile.name}\` (${entry.logFile.size} bytes) — ${entry.logFile.note}`);
   bodyParts.push("", `Filed from Telegram by ${entry.author}${link ? ` ([message](${link}))` : ""}.`);
   const body = bodyParts.join("\n");
 
@@ -265,6 +303,7 @@ async function fileIssue(env, cq) {
   });
 
   if (!res.html_url) {
+    console.error("issue create failed", JSON.stringify(res));
     return tgCall(env, "editMessageReplyMarkup", {
       chat_id: cq.message.chat.id, message_id: cq.message.message_id,
       reply_markup: { inline_keyboard: [[{ text: "⚠️ Filing failed — tap to retry", callback_data: cq.data }]] },
@@ -304,10 +343,16 @@ export default {
     }
 
     const msg = update.message;
-    if (!msg?.text || msg.from?.is_bot) return new Response("ok");
-    const m = msg.text.match(/^\/(release|beta|ci|help)(@\w+)?(\s|$)/i);
-    if (m) ctx.waitUntil(command(env, m[1].toLowerCase(), msg));
-    else ctx.waitUntil(maybeCollectDetails(env, msg).then((handled) => handled || maybeOfferFeatureRequest(env, msg)));
+    if (!msg || msg.from?.is_bot) return new Response("ok");
+    const m = msg.text?.match(/^\/(release|beta|ci|help)(@\w+)?(\s|$)/i);
+    if (m) {
+      ctx.waitUntil(command(env, m[1].toLowerCase(), msg));
+    } else if (msg.reply_to_message && (msg.text || msg.caption || msg.document)) {
+      // A reply with a log file attached has no msg.text at all, so this can't be gated on msg.text.
+      ctx.waitUntil(maybeCollectDetails(env, msg).then((handled) => handled || (msg.text && maybeOfferFeatureRequest(env, msg))));
+    } else if (msg.text) {
+      ctx.waitUntil(maybeOfferFeatureRequest(env, msg));
+    }
     return new Response("ok");
   },
 };

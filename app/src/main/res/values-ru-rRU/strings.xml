@@ -375,6 +375,8 @@
     <string name="settings_about_developer">Разработчик</string>
     <string name="settings_about_original">Автор оригинала</string>
     <string name="settings_about_source">Исходный код на GitHub</string>
+    <string name="settings_about_share_bug_info">Поделиться для багрепорта</string>
+    <string name="settings_about_share_info_chooser">Поделиться данными приложения</string>
     <string name="settings_about_announcements">Объявления</string>
     <string name="settings_about_discussion">Обсуждение</string>
     <string name="settings_about_ci_channel">Сборки CI</string>

@@ -950,7 +950,29 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         rows.infoRow(system, uiStrings.get("settings_about_build", "Build"),
                 com.eza.spicyex.BuildConfig.BUILD_DATE + " · " + com.eza.spicyex.BuildConfig.GIT_SHA
                         + " · B" + com.eza.spicyex.BuildConfig.UPSTREAM_BASE_CODE);
+        rows.actionRow(system, Kind.BUG, uiStrings.get("settings_about_share_bug_info", "Share for a bug report"),
+                v -> shareBugReportInfo());
         style.attachCard(parent, system, -1);
+    }
+
+    /** Shares app/Spotify/Android/device info as plain text, so a bug report always carries exact
+     *  version numbers instead of relying on the reporter to remember or retype them. */
+    private void shareBugReportInfo() {
+        String framework = com.eza.spicyex.xposed.XpHooks.frameworkLabel();
+        String info = "Spicy EX " + BuildStamp.VERSION + " (" + BuildStamp.VERSION_CODE + ")\n"
+                + "Spotify: " + spotifyVersion() + "\n"
+                + "Android: " + android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")\n"
+                + "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                + (framework.isEmpty() ? "" : "\nFramework: " + framework);
+        try {
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_TEXT, info);
+            Intent chooser = Intent.createChooser(send, uiStrings.get("settings_about_share_info_chooser", "Share app info"));
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(chooser);
+        } catch (Throwable ignored) {
+        }
     }
 
     /** Announcements / discussion / CI channel as one row of three pills instead of three list rows. */
