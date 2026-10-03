@@ -3893,10 +3893,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             if (moved) clearRowCascade();
             return;
         }
-        if (!appleStyle()) {
-            // Not the Apple style: nothing below this line applies. The spring scroll, the row
-            // cascade it complements and the Apple cascade speed/strength editor keys are all
-            // Apple-owned, so this stays on the ScrollView's own smoothScrollTo() as it always was.
+        if (!appleStyle() && !returnToCurrentPending && Math.abs(delta) <= springTravelCapPx()) {
+            // Not the Apple style: the row cascade and the Apple speed/strength editor keys do not
+            // apply, so an ordinary advance stays on the ScrollView's own smoothScrollTo(). A
+            // return from far away falls through to the capped spring below instead, since
+            // smoothScrollTo() would just slide the whole distance as a plain scroll.
             clearRowCascade();
             lyricsScroll.smoothScrollTo(0, target);
             return;
@@ -3950,7 +3951,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // the excess first and springing a fixed, viewport-relative remainder gives every jump
         // the same legible arrival no matter how far it started.
         int start = oldScroll;
-        float maxTravel = springTravelCapPx();
+        // A return springs over a shorter stretch than an ordinary far jump: the rest is skipped
+        // first, so the spring is visibly the arrival rather than a long fast scroll.
+        float maxTravel = returning ? springTravelCapPx() * 0.6f : springTravelCapPx();
         if (Math.abs(target - start) > maxTravel) {
             start = target + Math.round(Math.signum(start - target) * maxTravel);
             applyingLyricScroll = true;
