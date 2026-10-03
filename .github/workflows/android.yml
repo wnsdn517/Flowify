@@ -92,5 +92,5 @@ jobs:
           Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           for kind in release debug; do
             apk=$(ls app/build/outputs/apk/$kind/*.apk | head -1)
-            curl -sS --fail -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument"               -F chat_id="$TELEGRAM_CI_CHAT_ID"               -F "document=@${apk};filename=spicy-ex-${kind}-${short}.apk"               -F caption="$caption ($kind)" > /dev/null
+            curl -sS --fail -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument"               --form-string chat_id="$TELEGRAM_CI_CHAT_ID"               -F "document=@${apk};filename=spicy-ex-${kind}-${short}.apk"               --form-string caption="$caption ($kind)" > /dev/null
           done
