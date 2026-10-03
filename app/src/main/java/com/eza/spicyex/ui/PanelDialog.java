@@ -38,7 +38,8 @@ public final class PanelDialog {
     public static final int COL_CARD_BORDER = 0x30FFFFFF;
     public static final int COL_TITLE = 0xFFFFFFFF;
     public static final int COL_SUMMARY = 0xA6FFFFFF;
-    public static final int COL_ACCENT = 0xFF1ED760;
+    /** Follows the settings panel's accent (see PanelStyle#useAlbumAccent). */
+    public static int COL_ACCENT = 0xFF9DB8F2;
     public static final int COL_FIELD = 0x0DFFFFFF;
 
     private final Context context;
@@ -92,6 +93,28 @@ public final class PanelDialog {
     }
 
     private final LinearLayout root;
+    /** A filtered list keeps one height while its rows come and go, instead of jumping. */
+    private boolean fixedHeight;
+
+    /** Keeps one height (90% of the screen) whatever the content, for lists that change size. */
+    public PanelDialog tall() {
+        fixedHeight = true;
+        return this;
+    }
+
+    /** A view pinned between the title and the scrolling body (tabs, filters). */
+    public PanelDialog pinned(View view) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(8);
+        root.addView(view, root.indexOfChild(scroll), lp);
+        return this;
+    }
+
+    /** The body's scroller, to reset its position after the content is swapped. */
+    public ScrollView scroller() {
+        return scroll;
+    }
 
     /** Adds a view to the dialog body. */
     public PanelDialog add(View view) {
@@ -592,7 +615,7 @@ public final class PanelDialog {
 
         root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-        boolean constrained = root.getMeasuredHeight() > maxHeight;
+        boolean constrained = fixedHeight || root.getMeasuredHeight() > maxHeight;
         scrollParams.height = constrained ? 0 : ViewGroup.LayoutParams.WRAP_CONTENT;
         scrollParams.weight = constrained ? 1f : 0f;
         scroll.setLayoutParams(scrollParams);

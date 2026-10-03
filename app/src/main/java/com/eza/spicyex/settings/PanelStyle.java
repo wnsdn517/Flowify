@@ -31,12 +31,40 @@ import java.util.Map;
  * {@code PanelStyle} instance rather than re-deriving dimensions and colours locally.
  */
 public final class PanelStyle {
-    public static final int COL_CARD = 0xF21C1C22;
+    // Glass over the (blurred) lyrics screen: translucent enough for it to show through.
+    public static final int COL_CARD = 0xC7121214;
+    public static final int COL_CARD_TOP = 0xB8202024;
     public static final int COL_CARD_BORDER = 0x24FFFFFF;
+    public static final int COL_DIVIDER = 0x14FFFFFF;
     public static final int COL_TITLE = 0xFFFFFFFF;
     public static final int COL_SUMMARY = 0x99FFFFFF;
-    public static final int COL_SECTION = 0xFF8A8A90;
-    public static final int COL_ACCENT = 0xFF1ED760;
+    public static final int COL_SECTION = 0x8CFFFFFF;
+    /** The accent: the current album's colour, as the lyrics background uses it (see
+     *  {@link #useAlbumAccent}); a soft neutral blue when the art has no colour to give. */
+    public static final int COL_ACCENT_NEUTRAL = 0xFF9DB8F2;
+    public static int COL_ACCENT = COL_ACCENT_NEUTRAL;
+
+    /**
+     * Takes the accent from the album colour Spotify extracted for the playing track, lifted to a
+     * soft, bright tint that reads on the dark glass - the same source the lyrics screen's own
+     * background comes from, so the panel belongs to the screen it opens over.
+     */
+    public static void useAlbumAccent(String extractedColor) {
+        COL_ACCENT = COL_ACCENT_NEUTRAL;
+        if (extractedColor == null || extractedColor.trim().isEmpty()) return;
+        try {
+            int seed = com.eza.spicyex.lyrics.LyricVisuals.parseSpotifyExtractedColor(extractedColor);
+            float[] hsv = new float[3];
+            Color.colorToHSV(seed, hsv);
+            if (hsv[1] < 0.12f) return; // grey art: no colour to take, keep the default
+            hsv[1] = Math.min(0.55f, Math.max(0.35f, hsv[1]));
+            hsv[2] = 1f;
+            COL_ACCENT = Color.HSVToColor(hsv);
+        } catch (Throwable ignored) {
+        } finally {
+            com.eza.spicyex.ui.PanelDialog.COL_ACCENT = COL_ACCENT;
+        }
+    }
 
     private static final int ROW_MIN_HEIGHT_DP = 52;
 
@@ -45,6 +73,7 @@ public final class PanelStyle {
 
     static {
         SECTION_ICONS.put("lyrics", Kind.AUDIO_LINES);
+        SECTION_ICONS.put("gestures", Kind.POINTER);
         SECTION_ICONS.put("transliteration", Kind.BOOK_OPEN_TEXT);
         SECTION_ICONS.put("translation", Kind.LANGUAGES);
         SECTION_ICONS.put("now_playing", Kind.DISC_3);
@@ -103,12 +132,133 @@ public final class PanelStyle {
         view.setText(value);
         view.setTextSize(sp);
         view.setTextColor(color);
-        if (bold) view.setTypeface(Typeface.DEFAULT_BOLD);
+        Typeface face = panelTypeface();
+        if (bold) view.setTypeface(face == null ? Typeface.DEFAULT_BOLD : Typeface.create(face, Typeface.BOLD));
+        else if (face != null) view.setTypeface(face);
         return view;
+    }
+
+    /** Spotify Mix, the typeface the lyrics screen is set in; null before it has loaded. */
+    private static Typeface panelTypeface() {
+        java.lang.ref.WeakReference<Typeface> ref = com.eza.spicyex.References.beautifulFont;
+        return ref == null ? null : ref.get();
     }
 
     public static Kind sectionIcon(Settings.Section section) {
         return SECTION_ICONS.get(section.id);
+    }
+
+    /** Section icons are white, as every control on the lyrics screen is. */
+    public static int sectionTint(Settings.Section section) {
+        return COL_TITLE;
+    }
+
+    /** The panel's own surface: a faint lift at the top fading into the base, like the glass
+     *  the lyrics screen sits behind. */
+    public GradientDrawable panelBackground() {
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{COL_CARD_TOP, COL_CARD});
+        bg.setCornerRadius(dp(32));
+        bg.setStroke(Math.max(1, dp(1)), COL_CARD_BORDER);
+        return bg;
+    }
+
+    /** Icon in a translucent circle - the lyrics screen's own round button. */
+    public ImageView iconChip(Kind kind, int tint, int sizeDp) {
+        ImageView chip = kindView(kind, tint, Math.round(sizeDp * 0.48f));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setShape(GradientDrawable.OVAL);
+        bg.setColor(0x26FFFFFF);
+        bg.setStroke(Math.max(1, dp(1)), 0x2EFFFFFF);
+        chip.setBackground(bg);
+        return chip;
+    }
+
+    /** Small all-caps label over a group of hub tiles. */
+    public TextView groupCaption(String label) {
+        TextView caption = text(label, 12, COL_SECTION, true);
+        caption.setAllCaps(true);
+        caption.setLetterSpacing(0.08f);
+        caption.setPadding(dp(6), dp(14), dp(6), dp(6));
+        return caption;
+    }
+
+    /**
+     * A hub entry: coloured icon chip, title, one line about what is inside, an optional
+     * state pill and a chevron. The whole row is the tap target.
+     */
+    public LinearLayout hubTile(Kind icon, int tint, String title, String subtitle,
+                                String pill, View.OnClickListener listener) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(dp(64));
+        row.setPadding(dp(6), dp(10), dp(6), dp(10));
+        row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22FFFFFF), null,
+                new ColorDrawable(0xFFFFFFFF)));
+        LinearLayout.LayoutParams chip = new LinearLayout.LayoutParams(dp(40), dp(40));
+        chip.rightMargin = dp(14);
+        row.addView(iconChip(icon, tint, 40), chip);
+        LinearLayout col = new LinearLayout(context);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.addView(text(title, 16, COL_TITLE, false));
+        if (subtitle != null && !subtitle.isEmpty()) {
+            TextView sub = text(subtitle, 13, COL_SUMMARY, false);
+            sub.setMaxLines(2);
+            sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            sub.setPadding(0, dp(2), 0, 0);
+            col.addView(sub);
+        }
+        row.addView(col, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (pill != null) row.addView(statePill(pill), pillParams());
+        row.addView(kindView(Kind.CHEVRON_RIGHT, COL_SECTION, 18),
+                new LinearLayout.LayoutParams(dp(26), dp(30)));
+        row.setOnClickListener(listener);
+        return row;
+    }
+
+    private LinearLayout.LayoutParams pillParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.leftMargin = dp(8);
+        lp.rightMargin = dp(4);
+        return lp;
+    }
+
+    /** A state label such as "On", in the accent colour. */
+    private TextView statePill(String label) {
+        TextView pill = text(label, 11, COL_ACCENT, true);
+        pill.setPadding(dp(8), dp(3), dp(8), dp(3));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor((COL_ACCENT & 0x00FFFFFF) | 0x26000000);
+        bg.setCornerRadius(dp(10));
+        pill.setBackground(bg);
+        return pill;
+    }
+
+    /**
+     * A shortcut tile for the top of the hub: a wash of its colour, a big icon, a title and a
+     * hint. Two sit side by side, so each takes an equal share of the row.
+     */
+    public LinearLayout shortcutTile(Kind icon, int tint, String title, String hint,
+                                     View.OnClickListener listener) {
+        LinearLayout tile = new LinearLayout(context);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(dp(14), dp(14), dp(14), dp(14));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0x17FFFFFF);
+        bg.setCornerRadius(dp(22));
+        bg.setStroke(Math.max(1, dp(1)), 0x1AFFFFFF);
+        tile.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22FFFFFF), bg, null));
+        tile.addView(iconChip(icon, tint, 40), new LinearLayout.LayoutParams(dp(40), dp(40)));
+        TextView name = text(title, 15, COL_TITLE, true);
+        name.setPadding(0, dp(12), 0, 0);
+        tile.addView(name);
+        TextView sub = text(hint, 12, COL_SUMMARY, false);
+        sub.setPadding(0, dp(2), 0, 0);
+        tile.addView(sub);
+        tile.setOnClickListener(listener);
+        return tile;
     }
 
     /** Tinted lucide icon view; decorative by default (row text carries the meaning). */
@@ -188,17 +338,24 @@ public final class PanelStyle {
         LinearLayout card = new LinearLayout(context);
         card.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0x0DFFFFFF);
-        bg.setCornerRadius(dp(14));
+        bg.setColor(0x14FFFFFF);
+        bg.setCornerRadius(dp(22));
         card.setBackground(bg);
-        card.setPadding(dp(10), dp(2), dp(10), dp(2));
+        card.setPadding(dp(12), dp(2), dp(12), dp(2));
+        // A hairline between rows instead of relying on row height alone to separate them.
+        GradientDrawable divider = new GradientDrawable();
+        divider.setColor(COL_DIVIDER);
+        divider.setSize(1, Math.max(1, dp(1) / 2));
+        card.setDividerDrawable(divider);
+        card.setDividerPadding(dp(8));
+        card.setShowDividers(LinearLayout.SHOW_DIVIDER_MIDDLE);
         return card;
     }
 
     public void attachCard(LinearLayout parent, LinearLayout card, int at) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(4);
+        lp.bottomMargin = dp(8);
         if (at < 0 || at >= parent.getChildCount()) parent.addView(card, lp);
         else parent.addView(card, at, lp);
     }

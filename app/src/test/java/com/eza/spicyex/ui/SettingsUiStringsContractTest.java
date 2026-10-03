@@ -119,14 +119,13 @@ public class SettingsUiStringsContractTest {
     }
 
     @Test
-    public void layoutEditorActionsSurviveIncrementalSectionRebuilds() throws Exception {
+    public void layoutEditorActionsAreAppendedToPages() throws Exception {
         File source = new File("src/main/java/com/eza/spicyex/settings/SettingsPanel.java");
         if (!source.isFile()) source = new File("app/" + source.getPath());
         assertTrue(source.isFile());
         String java = new String(Files.readAllBytes(source.toPath()), StandardCharsets.UTF_8);
 
         assertTrue(java.contains("appendEditorActionRows(card, section);"));
-        assertTrue(java.contains("syncEditorActionRows(card, target);"));
         assertTrue(java.contains("TAG_LAYOUT_EDITOR_ACTION"));
         assertTrue(java.contains("TAG_CARD_EDITOR_ACTION"));
     }

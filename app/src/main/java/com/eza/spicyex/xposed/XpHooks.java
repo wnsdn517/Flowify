@@ -87,6 +87,17 @@ public final class XpHooks {
         api = xposed;
     }
 
+    /** The hooking framework, e.g. "LSPosed 1.10.1"; "" when not known. */
+    public static String frameworkLabel() {
+        XposedInterface current = api;
+        if (current == null) return "";
+        try {
+            return current.getFrameworkName() + " " + current.getFrameworkVersion();
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
     static XposedInterface api() {
         XposedInterface current = api;
         if (current == null) throw new IllegalStateException("XpHooks not attached");

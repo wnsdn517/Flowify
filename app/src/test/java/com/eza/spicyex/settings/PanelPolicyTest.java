@@ -43,13 +43,11 @@ public class PanelPolicyTest {
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_ENABLED, off));
         assertFalse(PanelPolicy.shouldRender(Settings.PIP_SHAPE, off));
         assertFalse(PanelPolicy.shouldRender(Settings.PIP_CONTROLS, off));
-        assertFalse(PanelPolicy.shouldRender(Settings.PIP_FOCUS, off));
         assertFalse(PanelPolicy.shouldRender(Settings.PIP_LEAVE_SPOTIFY, off));
 
         PanelSnapshot on = PanelSnapshot.builder().put(Settings.PIP_ENABLED, true).build();
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_SHAPE, on));
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_CONTROLS, on));
-        assertTrue(PanelPolicy.shouldRender(Settings.PIP_FOCUS, on));
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_LEAVE_SPOTIFY, on));
         assertTrue(PanelPolicy.shouldRebuildSectionAfterChange(Settings.PIP_ENABLED));
     }
@@ -62,7 +60,6 @@ public class PanelPolicyTest {
         PanelSnapshot onClose = PanelSnapshot.builder().put(Settings.PIP_ON_CLOSE, true).build();
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_SHAPE, onClose));
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_CONTROLS, onClose));
-        assertTrue(PanelPolicy.shouldRender(Settings.PIP_FOCUS, onClose));
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_LEAVE_SPOTIFY, onClose));
         assertTrue(PanelPolicy.shouldRebuildSectionAfterChange(Settings.PIP_ON_CLOSE));
     }

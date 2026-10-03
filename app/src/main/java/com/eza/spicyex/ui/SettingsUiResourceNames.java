@@ -5,15 +5,15 @@ import com.eza.spicyex.Settings;
 import java.util.Locale;
 
 /** Pure naming contract shared by settings resources and JVM tests. */
-final class SettingsUiResourceNames {
+public final class SettingsUiResourceNames {
     private SettingsUiResourceNames() {
     }
 
-    static String section(Settings.Section section) {
+    public static String section(Settings.Section section) {
         return "settings_section_" + normalize(section == null ? "" : section.id);
     }
 
-    static String setting(Settings.Setting<?> setting) {
+    public static String setting(Settings.Setting<?> setting) {
         return "settings_label_" + normalize(setting == null ? "" : setting.key);
     }
 

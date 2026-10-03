@@ -17,7 +17,7 @@ public class SettingsUiSchemaTest {
         List<String> ids = new ArrayList<>();
         for (Settings.Section section : SettingsUiSchema.orderedSections()) ids.add(section.id);
         assertEquals(java.util.Arrays.asList(
-                "lyrics", "lyrics_sources", "lyrics_screen", "apple_music",
+                "lyrics", "gestures", "lyrics_sources", "lyrics_screen",
                 "transliteration", "translation", "ai", "pip", "ad_free"), ids);
     }
 

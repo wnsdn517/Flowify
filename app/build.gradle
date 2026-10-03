@@ -94,14 +94,54 @@ android {
         applicationId "com.eza.spicyex"
         minSdk 27
         targetSdk 35
-        versionCode 919
-        versionName "1.58.637+B919-20261003T0900Z"
+        // Fork version: MAJOR (large refactor) . MINOR (features) . PATCH (bug fixes), set in
+        // gradle.properties; the version code is computed below. Shown as "1.6.0 (11172) [C172B918_20261004]": C = this fork's commit count,
+        // B = the version code of the upstream build the fork is based on, then the build date.
+        def forkMajor = (project.findProperty("spicyForkMajor") ?: "1").toString().toInteger()
+        def forkMinor = (project.findProperty("spicyForkMinor") ?: "6").toString().toInteger()
+        def forkPatch = (project.findProperty("spicyForkPatch") ?: "0").toString().toInteger()
+        def git = { List<String> args ->
+            try {
+                def proc = (["git"] + args).execute(null, rootProject.projectDir)
+                def out = proc.text.trim()
+                proc.waitFor()
+                return proc.exitValue() == 0 ? out : null
+            } catch (Throwable ignored) {
+                return null
+            }
+        }
+        def commitCount = git(["rev-list", "--count", "HEAD"]) ?: "0"
+        // The version code counts itself: every commit raises it, so any newer build installs
+        // over an older one with nothing to bump by hand. (11000 keeps it above the 10600 the
+        // first 1.6.0 builds used.)
+        def forkCode = 11000 + commitCount.toInteger()
+        def gitSha = git(["rev-parse", "--short=8", "HEAD"]) ?: "unknown"
+        def upstreamBase = (project.findProperty("spicyUpstreamBaseCode") ?: "0").toString()
+        def base = git(["merge-base", "HEAD", "upstream/main"])
+        if (base != null) {
+            def upstreamGradle = git(["show", base + ":app/build.gradle"])
+            def found = upstreamGradle == null ? null : (upstreamGradle =~ /versionCode\s+(\d+)/)
+            if (found != null && found.find()) upstreamBase = found.group(1)
+        }
+        def buildDate = new Date().format("yyyyMMdd", TimeZone.getTimeZone("UTC"))
+        def forkVersion = "${forkMajor}.${forkMinor}.${forkPatch}"
+        def buildTag = "C${commitCount}B${upstreamBase}_${buildDate}"
+        versionCode forkCode
+        versionName forkVersion
+        buildConfigField "String", "FORK_VERSION", "\"${forkVersion}\""
+        buildConfigField "int", "FORK_VERSION_CODE", "${forkCode}"
+        buildConfigField "String", "BUILD_TAG", "\"${buildTag}\""
+        buildConfigField "int", "COMMIT_COUNT", "${commitCount}"
+        buildConfigField "int", "UPSTREAM_BASE_CODE", "${upstreamBase}"
+        buildConfigField "String", "BUILD_DATE", "\"${buildDate}\""
+        buildConfigField "String", "GIT_SHA", "\"${gitSha}\""
+        ext.spicyApkTag = "${forkVersion}-${buildTag}"
         def diagnosticIntakeUrl = providers.gradleProperty("DIAGNOSTIC_INTAKE_URL")
                 .orElse("https://reports.eza.dpdns.org/v1/reports")
                 .get()
         buildConfigField "String", "DIAGNOSTIC_INTAKE_URL", "\"${diagnosticIntakeUrl}\""
         def modelPackUrl = providers.gradleProperty("LANGUAGE_MODEL_PACK_URL")
-            .orElse("https://github.com/amarinne/spicy-ex/releases/download/v1/spicyex-language-models-v1.zip")
+            .orElse("https://github.com/wnsdn517/spicy-ex/releases/download/v1/spicyex-language-models-v1.zip")
             .get()
         def modelPackSha256 = providers.gradleProperty("LANGUAGE_MODEL_PACK_SHA256")
             .orElse("fab585db878657fb124e49722f4579aaeb994b902b1dbf288b4b17700f90eb37")
@@ -238,7 +278,7 @@ android.applicationVariants.configureEach { variant ->
     tasks.register("copy${cap}Apk", Copy) {
         from layout.buildDirectory.file("outputs/apk/debug/app-debug.apk")
         into rootProject.layout.projectDirectory.dir('artifacts')
-        rename { "SpicyEX-debug-${variant.versionName}.apk" }
+        rename { "SpicyEX-debug-${android.defaultConfig.ext.spicyApkTag}.apk" }
     }
     tasks.named("assemble${cap}").configure { finalizedBy "copy${cap}Apk" }
 }

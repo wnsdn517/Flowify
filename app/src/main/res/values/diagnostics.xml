@@ -32,7 +32,7 @@
     <string name="diagnostic_accept_policy">I accept the policy.</string>
     <string name="diagnostic_included_json">Included JSON</string>
     <string name="diagnostic_preview">Report preview</string>
-    <string name="diagnostic_upload">Upload</string>
+    <string name="diagnostic_upload">Report on GitHub</string>
     <string name="diagnostic_discard">Discard</string>
     <string name="diagnostic_uploaded">Report uploaded</string>
     <string name="diagnostic_report_id">Report ID</string>
@@ -67,4 +67,6 @@
     <string name="diagnostic_check_features">Module features</string>
     <string name="diagnostic_check_installation">Install: %1$s · Root not checked</string>
     <string name="diagnostic_check_hyperglow">HyperGlow bridge: %1$s</string>
+    <string name="diagnostic_json_copied">Diagnostic JSON copied - paste it into the issue</string>
+    <string name="diagnostic_paste_json">(paste the copied JSON here)</string>
 </resources>

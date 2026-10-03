@@ -326,20 +326,50 @@ public final class DiagnosticReportingDialog {
         });
         dialog.positiveButton.setOnClickListener(v -> {
             if (!accept.isChecked()) return;
-            dialog.setPrimaryEnabled(false);
-            new DiagnosticUploader().upload(BuildConfig.DIAGNOSTIC_INTAKE_URL, draft, result ->
-                    MAIN.post(() -> {
-                        if (result.successful()) {
-                            DiagnosticDraftStore.clear(context);
-                            dialog.dismiss();
-                            showReceipt(context, strings, draft, result.receipt);
-                        } else {
-                            dialog.setPrimaryEnabled(true);
-                            toast(context, uploadFailure(strings, result.failure));
-                        }
-                    }));
+            // Reports go to this fork's GitHub issues, not to a server: the full JSON is put on the
+            // clipboard (too long for a link) and a new issue opens with the summary filled in.
+            reportOnGitHub(context, strings, draft);
+            DiagnosticDraftStore.clear(context);
+            dialog.dismiss();
         });
         dialog.show();
+    }
+
+    /** Where reports go: this fork's issue tracker. */
+    static final String ISSUES_NEW_URL = "https://github.com/wnsdn517/spicy-ex/issues/new";
+    /** GitHub refuses very long links; the body is cut to fit, the full JSON is on the clipboard. */
+    private static final int ISSUE_BODY_MAX = 5500;
+
+    private static void reportOnGitHub(Context context, SettingsUiStrings strings,
+                                       SpicyDiagnosticReportFactory.Draft draft) {
+        try {
+            android.content.ClipboardManager clipboard =
+                    (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Spicy EX diagnostics", draft.json));
+            }
+        } catch (Throwable ignored) {
+        }
+        String body = draft.issueBody == null ? "" : draft.issueBody;
+        if (body.length() > ISSUE_BODY_MAX) body = body.substring(0, ISSUE_BODY_MAX) + "\n…";
+        body = body + "\n\n<details><summary>Diagnostic JSON</summary>\n\n```json\n"
+                + text(strings, R.string.diagnostic_paste_json, "(paste the copied JSON here)")
+                + "\n```\n</details>\n";
+        String title = draft.issueTitle == null || draft.issueTitle.isEmpty()
+                ? "Problem report " + draft.reportId : draft.issueTitle;
+        String url = ISSUES_NEW_URL + "?title=" + android.net.Uri.encode(title)
+                + "&body=" + android.net.Uri.encode(body);
+        try {
+            android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url));
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+            toast(context, text(strings, R.string.diagnostic_json_copied,
+                    "Diagnostic JSON copied - paste it into the issue"));
+        } catch (Throwable t) {
+            toast(context, text(strings, R.string.diagnostic_json_copied,
+                    "Diagnostic JSON copied - paste it into the issue"));
+        }
     }
 
     private static void showReceipt(Context context, SettingsUiStrings strings,

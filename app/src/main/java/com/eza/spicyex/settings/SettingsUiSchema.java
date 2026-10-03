@@ -26,9 +26,9 @@ public final class SettingsUiSchema {
     public static List<Settings.Section> orderedSections() {
         return Collections.unmodifiableList(Arrays.asList(
                 Settings.LYRICS,
+                Settings.GESTURES,
                 Settings.LYRICS_SOURCES,
                 Settings.LYRICS_SCREEN,
-                Settings.APPLE,
                 Settings.TRANSLITERATION,
                 Settings.TRANSLATION,
                 Settings.AI,
@@ -52,12 +52,13 @@ public final class SettingsUiSchema {
             Settings.AUTO_RESUME_FOLLOW,
             Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS,
             Settings.AUTO_SKIP_INTRO_OUTRO,
-            Settings.MINI_PLAYER_LYRICS_ICON,
             Settings.STATUS_BAR_HIDDEN_MODE,
+            Settings.TRANSITION_FEEL,
+            Settings.SYNC_OFFSET_MS,
+            Settings.MINI_PLAYER_LYRICS_ICON,
+            Settings.HYPERGLOW_ENABLED,
             Settings.LONG_PRESS_SHARE,
             Settings.SHARE_GESTURE_HINT,
-            Settings.SYNC_OFFSET_MS,
-            Settings.HYPERGLOW_ENABLED,
             // Lyrics sources
             Settings.LYRICS_SOURCE_MODE,
             Settings.LYRICS_SOURCE_OVERRIDE,
@@ -66,15 +67,10 @@ public final class SettingsUiSchema {
             Settings.KARAOKE_ORIGINAL_LYRICS,
             Settings.CACHE_SIZE,
             // Layout editor (tap behaviour stays in the panel; looks are edited on-screen)
-            Settings.LIVE_CARD_TAP_MODE,
-            Settings.LIVE_CARD_TAP_TARGET,
-            Settings.TRANSITION_FEEL,
             // Editor-managed (PanelPolicy hides these); the schema test requires every
             // non-internal setting listed exactly once.
             Settings.FULLSCREEN_CONTROLS,
             Settings.ANIMATION_STYLE,
-            // Apple Music (dedicated section; renders only while the Animation style is Apple Music)
-            Settings.APPLE_COMPACT_TEXT,
             // Reading & transliteration
             Settings.DOWNLOAD_LANGUAGE_MODELS,
             Settings.TRANSLITERATION_ENABLED,
@@ -106,7 +102,6 @@ public final class SettingsUiSchema {
             Settings.PIP_SHAPE,
             Settings.PIP_CONTROLS,
             Settings.PIP_SONG_INFO,
-            Settings.PIP_FOCUS,
             Settings.PIP_LEAVE_SPOTIFY,
             // Ad-free listening
             Settings.AD_MODE,
@@ -127,6 +122,43 @@ public final class SettingsUiSchema {
             if (setting.section == section) items.add(setting);
         }
         return items;
+    }
+
+    /** Which labelled group of its page a setting sits in: a page lists several small groups
+     *  rather than one long run of rows. The id names the caption string
+     *  {@code settings_group_<id>}; settings absent here are shown without a caption. */
+    private static final java.util.Map<Settings.Setting<?>, String> GROUPS = new java.util.HashMap<>();
+
+    private static void group(String id, Settings.Setting<?>... settings) {
+        for (Settings.Setting<?> setting : settings) GROUPS.put(setting, id);
+    }
+
+    static {
+        group("general_language", Settings.UI_LANGUAGE);
+        group("general_lyrics", Settings.STAY_IN_LYRICS, Settings.AUTO_RESUME_FOLLOW,
+                Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS, Settings.AUTO_SKIP_INTRO_OUTRO,
+                Settings.STATUS_BAR_HIDDEN_MODE, Settings.TRANSITION_FEEL);
+        group("general_timing", Settings.SYNC_OFFSET_MS);
+        group("general_outside", Settings.MINI_PLAYER_LYRICS_ICON, Settings.HYPERGLOW_ENABLED);
+        group("gestures_seek", Settings.TAP_SEEK_MODE);
+        group("gestures_like", Settings.DOUBLE_TAP_LIKE, Settings.DOUBLE_TAP_LIKE_MARK,
+                Settings.DOUBLE_TAP_LIKE_EFFECT);
+        group("gestures_share", Settings.LONG_PRESS_SHARE, Settings.SHARE_GESTURE_HINT);
+        group("sources_sources", Settings.LYRICS_SOURCE_MODE, Settings.LYRICS_SOURCE_OVERRIDE,
+                Settings.SPICY_MANUAL_TOKEN, Settings.LYRICS_SOURCE_ORDER);
+        group("sources_karaoke", Settings.KARAOKE_ORIGINAL_LYRICS);
+        group("sources_storage", Settings.CACHE_SIZE);
+        group("pip_open", Settings.PIP_ENABLED, Settings.PIP_ON_CLOSE);
+        group("pip_window", Settings.PIP_SHAPE, Settings.PIP_CONTROLS, Settings.PIP_SONG_INFO,
+                Settings.PIP_LEAVE_SPOTIFY);
+        group("adfree_ads", Settings.AD_MODE, Settings.AD_MUSIC_THEME);
+        group("adfree_connect", Settings.CONNECT_ENABLED, Settings.CONNECT_AUTO_SWITCH,
+                Settings.CONNECT_NETWORK_RECOVERY);
+    }
+
+    /** The group id of a setting within its page, or null for none. */
+    public static String groupOf(Settings.Setting<?> setting) {
+        return GROUPS.get(setting);
     }
 
     public static SettingUiSpec.RowKind kindOf(Settings.Setting<?> setting) {

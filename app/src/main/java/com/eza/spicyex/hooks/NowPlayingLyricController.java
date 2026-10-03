@@ -386,39 +386,10 @@ final class NowPlayingLyricController {
         miniProjectedBackgroundKey = "";
     }
 
+    /** A tap on the card's lyrics opens the lyrics screen. (It used to be a choice of single
+     *  or double tap, opening the lyrics or an artwork view - options nobody needed to find.) */
     private void handleCardTap() {
-        refreshConfig();
-        String mode = config.get(com.eza.spicyex.Settings.LIVE_CARD_TAP_MODE);
-        if ("Off".equals(mode)) return;
-        long now = SystemClock.uptimeMillis();
-        if ("Single tap".equals(mode)) {
-            openConfiguredTapTarget();
-            return;
-        }
-        if (now - lastCardTapMs <= 340L) {
-            lastCardTapMs = 0L;
-            openConfiguredTapTarget();
-        } else {
-            lastCardTapMs = now;
-        }
-    }
-
-    private void openConfiguredTapTarget() {
-        String target = config.get(com.eza.spicyex.Settings.LIVE_CARD_TAP_TARGET);
-        NowPlayingArtworkTargetResolver.Resolution resolution = artworkTargetHost.resolve(true);
-        NowPlayingArtworkTargetResolver.OpenAction action =
-                NowPlayingArtworkTargetResolver.openAction(target, resolution);
-        if (action == NowPlayingArtworkTargetResolver.OpenAction.ARTWORK) {
-            clearPendingCanvasTransfer();
-            lastStableArtworkTarget = NowPlayingArtworkTargetResolver.Kind.COVER;
-            artworkUnavailableGraceArmed = false;
-            artworkUnavailableRetriesRemaining = 0;
-            artworkOverlay.setDocument(artworkDocument, renderConfig);
-            artworkOverlay.showOverlay();
-            artworkBackLifecycle.start();
-        } else {
-            hook.launchNativeLyricsFullscreen(activity);
-        }
+        hook.launchNativeLyricsFullscreen(activity);
     }
 
     private void closeArtwork() {

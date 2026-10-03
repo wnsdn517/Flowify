@@ -29,4 +29,7 @@
     <string name="diagnostic_retention_notice">Вся информация, включая трек, улики текстов, и недавние запросы ИИ, хранятся пока не удалены вручную или изменены.</string>
     <string name="diagnostic_accept_retention">Я прочитал политику хранения и согласен отправить отчёт об ошибке.</string>
     <string name="diagnostic_data_policy">Политика информации Диагностики</string>
+    <string name="diagnostic_upload">Сообщить на GitHub</string>
+    <string name="diagnostic_json_copied">Диагностический JSON скопирован - вставьте его в issue</string>
+    <string name="diagnostic_paste_json">(вставьте сюда скопированный JSON)</string>
 </resources>

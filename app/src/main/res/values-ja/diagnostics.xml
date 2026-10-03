@@ -33,7 +33,7 @@
     <string name="diagnostic_accept_policy">ポリシーに同意します。</string>
     <string name="diagnostic_included_json">含まれるJSON</string>
     <string name="diagnostic_preview">レポートプレビュー</string>
-    <string name="diagnostic_upload">アップロード</string>
+    <string name="diagnostic_upload">GitHubで報告</string>
     <string name="diagnostic_discard">破棄</string>
     <string name="diagnostic_uploaded">レポートがアップロードされました</string>
     <string name="diagnostic_report_id">レポートID</string>
@@ -62,4 +62,6 @@
     <string name="diagnostic_setup_ready">セットアップ: 準備完了</string>
     <string name="diagnostic_setup_warning">セットアップ: 確認が必要</string>
     <string name="diagnostic_setup_failed">セットアップ: 準備未完了</string>
+    <string name="diagnostic_json_copied">診断JSONをコピーしました - Issueに貼り付けてください</string>
+    <string name="diagnostic_paste_json">(コピーしたJSONをここに貼り付け)</string>
 </resources>

@@ -19,7 +19,8 @@ public final class Settings {
     public static final List<Setting<?>> ALL = new ArrayList<>();
 
     // --- Sections ---
-    public static final Section LYRICS = new Section("Behavior", "lyrics");
+    public static final Section LYRICS = new Section("General", "lyrics");
+    public static final Section GESTURES = new Section("Gestures", "gestures");
     public static final Section LYRICS_SOURCES = new Section("Lyrics Sources", "lyrics_sources");
     public static final Section TRANSLITERATION = new Section("Reading & Transliteration", "transliteration");
     public static final Section ROMANIZATION = TRANSLITERATION;
@@ -49,7 +50,7 @@ public final class Settings {
     );
 
     public static final Setting<String> TAP_SEEK_MODE = enumSetting(
-            "lyric_tap_seek_mode", LYRICS, "Tap lyric to seek",
+            "lyric_tap_seek_mode", GESTURES, "Tap lyric to seek",
             "Double tap",
             "Off", "Single tap", "Double tap"
     );
@@ -59,7 +60,7 @@ public final class Settings {
     // double tap outright: "Tap lyric to seek" on double tap does nothing, and on single tap
     // the seek waits out the double-tap window so a double tap never also seeks.
     public static final Setting<Boolean> DOUBLE_TAP_LIKE = boolSetting(
-            "lyrics_double_tap_like", LYRICS, "Double-tap to like", true
+            "lyrics_double_tap_like", GESTURES, "Double-tap to like", true
     );
 
     // Which mark bursts where the finger double-tapped. Looks only - either way the song goes to
@@ -67,7 +68,7 @@ public final class Settings {
     // back to a heart while that button is off.
     public static final StringSetting DOUBLE_TAP_LIKE_MARK =
             (StringSetting) enumSetting(
-                    "lyrics_double_tap_like_mark", LYRICS, "Double-tap mark", "Like button",
+                    "lyrics_double_tap_like_mark", GESTURES, "Double-tap mark", "Like button",
                     "Like button", "Heart", "Star"
             );
 
@@ -75,7 +76,7 @@ public final class Settings {
     // com.eza.spicyex.ui.LikeBursts); looks only.
     public static final StringSetting DOUBLE_TAP_LIKE_EFFECT =
             (StringSetting) enumSetting(
-                    "lyrics_double_tap_like_effect", LYRICS, "Double-tap effect", "Aurora",
+                    "lyrics_double_tap_like_effect", GESTURES, "Double-tap effect", "Aurora",
                     "Aurora", "Glow", "Pulse", "Watercolor", "Radiant", "Stardust", "Gravity",
                     "Crystal", "Liquid", "Lens", "Pearl", "Prism", "Bloom", "Classic"
             );
@@ -163,13 +164,13 @@ public final class Settings {
     // default: long-pressing the lyrics did nothing before, and a held finger while reading
     // should not start throwing up sheets unexpectedly.
     public static final Setting<Boolean> LONG_PRESS_SHARE = boolSetting(
-            "lyrics_long_press_share", LYRICS, "Long-press a line to share", false
+            "lyrics_long_press_share", GESTURES, "Long-press a line to share", false
     );
 
     // The share sheet's swipe-up demonstration (see LyricsShareCardController#teaseNextLine):
     // two passes the first few times then one, on every open, or never.
     public static final Setting<String> SHARE_GESTURE_HINT = enumSetting(
-            "lyrics_share_gesture_hint", LYRICS, "Share sheet gesture hint",
+            "lyrics_share_gesture_hint", GESTURES, "Share sheet gesture hint",
             "First few times",
             "First few times", "Every time", "Off"
     );
@@ -225,13 +226,13 @@ public final class Settings {
 
     // --- Now Playing ---
     public static final Setting<String> LIVE_CARD_TAP_MODE = enumSetting(
-            "lyrics_live_card_tap_mode", LYRICS_SCREEN, "Tap card to open lyrics",
+            "lyrics_live_card_tap_mode", INTERNAL, "Tap card to open lyrics",
             "Double tap",
             "Off", "Single tap", "Double tap"
     );
 
     public static final Setting<String> LIVE_CARD_TAP_TARGET = enumSetting(
-            "lyrics_live_card_tap_target", LYRICS_SCREEN, "Card tap target",
+            "lyrics_live_card_tap_target", INTERNAL, "Card tap target",
             "Fullscreen",
             "Fullscreen", "Artwork"
     );
@@ -548,7 +549,7 @@ public final class Settings {
     // transitions (fastest, least motion); Fast halves the standard durations; Relaxed
     // keeps full durations. Playback-driven highlighting never consults this setting.
     public static final Setting<String> TRANSITION_FEEL = enumSetting(
-            "lyrics_transition_feel", ANIMATION, "Transition feel",
+            "lyrics_transition_feel", LYRICS, "Transition feel",
             "Fast",
             "Instant", "Fast", "Relaxed"
     );
@@ -560,7 +561,7 @@ public final class Settings {
     );
 
     public static final Setting<Boolean> APPLE_COMPACT_TEXT = boolSetting(
-            "lyric_apple_compact_text", APPLE, "Apple-style text proportions", true
+            "lyric_apple_compact_text", INTERNAL, "Apple-style text proportions", true
     );
 
     // Row-scroll cascade. Apple-owned: rendered only inside the Apple sub-section.
@@ -845,7 +846,7 @@ public final class Settings {
     // Where the current line rests: the lyrics screen's focus position, taken as a height on the
     // window, or the middle of the lyrics area.
     public static final Setting<String> PIP_FOCUS = enumSetting(
-            "lyrics_pip_focus", PIP, "Current line position", "Same as lyrics screen",
+            "lyrics_pip_focus", INTERNAL, "Current line position", "Same as lyrics screen",
             "Same as lyrics screen", "Center"
     );
 

@@ -95,6 +95,30 @@ public final class LanguageModelPack {
         prefetch();
     }
 
+    /** Removes the installed pack; the download row offers it again afterwards. */
+    public static void delete(Runnable done) {
+        DOWNLOADS.execute(() -> {
+            File root = root();
+            if (root != null) deleteRecursively(root);
+            clearTransientState();
+            if (done != null) done.run();
+        });
+    }
+
+    /** Bytes the installed pack takes, or 0. */
+    public static long sizeBytes() {
+        return sizeOf(root());
+    }
+
+    private static long sizeOf(File file) {
+        if (file == null || !file.exists()) return 0L;
+        if (file.isFile()) return file.length();
+        long total = 0L;
+        File[] children = file.listFiles();
+        if (children != null) for (File child : children) total += sizeOf(child);
+        return total;
+    }
+
     public static boolean isReady() {
         File root = root();
         if (root == null || !new File(root, READY).isFile()) return false;

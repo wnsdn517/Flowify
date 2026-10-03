@@ -27,6 +27,12 @@ public final class PanelSurface extends FrameLayout {
     private float currentDim;
     private ValueAnimator dimAnimator;
     private boolean exiting;
+    /** Bottom sheet: slides up in and down out instead of scaling, and edges stay flush. */
+    private boolean sheet;
+
+    public void setSheet(boolean value) {
+        sheet = value;
+    }
     private Runnable availableSizeChanged;
     private int availableWidth;
     private int availableHeight;
@@ -97,6 +103,17 @@ public final class PanelSurface extends FrameLayout {
         window.setWindowAnimations(0);
         window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        // The lyrics screen shows through the panel's glass, blurred, as on the screen itself.
+        // Android 12+ with cross-window blur on; elsewhere the dim alone stays.
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            try {
+                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
+                WindowManager.LayoutParams attrs = window.getAttributes();
+                attrs.setBlurBehindRadius(Math.round(36 * window.getContext().getResources().getDisplayMetrics().density));
+                window.setAttributes(attrs);
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     public View getCard() {
@@ -160,6 +177,12 @@ public final class PanelSurface extends FrameLayout {
         }
         setDim(0f);
         animateDim(targetDim, Motion.dur(Motion.BASE));
+        if (sheet) {
+            card.setTranslationY(getResources().getDisplayMetrics().heightPixels * 0.6f);
+            card.animate().translationY(0f).setDuration(Motion.dur(Motion.SLOW))
+                    .setInterpolator(Motion.decel()).start();
+            return;
+        }
         Motion.enterCard(card);
     }
 
@@ -182,6 +205,12 @@ public final class PanelSurface extends FrameLayout {
             return;
         }
         animateDim(0f, Motion.dur(Motion.EXIT));
+        if (sheet) {
+            card.animate().translationY(Math.max(card.getHeight(), 1) + card.getTranslationY())
+                    .setDuration(Motion.dur(Motion.BASE)).setInterpolator(Motion.accel())
+                    .withEndAction(dismissAction).start();
+            return;
+        }
         Motion.exitCardThen(card, dialog::isShowing, dismissAction);
     }
 

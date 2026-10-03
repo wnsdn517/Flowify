@@ -137,7 +137,7 @@ public class LayoutEditorGeometryContractTest {
     }
 
     @Test
-    public void layoutEditorOptionsAreAFloatingPanelNotADragToDismissSheet() throws Exception {
+    public void layoutEditorOptionsAreTheSettingsBottomSheetOnPhones() throws Exception {
         String editor = read("src/main/java/com/eza/spicyex/hooks/LyricsLayoutEditController.java");
 
         // One surface, rounded on every corner, its own elevation, inset from every screen edge.
@@ -157,11 +157,14 @@ public class LayoutEditorGeometryContractTest {
         // Header: the title on the left, a 44dp close button on the right that hides the panel.
         assertTrue(editor.contains("private static final int PANEL_CLOSE_BUTTON_DP = 44;"));
         assertTrue(editor.contains("s(\"close\", \"Close\"), () -> hidePanelSheet(true))"));
-        // Fade and scale in and out; a window appears, it does not slide off an edge.
+        // The side sheet (wide screens) fades and scales in and out like a window.
         assertTrue(editor.contains("private static final int PANEL_FADE_MS = 180;"));
         assertTrue(editor.contains("private static final float PANEL_HIDDEN_SCALE = 0.96f;"));
         assertTrue(editor.contains(".setDuration(PANEL_FADE_MS)"));
-        assertFalse(editor.contains("panelContainer.setTranslationY"));
+        // On a phone it is the settings' bottom sheet: flush with the bottom, slides up, and a
+        // pull on its handle or title closes it.
+        assertTrue(editor.contains("installSheetPull(panelHeader)"));
+        assertTrue(editor.contains("panelLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;"));
         // The drag-to-dismiss machinery is deleted, not left dormant: no sheet container, no
         // velocity tracking, no settle, no signed travel, and nothing intercepting the list.
         assertFalse(editor.contains("class SheetLayout"));

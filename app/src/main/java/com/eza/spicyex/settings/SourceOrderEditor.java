@@ -91,30 +91,91 @@ public final class SourceOrderEditor {
         group.setTag(PanelTags.row(Settings.LYRICS_SOURCE_MODE));
         content.addView(group, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        mergedRow(group);
+        inlineEditor(group);
         trackRow(group);
     }
 
-    /** Single merged "Lyrics source" row: ranking mode plus the enabled order summary. */
-    private void mergedRow(LinearLayout content) {
-        PanelStyle style = host.style();
-        SettingsUiStrings strings = host.strings();
-        String ranking = host.store().get(Settings.LYRICS_SOURCE_MODE);
-        StringBuilder order = new StringBuilder();
-        for (Source source : LyricsSourcePreferences.enabledSourceOrder(style.context())) {
-            if (order.length() > 0) order.append(" · ");
-            order.append(sourceLabel(source));
+    /**
+     * Ranking and the source list right on the page, saved as they change. They used to sit
+     * behind a summary row and a dialog with its own Save - three taps and a confirmation to
+     * turn one source off.
+     */
+    private void inlineEditor(LinearLayout group) {
+        final PanelStyle style = host.style();
+        final SettingsUiStrings strings = host.strings();
+        final String[] ranking = new String[]{rankingValue()};
+        final ArrayList<Source> order = new ArrayList<>(LyricsSourcePreferences.sourceOrder(style.context()));
+        final EnumMap<Source, GlossyToggle> toggles = new EnumMap<>(Source.class);
+        final ArrayList<ImageView> grips = new ArrayList<>();
+        final Runnable commit = () -> {
+            EnumMap<Source, Boolean> enabled = new EnumMap<>(Source.class);
+            for (Source source : Source.values()) {
+                GlossyToggle toggle = toggles.get(source);
+                enabled.put(source, toggle != null ? toggle.isChecked()
+                        : LyricsSourcePreferences.sourceEnabled(style.context(), source));
+            }
+            sourceAdapter().commit(host.writer(), new SourcePreferencesAdapter.Commit(ranking[0], order, enabled));
+        };
+
+        final ArrayList<LinearLayout> rankingRows = new ArrayList<>();
+        final String[][] rankingOptions = new String[][]{
+                {MODE_AUTO, strings.option(modeSetting(), MODE_AUTO)},
+                {MODE_SOURCE_ORDER, strings.option(modeSetting(), MODE_SOURCE_ORDER) + " — "
+                        + strings.get("settings_source_ranking_order_desc", "follow the order below")}
+        };
+        for (final String[] option : rankingOptions) {
+            LinearLayout row = style.radioRow(option[1], option[0].equals(ranking[0]));
+            row.setPadding(style.dp(4), style.dp(12), style.dp(4), style.dp(12));
+            rankingRows.add(row);
+            final String value = option[0];
+            row.setOnClickListener(v -> {
+                if (value.equals(ranking[0])) return;
+                ranking[0] = value;
+                refreshRankingRows(rankingRows, ranking[0]);
+                boolean ordered = MODE_SOURCE_ORDER.equals(value);
+                for (ImageView grip : grips) grip.setVisibility(ordered ? View.VISIBLE : View.GONE);
+                commit.run();
+            });
+            group.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
-        String rankLabel = strings.option(modeSetting(), ranking);
-        String summary = order.length() == 0
-                ? rankLabel + " · " + strings.get("settings_source_none_enabled", "None enabled")
-                : rankLabel + " · " + order;
-        LinearLayout row = style.newRow(content);
-        TextView value = style.titleColumn(row, strings.setting(Settings.LYRICS_SOURCE_OVERRIDE), summary);
-        value.setTextColor(PanelStyle.COL_ACCENT);
-        row.addView(style.kindView(Kind.CHEVRON_RIGHT, PanelStyle.COL_SECTION, 18),
-                new LinearLayout.LayoutParams(style.dp(24), style.dp(30)));
-        row.setOnClickListener(v -> showDialog());
+        refreshRankingRows(rankingRows, ranking[0]);
+
+        final LinearLayout list = new LinearLayout(style.context());
+        list.setOrientation(LinearLayout.VERTICAL);
+        for (Source source : order) {
+            // Spicy's remote path is retired from the user-selectable set; it stays in the
+            // backing order for old persisted data but is never shown.
+            if (source == Source.SPICY) continue;
+            LinearLayout row = new LinearLayout(style.context());
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(style.dp(4), style.dp(6), style.dp(0), style.dp(6));
+            row.setTag(source);
+            TextView label = style.text(sourceLabel(source), 16, PanelStyle.COL_TITLE, false);
+            row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            ImageView grip = style.kindView(Kind.CHEVRONS_UP_DOWN, PanelStyle.COL_SUMMARY, 20);
+            grip.setContentDescription(strings.get("settings_source_drag", "Drag to reorder"));
+            grip.setVisibility(MODE_SOURCE_ORDER.equals(ranking[0]) ? View.VISIBLE : View.GONE);
+            grips.add(grip);
+            row.addView(grip, new LinearLayout.LayoutParams(style.dp(40), style.dp(40)));
+            GlossyToggle toggle = new GlossyToggle(style.context());
+            toggle.setAccent(PanelStyle.COL_ACCENT);
+            toggle.setChecked(LyricsSourcePreferences.sourceEnabled(style.context(), source), false);
+            toggles.put(source, toggle);
+            toggle.setOnChangeListener(() -> {
+                commit.run();
+                // Turning Spicy's source on or off shows or hides its token row.
+                host.onSourcesCommitted();
+            });
+            row.setOnClickListener(v -> toggle.setChecked(!toggle.isChecked(), true));
+            row.addView(toggle);
+            attachSourceDrag(grip, row, list, order, commit);
+            list.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        group.addView(list, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     /** Separate management item scoped to the current song: opens its lyrics picker. */
@@ -149,7 +210,7 @@ public final class SourceOrderEditor {
     }
 
     /** Provider names are brands and stay as authored; only the surrounding copy localizes. */
-    public String sourceLabel(Source source) {
+    public static String sourceLabel(Source source) {
         if (source == Source.APPLE_MUSIC) return "Apple Music";
         if (source == Source.SPICY) return "Spicy";
         if (source == Source.SPOTIFY) return "Spotify";
@@ -157,103 +218,6 @@ public final class SourceOrderEditor {
         if (source == Source.QQ) return "QQ Music";
         if (source == Source.NETEASE) return "NetEase";
         return "LRCLIB";
-    }
-
-    // --- Dialog ---
-
-    public void showDialog() {
-        final PanelStyle style = host.style();
-        final SettingsUiStrings strings = host.strings();
-        final String[] ranking = new String[]{rankingValue()};
-        final ArrayList<Source> order = new ArrayList<>(LyricsSourcePreferences.sourceOrder(style.context()));
-        final EnumMap<Source, GlossyToggle> toggles = new EnumMap<>(Source.class);
-
-        PanelDialog dialog = new PanelDialog(style.context(),
-                strings.setting(Settings.LYRICS_SOURCE_OVERRIDE));
-
-        // The source list is always visible: in Source order mode it edits priority with
-        // drag grips; in Auto it edits the allow-list with toggles only, since order does
-        // not arbitrate there. Hiding it in Auto implied the toggles did nothing.
-        final LinearLayout orderSection = new LinearLayout(style.context());
-        orderSection.setOrientation(LinearLayout.VERTICAL);
-        final ArrayList<ImageView> grips = new ArrayList<>();
-        final Runnable refreshOrderVisibility = () -> {
-            boolean ordered = MODE_SOURCE_ORDER.equals(ranking[0]);
-            for (ImageView grip : grips) {
-                grip.setVisibility(ordered ? View.VISIBLE : View.GONE);
-            }
-        };
-
-        dialog.paragraph(strings.get("settings_source_ranking_title", "Ranking"));
-        final ArrayList<LinearLayout> rankingRows = new ArrayList<>();
-        // The value drives selection; the option label is authored English, as before.
-        final String[][] rankingOptions = new String[][]{
-                {MODE_AUTO, MODE_AUTO},
-                {MODE_SOURCE_ORDER, MODE_SOURCE_ORDER + " — "
-                        + strings.get("settings_source_ranking_order_desc", "follow the order below")}
-        };
-        for (final String[] option : rankingOptions) {
-            LinearLayout row = style.radioRow(option[1], option[0].equals(ranking[0]));
-            rankingRows.add(row);
-            final String value = option[0];
-            row.setOnClickListener(v -> {
-                ranking[0] = value;
-                refreshRankingRows(rankingRows, ranking[0]);
-                refreshOrderVisibility.run();
-            });
-            dialog.add(row);
-        }
-
-        TextView orderTitle = style.text(strings.get("settings_source_order_title", "Order"),
-                15, PanelStyle.COL_SECTION, true);
-        orderTitle.setPadding(style.dp(12), style.dp(12), style.dp(8), style.dp(2));
-        orderSection.addView(orderTitle);
-        LinearLayout list = new LinearLayout(style.context());
-        list.setOrientation(LinearLayout.VERTICAL);
-        orderSection.addView(list);
-        dialog.add(orderSection);
-        refreshOrderVisibility.run();
-        for (Source source : order) {
-            // Spicy's remote path is retired from the user-selectable set. Keep it in the
-            // backing order for old persisted data, but never expose it.
-            if (source == Source.SPICY) continue;
-            LinearLayout row = new LinearLayout(style.context());
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            row.setPadding(style.dp(12), style.dp(8), style.dp(8), style.dp(8));
-            row.setTag(source);
-            GlossyToggle toggle = new GlossyToggle(style.context());
-            toggle.setAccent(PanelStyle.COL_ACCENT);
-            toggle.setChecked(LyricsSourcePreferences.sourceEnabled(style.context(), source), false);
-            toggles.put(source, toggle);
-            row.addView(toggle, new LinearLayout.LayoutParams(style.dp(44), style.dp(30)));
-            TextView label = style.text(sourceLabel(source), 16, PanelStyle.COL_TITLE, false);
-            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            labelParams.leftMargin = style.dp(12);
-            row.addView(label, labelParams);
-            ImageView grip = style.kindView(Kind.CHEVRONS_UP_DOWN, PanelStyle.COL_SUMMARY, 20);
-            grip.setContentDescription(strings.get("settings_source_drag", "Drag to reorder"));
-            grip.setVisibility(MODE_SOURCE_ORDER.equals(ranking[0]) ? View.VISIBLE : View.GONE);
-            grips.add(grip);
-            row.addView(grip, new LinearLayout.LayoutParams(style.dp(40), style.dp(40)));
-            attachSourceDrag(grip, row, list, order);
-            list.addView(row, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        }
-        dialog.primary(strings.get("settings_ai_save", "Save"), () -> {
-            EnumMap<Source, Boolean> enabled = new EnumMap<>(Source.class);
-            for (Source source : Source.values()) {
-                GlossyToggle toggle = toggles.get(source);
-                enabled.put(source, toggle != null && toggle.isChecked());
-            }
-            sourceAdapter().commit(host.writer(), new SourcePreferencesAdapter.Commit(
-                    ranking[0], order, enabled));
-            host.onSourcesCommitted();
-        });
-        dialog.secondary(strings.get("settings_ai_cancel", "Cancel"), null);
-        dialog.show();
-        refreshRankingRows(rankingRows, ranking[0]);
     }
 
     /** Current ranking as a persisted token; anything unrecognized reads as Auto. */
@@ -277,7 +241,7 @@ public final class SourceOrderEditor {
      * while the rows it passes slide out of the way. Order commits on release.
      */
     private void attachSourceDrag(View handle, LinearLayout row, final LinearLayout list,
-                                  final ArrayList<Source> order) {
+                                  final ArrayList<Source> order, final Runnable onReordered) {
         final PanelStyle style = host.style();
         final float[] startRawY = new float[1];
         final int[] fromIndex = new int[1];
@@ -332,6 +296,7 @@ public final class SourceOrderEditor {
                             order.add(visibleInsertionToOrderIndex(order, target), dragged);
                             list.removeView(row);
                             list.addView(row, Math.min(target, list.getChildCount()));
+                            if (onReordered != null) onReordered.run();
                         }
                     }
                     if (android.os.Build.VERSION.SDK_INT >= 21) row.setElevation(0);

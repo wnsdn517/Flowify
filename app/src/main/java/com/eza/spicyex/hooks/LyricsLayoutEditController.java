@@ -114,7 +114,11 @@ final class LyricsLayoutEditController {
     private static final int GRIP_BOX_DP = 56;
     private static final int GRIP_OUTSIDE_DP = 12;
     private static final int TEXT_COLOR = 0xFFE8E8EE;
-    private static final int ACCENT_COLOR = 0xFF1ED760;
+    /** The settings panel's accent (the current album's colour), so the editor and the panel it
+     *  opens from read as one design rather than the editor alone staying Spotify green. */
+    private static int accent() {
+        return com.eza.spicyex.settings.PanelStyle.COL_ACCENT;
+    }
     /** Outline color actually painted on an UNSELECTED capture. Every capturable element is
      *  outlined at all times so the editor reads as one visual language, but at full-strength
      *  gray, seven simultaneous boxes plus a per-lyric-row grid buried the one box the user
@@ -332,6 +336,11 @@ final class LyricsLayoutEditController {
             }
         }
         return bestIndex;
+    }
+
+    /** The settings the editor covers, for the settings search (see LayoutEditorSettings). */
+    static Settings.Setting<?>[] coveredSettings() {
+        return Session.TOUCHED_SETTINGS.clone();
     }
 
     /** One editor invocation's mutable state - a plain instance instead of a pile of one-element
@@ -786,10 +795,17 @@ final class LyricsLayoutEditController {
             // per selection in selectElement - this only fixes the default.
             android.content.res.Configuration screen = activity.getResources().getConfiguration();
             sideSheet = landscape || screen.screenWidthDp >= 600;
-            GradientDrawable panelBg = new GradientDrawable();
-            panelBg.setColor(0xF21C1C22);
-            panelBg.setStroke(dp(1), 0x24FFFFFF);
-            panelBg.setCornerRadius(dp(20));
+            GradientDrawable panelBg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                    new int[]{com.eza.spicyex.settings.PanelStyle.COL_CARD_TOP | 0xF7000000,
+                            com.eza.spicyex.settings.PanelStyle.COL_CARD | 0xF7000000});
+            panelBg.setStroke(dp(1), com.eza.spicyex.settings.PanelStyle.COL_CARD_BORDER);
+            if (sideSheet) {
+                panelBg.setCornerRadius(dp(20));
+            } else {
+                // The same bottom sheet as the settings: flush with the bottom, top corners only.
+                float r = dp(30);
+                panelBg.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
+            }
             panelContainer.setBackground(panelBg);
             panelContainer.setElevation(dp(16));
             // Swallow taps on the panel's own padding so they never fall through to the element
@@ -810,15 +826,29 @@ final class LyricsLayoutEditController {
             titleLp.leftMargin = dp(16);
             titleLp.rightMargin = dp(8);
             panelHeader.addView(sheetTitle, titleLp);
-            ImageView close = iconButton(ActionIconDrawable.Kind.CLOSE, 0xE6FFFFFF,
-                    s("close", "Close"), () -> hidePanelSheet(true));
-            LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(
-                    dp(PANEL_CLOSE_BUTTON_DP), dp(PANEL_CLOSE_BUTTON_DP));
-            closeLp.rightMargin = dp(4);
-            panelHeader.addView(close, closeLp);
+            if (sideSheet) {
+                ImageView close = iconButton(ActionIconDrawable.Kind.CLOSE, 0xE6FFFFFF,
+                        s("close", "Close"), () -> hidePanelSheet(true));
+                LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(
+                        dp(PANEL_CLOSE_BUTTON_DP), dp(PANEL_CLOSE_BUTTON_DP));
+                closeLp.rightMargin = dp(4);
+                panelHeader.addView(close, closeLp);
+            } else {
+                // No close button: pulled down by its handle or title, as the settings sheet is.
+                FrameLayout handle = new FrameLayout(activity);
+                View pill = new View(activity);
+                GradientDrawable pillBg = new GradientDrawable();
+                pillBg.setColor(0x59FFFFFF);
+                pillBg.setCornerRadius(dp(3));
+                pill.setBackground(pillBg);
+                handle.addView(pill, new FrameLayout.LayoutParams(dp(40), dp(5), Gravity.CENTER));
+                panelContainer.addView(handle, new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(22)));
+                sheetHandle = handle;
+            }
             LinearLayout.LayoutParams headerLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(PANEL_CLOSE_BUTTON_DP));
-            headerLp.topMargin = dp(4);
+            headerLp.topMargin = sideSheet ? dp(4) : 0;
             panelContainer.addView(panelHeader, headerLp);
             installPanelDrag();
             // Editor actions live in the top chrome, so the panel is only as tall as its options.
@@ -828,6 +858,13 @@ final class LyricsLayoutEditController {
             // Opens against the default edge; selectElement() re-picks it per selection from there.
             applySheetPlacement(sideSheet ? SheetPlacement.END : SheetPlacement.BOTTOM);
             overlay.addView(panelContainer, panelLp);
+            // The toolbar row (done, reset, demo) stays reachable over the bottom sheet. The sheet
+            // casts a shadow (elevation), and elevation outranks child order, so the row's layer
+            // is raised above it rather than only moved to the front.
+            if (!sideSheet) {
+                backLayer.bringToFront();
+                backLayer.setElevation(dp(24));
+            }
             panelVisible = false;
             panelContainer.setVisibility(View.INVISIBLE);
 
@@ -1073,7 +1110,7 @@ final class LyricsLayoutEditController {
                 int[] pos = new int[] { dp(16), toolbarBottomPx() + dp(12) };
                 View capture = new View(activity);
                 GradientDrawable outline = new GradientDrawable();
-                outline.setStroke(dp(2), ACCENT_COLOR);
+                outline.setStroke(dp(2), accent());
                 outline.setCornerRadius(dp(safeGet(Settings.TRACK_INFO_ART_RADIUS)));
                 capture.setBackground(outline);
                 makeSelectableTarget(capture, Element.ARTWORK);
@@ -1094,7 +1131,7 @@ final class LyricsLayoutEditController {
 
             View capture = new View(activity);
             GradientDrawable outline = new GradientDrawable();
-            outline.setStroke(dp(2), ACCENT_COLOR);
+            outline.setStroke(dp(2), accent());
             outline.setCornerRadius(dp(radiusDp));
             capture.setBackground(outline);
             makeSelectableTarget(capture, Element.ARTWORK);
@@ -1308,7 +1345,7 @@ final class LyricsLayoutEditController {
                 capture.setLayoutParams(lp);
             }
             GradientDrawable updatedOutline = new GradientDrawable();
-            updatedOutline.setStroke(dp(OUTLINE_SELECTED_DP), ACCENT_COLOR);
+            updatedOutline.setStroke(dp(OUTLINE_SELECTED_DP), accent());
             updatedOutline.setCornerRadius(dp(safeGet(Settings.TRACK_INFO_ART_RADIUS)));
             capture.setBackground(updatedOutline);
 
@@ -1341,7 +1378,7 @@ final class LyricsLayoutEditController {
                 int height = dp(64);
                 View capture = new View(activity);
                 GradientDrawable outline = new GradientDrawable();
-                outline.setStroke(dp(2), ACCENT_COLOR);
+                outline.setStroke(dp(2), accent());
                 outline.setCornerRadius(dp(10));
                 capture.setBackground(outline);
                 makeSelectableTarget(capture, Element.TRACK_TEXT);
@@ -1360,7 +1397,7 @@ final class LyricsLayoutEditController {
             int[] pos = relativePosition(frame, shellRoot);
             View capture = new View(activity);
             GradientDrawable outline = new GradientDrawable();
-            outline.setStroke(dp(2), ACCENT_COLOR);
+            outline.setStroke(dp(2), accent());
             outline.setCornerRadius(dp(10));
             capture.setBackground(outline);
             makeSelectableTarget(capture, Element.TRACK_TEXT);
@@ -2299,7 +2336,7 @@ final class LyricsLayoutEditController {
             int[] pos = relativePosition(chip, shellRoot);
             View capture = new View(activity);
             GradientDrawable outline = new GradientDrawable();
-            outline.setStroke(dp(2), ACCENT_COLOR);
+            outline.setStroke(dp(2), accent());
             outline.setCornerRadius(dp(20));
             capture.setBackground(outline);
             makeSelectableTarget(capture, element);
@@ -2509,6 +2546,23 @@ final class LyricsLayoutEditController {
             // Re-place on every reveal: the panel's width comes from the live overlay, and the
             // list's height budget from the edge the toolbar row currently occupies.
             applySheetPlacement(sheetPlacement);
+            if (!sideSheet) {
+                // The toolbar row stays above the sheet's foot (the editor re-adds layers).
+                backLayer.bringToFront();
+                boolean hidden = panelContainer.getVisibility() != View.VISIBLE;
+                panelContainer.setVisibility(View.VISIBLE);
+                panelContainer.setAlpha(1f);
+                panelContainer.setScaleX(1f);
+                panelContainer.setScaleY(1f);
+                if (!animate) {
+                    panelContainer.setTranslationY(0f);
+                    return;
+                }
+                if (hidden) panelContainer.setTranslationY(overlayHeightPx() * 0.5f);
+                panelContainer.animate().translationY(0f).setDuration(260)
+                        .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
+                return;
+            }
             if (panelContainer.getVisibility() != View.VISIBLE) {
                 panelContainer.setVisibility(View.VISIBLE);
                 panelContainer.setAlpha(animate ? 0f : 1f);
@@ -2534,6 +2588,15 @@ final class LyricsLayoutEditController {
                 panelContainer.setScaleX(1f);
                 panelContainer.setScaleY(1f);
                 panelContainer.setVisibility(View.INVISIBLE);
+                return;
+            }
+            if (!sideSheet) {
+                panelContainer.animate().translationY(Math.max(panelContainer.getHeight(), 1))
+                        .setDuration(200).setInterpolator(new android.view.animation.AccelerateInterpolator(1.5f))
+                        .withEndAction(() -> {
+                            panelContainer.setVisibility(View.INVISIBLE);
+                            panelContainer.setTranslationY(0f);
+                        }).start();
                 return;
             }
             panelContainer.animate().alpha(0f).scaleX(PANEL_HIDDEN_SCALE).scaleY(PANEL_HIDDEN_SCALE)
@@ -2568,6 +2631,24 @@ final class LyricsLayoutEditController {
             // The list gets what is left of the panel's height budget: the header above it is a
             // fixed-height row, so the panel as a whole stays inside the cap.
             optionsScroll.maxHeightPx = Math.max(0, panelMaxHeightPx() - dp(PANEL_HEADER_DP));
+            if (!sideSheet) {
+                // Phone: one bottom sheet, flush with the bottom edge like the settings sheet. Its
+                // content stops above the toolbar row, which is drawn over the sheet's foot.
+                panelLp.width = Math.min(overlayWidthPx(), dp(640));
+                panelLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                panelLp.leftMargin = 0;
+                panelLp.rightMargin = 0;
+                panelLp.topMargin = 0;
+                panelLp.bottomMargin = 0;
+                SlotRect row = toolbarRowRect();
+                int foot = row != null && row.top > overlayHeightPx() / 2
+                        ? Math.max(0, overlayHeightPx() - row.top) + dp(PANEL_GAP_DP)
+                        : navigationInsetPx() + dp(PANEL_INSET_DP);
+                panelContainer.setPadding(0, 0, 0, foot);
+                optionsScroll.maxHeightPx = Math.max(0, panelMaxHeightPx() - dp(PANEL_HEADER_DP));
+                if (panelContainer.getLayoutParams() != null) panelContainer.setLayoutParams(panelLp);
+                return;
+            }
             if (panelMovedByUser) {
                 if (panelContainer.getHeight() > 0) {
                     // A rotation or unfold can leave the user's position off screen: keep where they
@@ -2610,6 +2691,11 @@ final class LyricsLayoutEditController {
          * and nothing intercepts their events on the way down.
          */
         private void installPanelDrag() {
+            if (!sideSheet) {
+                installSheetPull(panelHeader);
+                if (sheetHandle != null) installSheetPull(sheetHandle);
+                return;
+            }
             int slop = android.view.ViewConfiguration.get(activity).getScaledTouchSlop();
             float[] downRaw = new float[2];
             int[] startPos = new int[2];
@@ -2639,6 +2725,39 @@ final class LyricsLayoutEditController {
                         if (moved[0]) panelMovedByUser = true;
                         draggingPanel = false;
                         return true;
+                    default:
+                        return false;
+                }
+            });
+        }
+
+        private View sheetHandle;
+
+        /** Pulling the bottom sheet's handle or title down closes it; a short pull springs back. */
+        private void installSheetPull(View grip) {
+            int slop = android.view.ViewConfiguration.get(activity).getScaledTouchSlop();
+            float[] downY = new float[1];
+            grip.setOnTouchListener((v, event) -> {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downY[0] = event.getRawY();
+                        panelContainer.animate().cancel();
+                        return true;
+                    case MotionEvent.ACTION_MOVE: {
+                        float dy = event.getRawY() - downY[0];
+                        panelContainer.setTranslationY(dy > 0 ? dy : dy * 0.15f);
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL: {
+                        float dy = event.getRawY() - downY[0];
+                        if (dy > Math.min(panelContainer.getHeight() * 0.25f, dp(140)) && dy > slop) {
+                            hidePanelSheet(true);
+                        } else {
+                            panelContainer.animate().translationY(0f).setDuration(200).start();
+                        }
+                        return true;
+                    }
                     default:
                         return false;
                 }
@@ -2717,7 +2836,7 @@ final class LyricsLayoutEditController {
             refreshBackButton();
         }
 
-        /** Recolors a capture's outline stroke: {@link #ACCENT_COLOR} when it is the current
+        /** Recolors a capture's outline stroke: {@link #accent()} when it is the current
          *  selection, {@link #GRAY_IDLE_COLOR} otherwise - every capturable element shows an outline at
          *  all times now, not just the one currently selected, so it reads as one consistent
          *  selected/unselected visual language across the whole editor. */
@@ -2727,7 +2846,7 @@ final class LyricsLayoutEditController {
             if (!(background instanceof GradientDrawable)) return;
             ((GradientDrawable) background).setStroke(
                     dp(selected ? OUTLINE_SELECTED_DP : OUTLINE_IDLE_DP),
-                    selected ? ACCENT_COLOR : GRAY_IDLE_COLOR);
+                    selected ? accent() : GRAY_IDLE_COLOR);
         }
 
         private String labelFor(Element element) {
@@ -3445,7 +3564,7 @@ final class LyricsLayoutEditController {
             // 1..30 are seconds; 31 is the final Always stop.
             addOption(dragRow(1, 31, timeout == 0 ? 31 : timeout, "", 31,
                     value -> value == 31 ? s("always", "Always")
-                            : value + (value == 1 ? " second" : " seconds"), value -> {
+                            : strings.format(value == 1 ? "layout_editor_second" : "layout_editor_seconds", value == 1 ? "%1$d second" : "%1$d seconds", value), value -> {
                 String stored = com.eza.spicyex.lyrics.LyricsShellSettings
                         .fullscreenControlsValue(value == 31 ? 0 : value);
                 writer.put(Settings.FULLSCREEN_CONTROLS, stored);
@@ -3581,7 +3700,7 @@ final class LyricsLayoutEditController {
             View thumb = new View(activity);
             GradientDrawable thumbBg = new GradientDrawable();
             thumbBg.setShape(GradientDrawable.OVAL);
-            thumbBg.setColor(ACCENT_COLOR);
+            thumbBg.setColor(accent());
             thumb.setBackground(thumbBg);
             int thumbSize = dp(HANDLE_SIZE_DP);
             FrameLayout.LayoutParams thumbLp = new FrameLayout.LayoutParams(
@@ -3726,7 +3845,12 @@ final class LyricsLayoutEditController {
             view.setText(value);
             view.setTextSize(sp);
             view.setTextColor(color);
-            if (bold) view.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            // The panel's typeface (Spotify Mix), as the settings use.
+            java.lang.ref.WeakReference<android.graphics.Typeface> font = com.eza.spicyex.References.beautifulFont;
+            android.graphics.Typeface face = font == null ? null : font.get();
+            if (bold) view.setTypeface(face == null ? android.graphics.Typeface.DEFAULT_BOLD
+                    : android.graphics.Typeface.create(face, android.graphics.Typeface.BOLD));
+            else if (face != null) view.setTypeface(face);
             return view;
         }
 
@@ -3755,9 +3879,9 @@ final class LyricsLayoutEditController {
         private void paintChip(TextView chip, boolean selected) {
             GradientDrawable bg = new GradientDrawable();
             bg.setCornerRadius(dp(10));
-            bg.setColor(selected ? 0x331ED760 : 0x14FFFFFF);
+            bg.setColor(selected ? (accent() & 0x00FFFFFF) | 0x33000000 : 0x14FFFFFF);
             chip.setBackground(bg);
-            chip.setTextColor(selected ? ACCENT_COLOR : TEXT_COLOR);
+            chip.setTextColor(selected ? accent() : TEXT_COLOR);
             // Unselected chips also dim slightly - color alone (white vs. accent) read as too
             // close in weight; a touch of transparency makes the selected one pop more clearly.
             chip.setAlpha(selected ? 1f : 0.72f);
@@ -3906,7 +4030,7 @@ final class LyricsLayoutEditController {
             bracketPaint.setStrokeWidth(dp(3));
             bracketPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
             bracketPaint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
-            bracketPaint.setColor(ACCENT_COLOR);
+            bracketPaint.setColor(accent());
             dashPaint.setStyle(android.graphics.Paint.Style.STROKE);
             dashPaint.setStrokeWidth(dp(2));
             dashPaint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
@@ -3919,7 +4043,7 @@ final class LyricsLayoutEditController {
         void setSelectedState(boolean value) {
             if (isSelected == value) return;
             isSelected = value;
-            bracketPaint.setColor(value ? ACCENT_COLOR : GRAY_IDLE_COLOR);
+            bracketPaint.setColor(value ? accent() : GRAY_IDLE_COLOR);
             bracketPaint.setStrokeWidth(dp(value ? 3 : OUTLINE_IDLE_DP));
             invalidate();
         }
@@ -4004,7 +4128,7 @@ final class LyricsLayoutEditController {
                 postInvalidateOnAnimation();
                 return;
             }
-            paint.setColor(ACCENT_COLOR);
+            paint.setColor(accent());
             paint.setStrokeWidth(dp(OUTLINE_SELECTED_DP));
             ViewGroup host = mountedRowsHostSupplier == null ? null : mountedRowsHostSupplier.get();
             if (host != null) {

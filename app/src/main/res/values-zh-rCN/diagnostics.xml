@@ -32,7 +32,7 @@
     <string name="diagnostic_accept_policy">我接受此政策。</string>
     <string name="diagnostic_included_json">包含的 JSON</string>
     <string name="diagnostic_preview">报告预览</string>
-    <string name="diagnostic_upload">上传</string>
+    <string name="diagnostic_upload">在 GitHub 报告</string>
     <string name="diagnostic_discard">丢弃</string>
     <string name="diagnostic_uploaded">报告已上传</string>
     <string name="diagnostic_report_id">报告 ID</string>
@@ -67,4 +67,6 @@
     <string name="diagnostic_check_features">模块功能</string>
     <string name="diagnostic_check_installation">安装：%1$s · 未检查 Root</string>
     <string name="diagnostic_check_hyperglow">HyperGlow 桥接：%1$s</string>
+    <string name="diagnostic_json_copied">已复制诊断 JSON - 请粘贴到 Issue 中</string>
+    <string name="diagnostic_paste_json">(在此粘贴复制的 JSON)</string>
 </resources>

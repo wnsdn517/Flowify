@@ -91,7 +91,7 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             // everywhere while changing only Spotify's ad AudioTrack.
             new AdMuteController(this, applicationContext).start();
             SpotifyConnectHook.init(applicationContext);
-            SpotifyConnectHook.installPickerButton();
+            ConnectTransfer.install(lpparm.classLoader(), symbols);
             // Connect auto-start + auto-connect fire on Spotify's first resumed activity, not
             // here: at process start Spotify isn't foreground yet, and only a foreground sender
             // can get the player's foreground service past Android 12+'s background-start ban.

@@ -497,7 +497,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private void applyPipAnchor(int areaTop, int areaHeight) {
         int visible = getHeight() - pipCropTopPx;
         if (scrollController == null || areaHeight <= 0 || visible <= 0) return;
-        float wantedY = "Center".equals(config.get(Settings.PIP_FOCUS))
+        // Chosen by the window's shape, no setting: a square or wide window has little height,
+        // so the current line sits in its middle; a tall one keeps the lyrics screen's point.
+        int[] ratio = Settings.pipShapeRatio(config.get(Settings.PIP_SHAPE));
+        boolean shortWindow = ratio[0] >= ratio[1];
+        float wantedY = shortWindow
                 ? areaTop + areaHeight / 2f
                 : pipCropTopPx + baseFocusAnchorFraction() * visible;
         // Never inside the top fade: the current line would be half dissolved.
@@ -851,6 +855,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 .followChip(followChip)
                 .cardMode(cardMode)
                 .show();
+        // Opened from a settings search result: land on the element the setting is edited on.
+        String element = LayoutEditorSettings.consumeRequestedElement();
+        if (element != null) {
+            postDelayed(() -> {
+                LyricsLayoutEditController.EditorHandle editor = layoutEditorHandle;
+                if (editor != null) editor.agentSelect(element, true);
+            }, 450);
+        }
     }
 
     boolean consumeBack() {
@@ -1523,7 +1535,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 activity, frameScheduler, ambientController, host, this::onSettingsClosed,
                 mode -> enterLayoutEditMode(mode == com.eza.spicyex.settings.SettingsPanel.EDITOR_CARD),
                 this::resyncLyricsTiming, TAG);
-        this.settingsDialogController.setOnTryDoubleTap(this::startDoubleTapTrial);
+        this.settingsDialogController.setOnTryDoubleTap(this::startDoubleTapTrialInSettings,
+                this::endDoubleTapTrial, this::previewDoubleTapEffect);
         this.emptyStateController = new LyricsShellEmptyStateController(activity, config, textFactory);
         this.shellLifecycle = new LyricsShellLifecycle(activity, () -> {
             if (consumeShareSheetBack() || consumeLayoutEditorBack()) return;
@@ -5833,8 +5846,114 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         doubleTapTrialBar = bar;
     }
 
-    private void endDoubleTapTrial() {
+    /** The trial while the settings sheet is shrunk below the lyrics: double taps play the
+     *  effect only, and the sheet itself is where the effect is chosen. */
+    void startDoubleTapTrialInSettings() {
+        endDoubleTapTrial();
+        doubleTapTrial = true;
+        if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(true);
+        showDoubleTapFingerHint();
+    }
+
+    /** An effect chip was picked in the sheet: play it once over the lyrics while trying. */
+    void previewDoubleTapEffect() {
+        if (!doubleTapTrial) return;
+        doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
+        doubleTapEffect = config.get(Settings.DOUBLE_TAP_LIKE_EFFECT);
+        playTrialBurst(getWidth() / 2f, getHeight() * 0.3f);
+    }
+
+    private View doubleTapFingerHint;
+
+    /**
+     * The gesture shown, as on the share panel: a finger dot over the lyrics that taps twice -
+     * two presses with a ring going out - then rests, looping until the user double-taps.
+     */
+    private void showDoubleTapFingerHint() {
+        hideDoubleTapFingerHint();
+        View finger = new View(activity);
+        android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
+        dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        dot.setColor(android.graphics.Color.argb(110, 255, 255, 255));
+        dot.setStroke(dp(2), android.graphics.Color.argb(230, 255, 255, 255));
+        finger.setBackground(dot);
+        // One ring per tap, so the first is still spreading while the second goes out.
+        View[] rings = new View[2];
+        FrameLayout hint = new FrameLayout(activity);
+        int size = dp(46);
+        for (int r = 0; r < rings.length; r++) {
+            View ring = new View(activity);
+            android.graphics.drawable.GradientDrawable ringBg = new android.graphics.drawable.GradientDrawable();
+            ringBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            ringBg.setColor(0);
+            ringBg.setStroke(dp(2), android.graphics.Color.argb(210, 255, 255, 255));
+            ring.setBackground(ringBg);
+            ring.setAlpha(0f);
+            hint.addView(ring, new FrameLayout.LayoutParams(size, size, Gravity.CENTER));
+            rings[r] = ring;
+        }
+        hint.addView(finger, new FrameLayout.LayoutParams(size, size, Gravity.CENTER));
+        int box = dp(150);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(box, box, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        lp.topMargin = Math.max(0, Math.round(getHeight() * 0.3f) - box / 2);
+        hint.setClickable(false);
+        hint.setFocusable(false);
+        finger.setAlpha(0f);
+        addView(hint, lp);
+        doubleTapFingerHint = hint;
+        // One loop: the finger fades in (0-220ms), taps at 300 and 560ms - a press and a ring
+        // spreading out over 650ms each - fades out (1350-1650) and rests until 2200, so every
+        // loop starts from nothing instead of jumping back in.
+        final float pass = 2200f;
+        final float[] taps = {300f, 560f};
+        android.animation.ValueAnimator clock = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        clock.setDuration((long) pass);
+        clock.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        clock.setInterpolator(null);
+        clock.addUpdateListener(a -> {
+            float t = a.getAnimatedFraction() * pass;
+            float in = Math.min(1f, t / 220f);
+            float out = t < 1350f ? 0f : Math.min(1f, (t - 1350f) / 300f);
+            float fade = in * (1f - out);
+            float press = 0f;
+            for (int k = 0; k < taps.length; k++) {
+                float local = t - taps[k];
+                if (local >= 0f && local < 200f) {
+                    press = Math.max(press, local < 100f ? local / 100f : 1f - (local - 100f) / 100f);
+                }
+                View ring = rings[k];
+                if (local >= 0f && local < 650f) {
+                    float p = local / 650f;
+                    float ease = 1f - (1f - p) * (1f - p);
+                    ring.setAlpha((1f - p) * 0.9f);
+                    ring.setScaleX(1f + 1.4f * ease);
+                    ring.setScaleY(1f + 1.4f * ease);
+                } else {
+                    ring.setAlpha(0f);
+                }
+            }
+            finger.setAlpha(fade);
+            float scale = 1f - 0.2f * press;
+            finger.setScaleX(scale);
+            finger.setScaleY(scale);
+        });
+        hint.setTag(clock);
+        clock.start();
+    }
+
+    private void hideDoubleTapFingerHint() {
+        View hint = doubleTapFingerHint;
+        doubleTapFingerHint = null;
+        if (hint == null) return;
+        if (hint.getTag() instanceof android.animation.ValueAnimator) {
+            ((android.animation.ValueAnimator) hint.getTag()).cancel();
+        }
+        hint.animate().alpha(0f).setDuration(180).withEndAction(() -> removeView(hint)).start();
+    }
+
+    void endDoubleTapTrial() {
         doubleTapTrial = false;
+        hideDoubleTapFingerHint();
         if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(false);
         View bar = doubleTapTrialBar;
         doubleTapTrialBar = null;
@@ -5854,7 +5973,12 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void likeFromDoubleTap(View source, float x, float y) {
         if (doubleTapTrial) {
-            // Trial: the effect only, no Liked Songs action.
+            // Trial: the effect only, no Liked Songs action. Read live: the effect and mark
+            // can be changed in the settings sheet while the trial runs.
+            doubleTapMark = config.get(Settings.DOUBLE_TAP_LIKE_MARK);
+            doubleTapEffect = config.get(Settings.DOUBLE_TAP_LIKE_EFFECT);
+            // They got it: the demonstration has done its job.
+            hideDoubleTapFingerHint();
             int[] here = new int[2];
             int[] from = new int[2];
             getLocationInWindow(here);
