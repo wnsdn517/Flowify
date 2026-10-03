@@ -17,21 +17,23 @@ import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
 
 /**
- * The like acknowledgement as light gathering into a star - neither a flat symbol nor a 3D
- * object - with the screen answering in layers rather than all being bent alike:
+ * The like acknowledgement as a mark made of light, with the screen answering in layers rather
+ * than all being bent alike:
  *
  * <ul>
- *   <li>The mark: points of light spiral in from round the finger and converge into the shape,
- *       which is made of light only - a bright outline, a hot core, a soft halo and two thin
- *       crossing streaks - drawn additively, so it brightens whatever is under it. It breathes
- *       while held, then comes apart into points of light that drift up and out.</li>
- *   <li>The backdrop (behind the lyrics): bends round the mark like space round a mass - a
- *       gravitational lens, wound up and springing back as the mark ignites - while the Liked
- *       Songs colour spreads out through it as light.</li>
+ *   <li>The mark: a star (or heart) that gives light - white at its heart, the Liked Songs colour
+ *       toward its edge, a fine line of light on its outline and two soft halos that follow its
+ *       shape - drawn additively, so it brightens whatever is under it. It comes on softly,
+ *       settling into place on a spring with almost no bounce and a small turn; one sheen slides
+ *       across it; then it swells a touch and its light fades out.</li>
+ *   <li>The backdrop (behind the lyrics): bends gently round the mark, like space round a mass,
+ *       while the colour spreads out through it as light.</li>
  *   <li>The lyrics: never warped - text bent out of shape reads as a glitch. They catch the
- *       light instead: the lines near the mark brighten with it, nudged a touch aside by its
- *       arrival, and settle as it fades.</li>
+ *       light instead: the lines near the mark brighten with it and settle as it fades.</li>
  * </ul>
+ *
+ * <p>Particles, light streaks, ripples and glassy 3D bodies were all tried and read as busy or
+ * toy-like; this keeps only light and a calm motion.
  *
  * <p>Everything is AGSL (API 33+): the mark is a shader drawn by this view, the backdrop and the
  * lyrics get RenderEffects of their own. Below API 33 a soft glow plays alone. The small form
@@ -41,7 +43,7 @@ import android.view.animation.LinearInterpolator;
  * clears the effects it set) when done.
  */
 public final class LikeBurstView extends View {
-    private static final long DURATION_MS = 1450L;
+    private static final long DURATION_MS = 1250L;
 
     private static final String SHAPES = ""
             + "float dot2(float2 v) { return dot(v, v); }"
@@ -72,11 +74,10 @@ public final class LikeBurstView extends View {
     private static final String MARK_AGSL = ""
             + "uniform float2 center;"
             + "uniform float R;"
+            + "uniform float scale;"
             + "uniform float angle;"
-            + "uniform float t;"
             + "uniform float glow;"
-            + "uniform float exitP;"
-            + "uniform float seed;"
+            + "uniform float sheenPos;"
             + "uniform float heart;"
             + "uniform half3 tint;"
             + SHAPES
@@ -86,49 +87,30 @@ public final class LikeBurstView extends View {
             + "      : sdStar(float2(q.x, -q.y));"
             + "}"
             + "half4 main(float2 p) {"
-            + "  float2 d = (p - center) / R;"
+            + "  if (glow <= 0.001) return half4(0.0);"
+            + "  float2 d = (p - center) / (R * scale);"
+            + "  float c = cos(-angle);"
+            + "  float s = sin(-angle);"
+            + "  float2 q = float2(c * d.x - s * d.y, s * d.x + c * d.y);"
+            + "  float sd = shapeAt(q);"
+            + "  float inside = smoothstep(0.015, -0.015, sd);"
+            + "  float depth = clamp(-sd / 0.45, 0.0, 1.0);"
+            + "  float core = exp(-dot(q, q) * 1.8);"
             + "  float3 white = float3(1.0);"
-            + "  float3 warm = mix(float3(tint), white, 0.55);"
-            + "  float3 col = float3(0.0);"
-            + "  if (glow > 0.001) {"
-            + "    float c = cos(-angle);"
-            + "    float s = sin(-angle);"
-            + "    float2 q = float2(c * d.x - s * d.y, s * d.x + c * d.y);"
-            + "    float sd = shapeAt(q);"
-            + "    float inside = smoothstep(0.02, -0.02, sd);"
-            + "    float edge = exp(-abs(sd) * 16.0);"
-            + "    float halo = exp(-max(sd, 0.0) * 3.2);"
-            + "    float core = exp(-dot(q, q) * 2.6);"
-            + "    col += (white * edge * 0.8 + warm * inside * (0.08 + 0.32 * core)"
-            + "        + float3(tint) * halo * 0.26) * glow;"
-            // Two thin streaks of light crossing the mark, turning slowly.
-            + "    float ra = t * 0.7 + 0.35;"
-            + "    float cr = cos(ra);"
-            + "    float sr = sin(ra);"
-            + "    float2 u = float2(cr * d.x - sr * d.y, sr * d.x + cr * d.y);"
-            + "    float streak = exp(-abs(u.y) * 60.0) * exp(-abs(u.x) * 1.2)"
-            + "        + exp(-abs(u.x) * 60.0) * exp(-abs(u.y) * 1.2);"
-            + "    col += warm * streak * 0.32 * glow;"
-            + "  }"
-            // Points of light: spiralling in to form the mark, drifting up and out as it goes.
-            + "  for (int i = 0; i < 22; i++) {"
-            + "    float fi = float(i);"
-            + "    float h1 = fract(sin(fi * 12.9898 + seed) * 43758.5453);"
-            + "    float h2 = fract(sin(fi * 78.233 + seed) * 12345.678);"
-            + "    float g = clamp((t - h1 * 0.08) / 0.34, 0.0, 1.0);"
-            + "    float ge = g * g * (3.0 - 2.0 * g);"
-            + "    float r = mix(2.4 + h2 * 1.4, 0.2 + 0.6 * h1, ge);"
-            + "    float aa = fi * 2.39996 + seed + (1.0 - ge) * 2.4;"
-            + "    r += exitP * (1.2 + 1.6 * h2);"
-            + "    aa += exitP * (0.6 + h1);"
-            + "    float2 mp = float2(cos(aa), sin(aa)) * r + float2(0.0, -exitP * (1.0 + h1));"
-            + "    float sz = 0.045 + 0.05 * h2;"
-            + "    float vis = smoothstep(0.0, 0.15, g) * (1.0 - 0.78 * ge * (1.0 - exitP))"
-            + "        * (1.0 - exitP * exitP);"
-            + "    float2 dm = d - mp;"
-            + "    col += mix(float3(tint), white, 0.6) * exp(-dot(dm, dm) / (sz * sz)) * vis * 0.9;"
-            + "  }"
-            + "  col = clamp(col, 0.0, 1.0);"
+            + "  float3 tintC = float3(tint);"
+            // The body gives light: white at the heart, the like colour toward the edge.
+            + "  float3 body = mix(tintC, white, 0.25 + 0.6 * core) * (0.55 + 0.35 * depth);"
+            // A fine line of light on the outline, and two halos that follow the shape.
+            + "  float rim = exp(-abs(sd) * 22.0);"
+            + "  float halo = exp(-max(sd, 0.0) * 4.0);"
+            + "  float halo2 = exp(-max(sd, 0.0) * 1.4);"
+            // One sheen passing over it, as light slides across.
+            + "  float z = (q.x * 0.8 - q.y * 0.6 - sheenPos) * 4.0;"
+            + "  float sheen = exp(-z * z) * inside;"
+            + "  float3 col = body * inside + white * rim * 0.45"
+            + "      + mix(tintC, white, 0.35) * halo * 0.35 + tintC * halo2 * 0.12"
+            + "      + white * sheen * 0.35;"
+            + "  col = clamp(col * glow, 0.0, 1.0);"
             + "  return half4(half3(col), half(max(col.r, max(col.g, col.b))));"
             + "}";
 
@@ -236,7 +218,6 @@ public final class LikeBurstView extends View {
                 android.graphics.RuntimeShader mark = new android.graphics.RuntimeShader(MARK_AGSL);
                 mark.setFloatUniform("tint", tr, tg, tb);
                 mark.setFloatUniform("heart", star ? 0f : 1f);
-                mark.setFloatUniform("seed", (float) (Math.random() * 100.0));
                 mark.setFloatUniform("center", x, y);
                 mark.setFloatUniform("R", radius);
                 markShader = mark;
@@ -346,41 +327,55 @@ public final class LikeBurstView extends View {
 
     // -- motion ------------------------------------------------------------------------------
 
-    /** The mark lights as the points of light arrive, flares a little, then holds. */
+    /** The light comes on quickly and softly. */
     private float ignite() {
-        float in = smooth(phase(t, 0.24f, 0.4f));
-        float flare = (float) Math.exp(-9.0 * Math.max(0f, t - 0.38f)) * phase(t, 0.3f, 0.38f);
-        return in + 0.35f * flare;
+        return smooth(phase(t, 0f, 0.18f));
     }
 
     private float exit() {
-        return smooth(phase(t, 0.7f, 1f));
+        return smooth(phase(t, 0.64f, 1f));
     }
 
-    /** Light of the mark: ignites, breathes faintly while held, fades as it comes apart. */
+    /** Light of the mark: comes on, holds, fades as it leaves. */
     private float glow() {
-        float breathe = 1f + 0.06f * (float) Math.sin(t * 14.0);
-        return ignite() * breathe * (1f - exit());
+        return ignite() * (1f - exit());
     }
 
+    /** Settles into place on a spring with almost no bounce, swelling a touch as it leaves. */
+    private float scale() {
+        return 0.72f + 0.28f * spring(phase(t, 0f, 0.5f), 0.8, 11.0) + 0.1f * exit();
+    }
+
+    /** A small, unhurried turn into place. */
     private float angleRadians() {
-        float settle = (star ? -0.35f : -0.12f) * (1f - smooth(phase(t, 0.2f, 0.7f)));
-        return settle + 0.08f * exit();
+        return (star ? -0.16f : -0.06f) * (1f - smooth(phase(t, 0f, 0.55f)));
     }
 
-    /** A damped breath, +1 first: the backdrop's shock as the mark ignites. */
+    /** Where the passing sheen is, across the mark (in units of its radius). */
+    private float sheenPos() {
+        return -1.8f + 3.6f * smooth(phase(t, 0.16f, 0.58f));
+    }
+
+    /** A soft breath, +1 first: the backdrop answering as the light comes on. */
     private float pulse() {
-        float p = phase(t, 0.3f, 0.85f);
+        float p = phase(t, 0.04f, 0.7f);
         if (p <= 0f || p >= 1f) return 0f;
-        return (float) (Math.exp(-4.5 * p) * Math.sin(p * 16.0 + 0.4));
+        return (float) (Math.exp(-4.0 * p) * Math.sin(p * 12.0 + 0.4));
     }
 
-    /** Space wound round the mark as it ignites, springing back past zero; a turn as it melts. */
+    /** A gentle twist of the backdrop round the mark, springing back. */
     private float swirl() {
-        float p = phase(t, 0.24f, 0.95f);
+        float p = phase(t, 0.02f, 0.9f);
         float wind = p <= 0f || p >= 1f ? 0f
-                : (float) (2.2 * Math.exp(-5.0 * p) * Math.cos(p * 9.0)) * smooth(phase(t, 0.24f, 0.32f));
-        return (star ? 1f : -1f) * (wind + 0.7f * exit());
+                : (float) (0.9 * Math.exp(-4.5 * p) * Math.cos(p * 8.0)) * smooth(phase(t, 0.02f, 0.12f));
+        return (star ? 1f : -1f) * (wind + 0.25f * exit());
+    }
+
+    /** A spring from 0 to 1 over p in [0, 1]; damping/omega set its bounce and pace. */
+    private static float spring(float p, double damping, double omega) {
+        double decay = Math.exp(-damping * omega * p);
+        double wd = omega * Math.sqrt(1 - damping * damping);
+        return (float) (1 - decay * (Math.cos(wd * p) + damping * omega / wd * Math.sin(wd * p)));
     }
 
     // -- drawing -----------------------------------------------------------------------------
@@ -394,10 +389,10 @@ public final class LikeBurstView extends View {
             s.setFloatUniform("center", cx - backdropOffset[0], cy - backdropOffset[1]);
             s.setFloatUniform("bounds", backdropView.getWidth(), backdropView.getHeight());
             s.setFloatUniform("lensR", radius * (1.5f + 0.45f * pulse));
-            s.setFloatUniform("lens", lit * (0.75f + 0.35f * pulse));
+            s.setFloatUniform("lens", lit * (0.5f + 0.25f * pulse));
             s.setFloatUniform("swirl", swirl());
             // The colour spreads out from the mark as light, wide and soft, then fades.
-            float spread = phase(t, 0.26f, 1f);
+            float spread = phase(t, 0.04f, 1f);
             s.setFloatUniform("washR", radius * (1.2f + 6f * (1f - (1f - spread) * (1f - spread))));
             s.setFloatUniform("wash", lit * (1f - 0.6f * spread));
             backdropView.setRenderEffect(
@@ -426,9 +421,9 @@ public final class LikeBurstView extends View {
     @Override protected void onDraw(Canvas canvas) {
         if (markShader != null && Build.VERSION.SDK_INT >= 33) {
             android.graphics.RuntimeShader s = (android.graphics.RuntimeShader) markShader;
-            s.setFloatUniform("t", t);
             s.setFloatUniform("glow", glow());
-            s.setFloatUniform("exitP", exit());
+            s.setFloatUniform("scale", scale());
+            s.setFloatUniform("sheenPos", sheenPos());
             s.setFloatUniform("angle", angleRadians());
             float reach = radius * 5f;
             canvas.drawRect(cx - reach, cy - reach, cx + reach, cy + reach, markPaint);
