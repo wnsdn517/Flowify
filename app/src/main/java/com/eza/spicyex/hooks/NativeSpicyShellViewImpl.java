@@ -1332,12 +1332,13 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float dt = deltaTimeSeconds <= 0d ? (1f / 60f) : (float) Math.max(0.001d, Math.min(0.08d, deltaTimeSeconds));
         // Order matters: the reveal publishes this frame's alpha factor, then updateState() runs
         // the renderer, which reads it. Stepping it after would show every row one frame stale.
-        // Lines still growing back after the scroll stopped finish on the frame clock.
-        if (this.edgeScaleSettling) applyEdgeRowScale(dt);
         stepLoadEntrance(dt);
         stepRowCascade(dt);
         stepScrollSpring(dt);
         updateState(dt);
+        // Last, so that nothing earlier in the frame (a cascade ending resets its rows' scale)
+        // leaves a row at the wrong size for the frame that is drawn.
+        applyEdgeRowScale();
     });
 
     /** Not in a picture-in-picture host. */
@@ -2910,11 +2911,13 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             current = target <= current ? target : Math.min(target, current + grow);
             if (current < target) edgeScaleSettling = true;
             edgeScales.put(row, current);
-            if (Math.abs(row.getScaleX() - current) < 0.002f) continue;
+            Float pressed = pressScales.get(row);
+            float applied = pressed == null ? current : current * pressed;
+            if (Math.abs(row.getScaleX() - applied) < 0.002f) continue;
             row.setPivotX(row.getWidth() * 0.5f);
             row.setPivotY(height * 0.5f);
-            row.setScaleX(current);
-            row.setScaleY(current);
+            row.setScaleX(applied);
+            row.setScaleY(applied);
         }
     }
 
@@ -3650,11 +3653,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private final Runnable shrinkPressedLyric = () -> {
         View row = pressedLyricRow;
         if (row == null || !row.isAttachedToWindow()) return;
-        // Held down, the line sinks a little, as in Apple Music, until the sheet opens. (No
-        // cancel(): a new scale animation replaces only the scale, not the row's other motion.)
-        row.animate().scaleX(0.94f).scaleY(0.94f)
-                .setDuration(Math.max(160, android.view.ViewConfiguration.getLongPressTimeout() - 60))
-                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
+        // Held down, the line sinks a little, as in Apple Music, until the sheet opens.
+        animatePress(row, 0.94f,
+                Math.max(160, android.view.ViewConfiguration.getLongPressTimeout() - 60),
+                new android.view.animation.DecelerateInterpolator(1.6f));
     };
 
     /**
@@ -3699,8 +3701,38 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         pressedLyricRow = null;
         if (row == null) return;
         row.removeCallbacks(shrinkPressedLyric);
-        row.animate().scaleX(1f).scaleY(1f).setDuration(460)
-                .setInterpolator(new android.view.animation.OvershootInterpolator(2.2f)).start();
+        animatePress(row, 1f, 460, new android.view.animation.OvershootInterpolator(2.2f));
+    }
+
+    /** The press feedback's own factor on a row's size. It is multiplied with the edge scale in
+     *  applyEdgeRowScale rather than animated on the view's scale directly: two writers on one
+     *  property overrode each other, and the lines jumped whenever a finger touched the list. */
+    private final java.util.WeakHashMap<View, Float> pressScales = new java.util.WeakHashMap<>();
+    private final java.util.WeakHashMap<View, android.animation.ValueAnimator> pressAnimators =
+            new java.util.WeakHashMap<>();
+
+    private void animatePress(View row, float to, long durationMs,
+                              android.animation.TimeInterpolator interpolator) {
+        android.animation.ValueAnimator running = pressAnimators.remove(row);
+        if (running != null) running.cancel();
+        Float from = pressScales.get(row);
+        android.animation.ValueAnimator animator = android.animation.ValueAnimator.ofFloat(
+                from == null ? 1f : from, to);
+        animator.setDuration(durationMs);
+        animator.setInterpolator(interpolator);
+        animator.addUpdateListener(a -> {
+            pressScales.put(row, (Float) a.getAnimatedValue());
+            applyEdgeRowScale(0f);
+        });
+        animator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator animation) {
+                if (pressAnimators.get(row) == animation) pressAnimators.remove(row);
+                if (to >= 1f) pressScales.remove(row);
+                applyEdgeRowScale(0f);
+            }
+        });
+        pressAnimators.put(row, animator);
+        animator.start();
     }
 
     /**
