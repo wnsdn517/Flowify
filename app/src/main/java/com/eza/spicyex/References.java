@@ -26,8 +26,10 @@ import java.util.regex.Pattern;
 
 public class References {
     private static WeakReference<Activity> currentActivity = new WeakReference<>(null);
-    public static WeakReference<Object> playerState = new WeakReference<>(null);
-    public static WeakReference<Object> playerStateWrapper = new WeakReference<>(null);
+    // Volatile: Spotify can build PlayerState off the main thread (9.1.88's
+    // observe_player_state_on_computation), while the lyrics frame loop reads it on the UI thread.
+    public static volatile WeakReference<Object> playerState = new WeakReference<>(null);
+    public static volatile WeakReference<Object> playerStateWrapper = new WeakReference<>(null);
     /** Strong playback snapshots keep background track detection alive while Spotify UI is idle. */
     public static volatile Object playerStateStrong;
     /** Artist of the most recently read track, for features that need more than the name. */

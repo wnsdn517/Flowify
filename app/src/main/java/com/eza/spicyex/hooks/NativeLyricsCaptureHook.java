@@ -413,7 +413,7 @@ final class NativeLyricsCaptureHook {
         for (Method method : cls.getDeclaredMethods()) {
             int modifiers = method.getModifiers();
             if (Modifier.isAbstract(modifiers) || Modifier.isNative(modifiers)) continue;
-            if (method.getReturnType() == Void.TYPE) continue;
+            if (!canReturnLyrics(method.getReturnType())) continue;
             if (methodHooks >= 18) break;
             try {
                 method.setAccessible(true);
@@ -437,6 +437,23 @@ final class NativeLyricsCaptureHook {
                 + " native lyrics capture hook installed " + className
                 + " methods=" + methodHooks
                 + " source=" + sourceTag);
+    }
+
+    /**
+     * Whether a method's result could be (or own) Spotify's lyrics. The string probes resolve
+     * obfuscated classes that R8 has merged with unrelated code - on 9.1.88 the
+     * "INSERT OR REPLACE INTO lyrics_entities" class has accessors returning String, Boolean and
+     * the main activity - and each hooked accessor paid a callback and a parse attempt on every
+     * call. Plain values and framework objects never carry lyrics, so they are not hooked;
+     * collections still are (their owner is re-read).
+     */
+    private static boolean canReturnLyrics(Class<?> type) {
+        if (type.isPrimitive() || type.isArray()) return false;
+        if (java.util.Collection.class.isAssignableFrom(type)) return true;
+        String name = type.getName();
+        if (type == Object.class) return true;
+        return !(name.startsWith("java.") || name.startsWith("android.")
+                || name.startsWith("androidx.") || name.startsWith("kotlin."));
     }
 
     private static boolean isNativeLyricsClassName(String name) {
