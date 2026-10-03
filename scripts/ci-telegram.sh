@@ -18,7 +18,7 @@ subject=$(git log -1 --pretty=%s | esc)
 author=$(git log -1 --pretty=%an | esc)
 repo_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
 
-caption="<b>🌶 Spicy EX CI build</b>
+caption="<b>Spicy EX CI build</b>
 
 <b>Version</b>  <code>${version}</code> (${code})
 <b>Branch</b>  <code>${GITHUB_REF_NAME}</code>
