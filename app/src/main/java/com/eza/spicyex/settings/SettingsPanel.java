@@ -930,6 +930,12 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         personRow(people, uiStrings.get("settings_about_original", "Original developer"), "amarinne");
         rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_source", "Source code on GitHub"),
                 v -> openUrl("https://github.com/" + FORK_REPO));
+        rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_announcements", "Announcements"),
+                v -> openUrl("https://t.me/spicy_ex"));
+        rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_discussion", "Discussion"),
+                v -> openUrl("https://t.me/spicy_ex_discussion"));
+        rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_ci_channel", "CI builds"),
+                v -> openUrl("https://t.me/spicy_ex_ci"));
         TextView latest = rows.infoRow(people, uiStrings.get("settings_about_latest", "Latest on GitHub"),
                 uiStrings.get("settings_about_checking", "Checking…"));
         View latestRow = (View) latest.getParent();

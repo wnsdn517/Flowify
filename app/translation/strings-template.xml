@@ -908,4 +908,8 @@
     <string name="lyrics_device_phone">This phone</string>
     <string name="lyrics_device_other">Another device</string>
     <string name="lyrics_device_now_playing_on">Now playing on</string>
+    <string name="settings_about_announcements">Announcements</string>
+    <string name="settings_about_discussion">Discussion</string>
+    <string name="settings_about_ci_channel">CI builds</string>
+    <string name="settings_source_list_title">Sources</string>
 </resources>

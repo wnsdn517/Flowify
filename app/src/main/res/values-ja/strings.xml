@@ -651,7 +651,6 @@
     <string name="search_terms_notification">通知, ロック画面</string>
     <string name="settings_source_track_title">再生中の曲の歌詞</string>
     <string name="settings_source_track_idle">再生中の曲はありません</string>
-    <string name="settings_source_list_title">歌詞の取得元</string>
     <string name="settings_cache_title">保存された歌詞</string>
     <string name="settings_cache_more">もっと見る</string>
     <string name="settings_cache_usage">%1$s / %2$s</string>
@@ -691,6 +690,9 @@
     <string name="settings_about_developer">開発者</string>
     <string name="settings_about_original">オリジナル開発者</string>
     <string name="settings_about_source">GitHubでソースを見る</string>
+    <string name="settings_about_announcements">お知らせ</string>
+    <string name="settings_about_discussion">ディスカッション</string>
+    <string name="settings_about_ci_channel">CIビルド</string>
     <string name="settings_about_latest">GitHubの最新版</string>
     <string name="settings_about_checking">確認中…</string>
     <string name="settings_about_update">アップデートあり</string>
@@ -820,4 +822,5 @@
     <string name="settings_search_lyrics_long_press_share">歌詞画像を共有, ストーリー, インスタグラム, カード</string>
     <string name="settings_search_lyric_tap_seek_mode">行をタップしてジャンプ, この行から再生</string>
     <string name="settings_search_lyrics_status_bar_hidden_mode">時計とバッテリーを隠す, フルスクリーン, 通知バー</string>
+    <string name="settings_source_list_title">歌詞の取得元</string>
 </resources>

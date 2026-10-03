@@ -696,7 +696,6 @@
     <string name="settings_search_lyrics_status_bar_hidden_mode">시계 배터리 숨기기, 전체화면, 상단바</string>
     <string name="settings_source_track_title">현재 곡 가사</string>
     <string name="settings_source_track_idle">재생 중인 곡 없음</string>
-    <string name="settings_source_list_title">가사 출처</string>
     <string name="settings_cache_title">저장된 가사</string>
     <string name="settings_cache_more">더보기</string>
     <string name="settings_cache_usage">%1$s / %2$s</string>
@@ -765,6 +764,9 @@
     <string name="settings_about_developer">개발자</string>
     <string name="settings_about_original">원작 개발자</string>
     <string name="settings_about_source">GitHub에서 소스 보기</string>
+    <string name="settings_about_announcements">공지 채널</string>
+    <string name="settings_about_discussion">토론방</string>
+    <string name="settings_about_ci_channel">CI 빌드 채널</string>
     <string name="settings_about_latest">GitHub 최신 버전</string>
     <string name="settings_about_checking">확인 중…</string>
     <string name="settings_about_update">업데이트 있음</string>
@@ -820,4 +822,5 @@
     <string name="settings_layout_editor_done">완료</string>
     <string name="settings_layout_editor_follow_chip_look">버튼 모양</string>
     <string name="settings_layout_editor_font_pick_file">파일 선택…</string>
+    <string name="settings_source_list_title">가사 출처</string>
 </resources>
