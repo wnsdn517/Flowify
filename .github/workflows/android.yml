@@ -5,6 +5,17 @@ name: CI (debug + release APK)
 on:
   push:
     branches: [main]
+    # Skip the build (and the Telegram post) when nothing that affects the APK changed - e.g. the
+    # telegram-bot/ worker or docs. The job won't even queue; a path outside this list won't trigger it.
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
 
 jobs:

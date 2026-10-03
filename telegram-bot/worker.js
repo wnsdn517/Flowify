@@ -293,12 +293,13 @@ export default {
     const update = await req.json();
 
     const cq = update.callback_query;
+    if (cq) console.log("callback_query", cq.data, "from", cq.from?.id, cq.from?.username);
     if (cq?.data?.startsWith("fr:")) {
-      ctx.waitUntil(fileIssue(env, cq));
+      ctx.waitUntil(fileIssue(env, cq).catch((e) => console.error("fileIssue error", e.message, e.stack)));
       return new Response("ok");
     }
     if (cq?.data?.startsWith("full:")) {
-      ctx.waitUntil(sendFullNotes(env, cq, cq.data.slice("full:".length)));
+      ctx.waitUntil(sendFullNotes(env, cq, cq.data.slice("full:".length)).catch((e) => console.error("sendFullNotes error", e.message, e.stack)));
       return new Response("ok");
     }
 
