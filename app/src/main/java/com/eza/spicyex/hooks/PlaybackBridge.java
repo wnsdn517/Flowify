@@ -265,13 +265,22 @@ final class PlaybackBridge {
         return controller;
     }
 
-    /** The position being heard: what Spotify reports, less the output path's latency while it
-     *  plays locally (see AudioOutputLatency). */
+    /** The position being heard while Spotify plays locally: counted in the audio frames
+     *  actually presented since the current PlayerState (AudioOutputLatency#heardPositionMs),
+     *  or else what Spotify reports less the output path's latency. */
     long readBestMeasuredProgressMs(SpotifyTrack track, boolean playing) {
+        reportedFromPlayerState = false;
         long reported = readReportedProgressMs(track, playing);
         if (reported <= 0 || !playing || outputLatency == null) return reported;
+        if (reportedFromPlayerState && !parsedBuffering && Math.abs(parsedSpeed - 1d) < 0.001d) {
+            long heard = outputLatency.heardPositionMs(
+                    parsedState, parsedBasePos, parsedTimestamp, reported);
+            if (heard >= 0) return heard;
+        }
         return Math.max(0, reported - outputLatency.latencyMs());
     }
+
+    private boolean reportedFromPlayerState;
 
     private long readReportedProgressMs(SpotifyTrack track, boolean playing) {
         long now = SystemClock.elapsedRealtime();
@@ -284,7 +293,10 @@ final class PlaybackBridge {
         }
 
         long playerStateProgress = readPlayerStateProgressMs(playing);
-        if (playerStateProgress >= 0) return playerStateProgress;
+        if (playerStateProgress >= 0) {
+            reportedFromPlayerState = parsedTimestamp > 0;
+            return playerStateProgress;
+        }
 
         if (track != null && track.position >= 0) {
             long wallNow = System.currentTimeMillis();
