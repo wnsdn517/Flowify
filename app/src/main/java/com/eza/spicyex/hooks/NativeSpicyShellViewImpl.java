@@ -3052,9 +3052,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  off. A line shrinks the moment it nears the edge but grows back at a fixed speed, so in a
      *  very fast scroll the lines streaming in stay small, and a little more of them shows. */
     /** Where along the way from the focus line to the screen edge the shrinking starts. */
-    private static final float EDGE_SCALE_START = 0.4f;
-    private static final float EDGE_SCALE_MIN = 0.72f;
-    private static final float EDGE_SCALE_GROW_PER_SEC = 0.55f;
+    private static final float EDGE_SCALE_START = 0.15f;
+    private static final float EDGE_SCALE_MIN = 0.7f;
+    private static final float EDGE_SCALE_GROW_PER_SEC = 1.8f;
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
     private long edgeScaleAtMs;
     private boolean edgeScaleSettling;
@@ -3072,8 +3072,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         int viewport = lyricsScroll.getHeight();
         if (viewport <= 0) return;
         // Measured from the focus line, not the screen edge: the lines dim away well before the
-        // edge, so that is where they have to be getting smaller too. Above and below the focus
-        // the distance is taken to its own side's edge.
+        // edge, so that is where they have to be getting smaller too.
         float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
         int scrollY = lyricsScroll.getScrollY();
         int hostTop = 0;
@@ -3087,8 +3086,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             int height = row.getHeight();
             if (height <= 0) continue;
             float center = hostTop + row.getTop() + height / 2f - scrollY;
-            float reach = center < anchor ? anchor : viewport - anchor;
-            float away = Math.abs(center - anchor) / Math.max(1f, reach);
+            // Only the lines above the focus recede; the ones below keep their size.
+            float away = center < anchor ? (anchor - center) / Math.max(1f, anchor) : 0f;
             float f = Math.max(0f, Math.min(1f, (away - EDGE_SCALE_START) / (1f - EDGE_SCALE_START)));
             f = f * f * (3f - 2f * f);
             float target = 1f - (1f - EDGE_SCALE_MIN) * f;
