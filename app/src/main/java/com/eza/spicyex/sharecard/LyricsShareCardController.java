@@ -769,7 +769,7 @@ public final class LyricsShareCardController {
         chip.setBackground(bg);
         chip.setElevation(dp(30));
         // A short next line used to leave the chip narrower than its own instruction.
-        chip.setMinimumWidth(Math.min(dp(190), cardHost.getWidth()));
+        chip.setMinimumWidth(Math.max(dp(190), Math.min(dp(280), cardHost.getWidth() - dp(40))));
         ImageView arrow = new ImageView(activity);
         arrow.setImageDrawable(new ShareCardIcon(ShareCardIcon.Kind.ARROW_UP, Color.WHITE));
         LinearLayout.LayoutParams arrowLp = new LinearLayout.LayoutParams(dp(18), dp(18));
@@ -798,7 +798,11 @@ public final class LyricsShareCardController {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         previewLp.topMargin = dp(2);
         texts.addView(preview, previewLp);
-        chip.addView(texts);
+        // Always the same width, text centred in it: a short next line no longer shrinks the chip
+        // into a small pill that reads as cut off.
+        texts.setGravity(Gravity.CENTER_HORIZONTAL);
+        chip.setGravity(Gravity.CENTER);
+        chip.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         int[] hostAt = new int[2];
         int[] cardAt = new int[2];
         host.getLocationOnScreen(hostAt);
