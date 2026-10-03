@@ -2863,11 +2863,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  size toward the middle - the scroll reads as a list receding rather than rows being cut
      *  off. A line shrinks the moment it nears the edge but grows back at a fixed speed, so in a
      *  very fast scroll the lines streaming in stay small, and a little more of them shows. */
-    /** Height of the stretch just inside the lyrics area's top (the header / fade) and bottom edge,
-     *  where lines shrink: full size at its inner end, smallest at the edge itself, where they
-     *  stop being visible. Everything further in keeps its size. */
-    private static final int EDGE_SCALE_ZONE_DP = 120;
-    private static final float EDGE_SCALE_MIN = 0.7f;
+    /** Height of the stretch just inside the lyrics area's top and bottom edge where a line
+     *  shrinks: full size until its outer edge enters it, smallest once that edge reaches the
+     *  area's edge and the line starts leaving. Everything further in keeps its size. */
+    private static final int EDGE_SCALE_ZONE_DP = 72;
+    private static final float EDGE_SCALE_MIN = 0.92f;
     private static final float EDGE_SCALE_GROW_PER_SEC = 1.8f;
     private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
     private long edgeScaleAtMs;
@@ -2887,11 +2887,13 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (viewport <= 0) return;
         // Measured from the edge where lines stop being visible (under the header at the top,
         // the screen's bottom), not from the focus line.
-        float zone = Math.max(1f, Math.min(dp(EDGE_SCALE_ZONE_DP), viewport * 0.3f));
+        float zone = Math.max(1f, Math.min(dp(EDGE_SCALE_ZONE_DP), viewport * 0.15f));
         float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
         int scrollY = lyricsScroll.getScrollY();
+        // Up to the scroll view itself: lyricsColumn sits at the scroll's (large, centring) top
+        // padding, and leaving that out put every line that far above where it really is.
         int hostTop = 0;
-        for (View v = mountedRowsHost; v != null && v != lyricsColumn; ) {
+        for (View v = mountedRowsHost; v != null && v != lyricsScroll; ) {
             hostTop += v.getTop();
             v = v.getParent() instanceof View ? (View) v.getParent() : null;
         }
@@ -2900,10 +2902,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             View row = mountedRowsHost.getChildAt(i);
             int height = row.getHeight();
             if (height <= 0) continue;
-            float center = hostTop + row.getTop() + height / 2f - scrollY;
-            // How deep into the edge zone this line is, on its own side of the focus: 0 at the
-            // zone's inner end, 1 at (or past) the edge itself.
-            float toEdge = center < anchor ? center : viewport - center;
+            float top = hostTop + row.getTop() - scrollY;
+            float center = top + height / 2f;
+            // How deep the line's outer edge is into the edge zone, on its own side of the focus:
+            // 0 at the zone's inner end, 1 once it touches (or passes) the area's edge.
+            float toEdge = center < anchor ? top : viewport - (top + height);
             float f = Math.max(0f, Math.min(1f, 1f - toEdge / zone));
             f = f * f * (3f - 2f * f);
             float target = 1f - (1f - EDGE_SCALE_MIN) * f;
