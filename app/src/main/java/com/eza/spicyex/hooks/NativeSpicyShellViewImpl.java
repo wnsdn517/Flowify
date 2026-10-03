@@ -2859,28 +2859,25 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 document.appliedLines, anchor, NativeRuntime.LYRIC_WINDOW_EDGE_BUFFER);
     }
 
-    /** Lines near the top and bottom edge are slightly smaller as they start leaving the lyrics
-     *  area - the scroll reads as a list receding rather than rows being cut off. The faster the
-     *  list moves (either way), the further in the effect reaches and the deeper it goes; it
-     *  eases back as the scroll slows. Shrinking and growing follow the target at the same pace. */
-    /** How close to the area's top or bottom edge a line's outer edge comes, at rest, before it
-     *  starts shrinking. It is smallest once it is half out, so the shrink happens on the edge
-     *  itself, as the line crosses it. Everything further in keeps its size. */
-    private static final int EDGE_SCALE_ZONE_DP = 16;
-    /** How much further in the zone reaches at full scroll speed, as a multiple of the above. */
-    private static final float EDGE_SCALE_ZONE_SPEED_BOOST = 0.5f;
-    private static final float EDGE_SCALE_MIN = 0.97f;
-    private static final float EDGE_SCALE_MIN_AT_SPEED = 0.95f;
+    /** Lines leaving the lyrics area dissolve into the background at its top and bottom edge
+     *  instead of being cut off or shrinking: a soft alpha mask on the scroll view itself
+     *  (ElasticScrollView#setEdgeFade), so it applies per pixel - to each visual line, including
+     *  each line of a lyric that wraps - and only where a line actually meets the edge. The
+     *  faster the list moves (either way) the longer the fade reaches; it eases back as the
+     *  scroll slows. */
+    private static final int EDGE_FADE_DP = 40;
+    /** How much longer the fade gets at full scroll speed, as a multiple of the above. */
+    private static final float EDGE_FADE_SPEED_BOOST = 0.8f;
     /** Scroll speeds below this read as resting (an auto-follow step); full effect at the max. */
     private static final int EDGE_SCALE_SPEED_FLOOR_DP_PER_SEC = 500;
     private static final int EDGE_SCALE_SPEED_MAX_DP_PER_SEC = 4000;
-    /** Time constant of a line's size following its target, both directions. */
-    private static final float EDGE_SCALE_EASE_SEC = 0.09f;
-    private final java.util.WeakHashMap<View, Float> edgeScales = new java.util.WeakHashMap<>();
+    /** Time constant of the fade length following the scroll speed, both directions. */
+    private static final float EDGE_SCALE_EASE_SEC = 0.12f;
     private long edgeScaleAtMs;
     private boolean edgeScaleSettling;
     private int edgeScaleLastScrollY = Integer.MIN_VALUE;
     private float edgeScaleSpeed;
+    private float edgeFadePx = -1f;
 
     private void applyEdgeRowScale() {
         long now = SystemClock.uptimeMillis();
@@ -2891,11 +2888,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void applyEdgeRowScale(float dt) {
         edgeScaleSettling = false;
-        if (mountedRowsHost == null || lyricsScroll == null || lyricsColumn == null) return;
+        if (mountedRowsHost == null || lyricsScroll == null) return;
         int viewport = lyricsScroll.getHeight();
         if (viewport <= 0) return;
-        // Measured from the edge where lines stop being visible (under the header at the top,
-        // the screen's bottom), not from the focus line.
         int scrollY = lyricsScroll.getScrollY();
         // Sampled once a frame at most: the scroll listener also calls in between, and a few
         // pixels over a millisecond or two read as a fling.
@@ -2903,7 +2898,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             float instant = edgeScaleLastScrollY == Integer.MIN_VALUE
                     ? 0f : Math.abs(scrollY - edgeScaleLastScrollY) / dt;
             edgeScaleLastScrollY = scrollY;
-            // Rises quickly with a fling, falls away a little slower so the lines settle softly.
+            // Rises quickly with a fling, falls away a little slower so the edge settles softly.
             float k = instant > edgeScaleSpeed ? 0.5f : 0.15f;
             edgeScaleSpeed += (instant - edgeScaleSpeed) * k;
         }
@@ -2911,47 +2906,24 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float s = Math.max(0f, Math.min(1f,
                 (edgeScaleSpeed - floor) / Math.max(1f, dp(EDGE_SCALE_SPEED_MAX_DP_PER_SEC) - floor)));
         s = s * (2f - s);
-        float zone = Math.max(1f, Math.min(dp(EDGE_SCALE_ZONE_DP) * (1f + EDGE_SCALE_ZONE_SPEED_BOOST * s),
-                viewport * 0.05f));
-        float minScale = EDGE_SCALE_MIN + (EDGE_SCALE_MIN_AT_SPEED - EDGE_SCALE_MIN) * s;
-        float anchor = Math.max(0.05f, Math.min(0.95f, resolveFocusAnchorFraction())) * viewport;
-        // Keep frames coming until the speed has died down, or the lines stay at a fling's size.
-        if (s > 0f) edgeScaleSettling = true;
-        // No time passed (a press step recomposing): sizes hold, only the press factor changes.
+        float target = Math.min(dp(EDGE_FADE_DP) * (1f + EDGE_FADE_SPEED_BOOST * s), viewport * 0.15f);
         float ease = dt <= 0f ? 0f : 1f - (float) Math.exp(-dt / EDGE_SCALE_EASE_SEC);
-        // Up to the scroll view itself: lyricsColumn sits at the scroll's (large, centring) top
-        // padding, and leaving that out put every line that far above where it really is.
-        int hostTop = 0;
-        for (View v = mountedRowsHost; v != null && v != lyricsScroll; ) {
-            hostTop += v.getTop();
-            v = v.getParent() instanceof View ? (View) v.getParent() : null;
+        edgeFadePx = edgeFadePx < 0f ? target : edgeFadePx + (target - edgeFadePx) * ease;
+        if (Math.abs(target - edgeFadePx) < 0.5f) edgeFadePx = target;
+        // Keep frames coming until the speed has died down and the fade has settled.
+        if (s > 0f || edgeFadePx != target) edgeScaleSettling = true;
+        if (lyricsScroll instanceof com.eza.spicyex.lyrics.ElasticScrollView) {
+            int px = Math.round(edgeFadePx);
+            ((com.eza.spicyex.lyrics.ElasticScrollView) lyricsScroll).setEdgeFade(px, px);
         }
+        // Rows keep their own size; only the long-press feedback scales them.
         for (int i = 0; i < mountedRowsHost.getChildCount(); i++) {
             View row = mountedRowsHost.getChildAt(i);
-            int height = row.getHeight();
-            if (height <= 0) continue;
-            float top = hostTop + row.getTop() - scrollY;
-            boolean upper = top + height / 2f < anchor;
-            // Distance of the line's outer edge from the area's edge, on its own side of the focus
-            // (negative once it is crossing): 0 at the zone's inner end, 1 when the line is half out.
-            float toEdge = upper ? top : viewport - (top + height);
-            float f = Math.max(0f, Math.min(1f, (zone - toEdge) / (zone + height * 0.5f)));
-            f = f * f * (3f - 2f * f);
-            float target = 1f - (1f - minScale) * f;
-            Float known = edgeScales.get(row);
-            float current = known == null ? target : known + (target - known) * ease;
-            if (Math.abs(target - current) < 0.001f) current = target;
-            else edgeScaleSettling = true;
-            edgeScales.put(row, current);
             Float pressed = pressScales.get(row);
-            float applied = pressed == null ? current : current * pressed;
+            float applied = pressed == null ? 1f : pressed;
             if (Math.abs(row.getScaleX() - applied) < 0.002f) continue;
-            // Shrinks toward the text's own alignment edge (lines are start- or end-aligned, so a
-            // centre pivot slid them sideways) and toward the list, so the gap to the next line
-            // stays even instead of opening up on both sides.
             row.setPivotX(rowAlignmentPivotX(row));
-            // Blended by depth so the pivot never jumps (the long-press shrink stays centred).
-            row.setPivotY(height * (0.5f + (upper ? 0.5f : -0.5f) * f));
+            row.setPivotY(row.getHeight() * 0.5f);
             row.setScaleX(applied);
             row.setScaleY(applied);
         }

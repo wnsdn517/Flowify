@@ -63,6 +63,67 @@ public class ElasticScrollView extends ScrollView {
         maxFlingVelocity = android.view.ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
     }
 
+    /**
+     * Content dissolving into the background over the top and bottom {@code px} of the visible
+     * area, rather than being cut at the edge. Drawn as an alpha mask over this view's own layer,
+     * so it fades whatever is behind the lyrics in, per pixel - each visual line on its own as it
+     * crosses - and costs nothing when both are 0.
+     */
+    public void setEdgeFade(int topPx, int bottomPx) {
+        topPx = Math.max(0, topPx);
+        bottomPx = Math.max(0, bottomPx);
+        if (topPx == edgeFadeTop && bottomPx == edgeFadeBottom) return;
+        edgeFadeTop = topPx;
+        edgeFadeBottom = bottomPx;
+        invalidate();
+    }
+
+    private int edgeFadeTop;
+    private int edgeFadeBottom;
+    private android.graphics.Paint edgeFadePaint;
+    private android.graphics.LinearGradient edgeFadeShader;
+    private final android.graphics.Matrix edgeFadeMatrix = new android.graphics.Matrix();
+
+    @Override
+    public void draw(android.graphics.Canvas canvas) {
+        int w = getWidth();
+        int h = getHeight();
+        if ((edgeFadeTop <= 0 && edgeFadeBottom <= 0) || w <= 0 || h <= 0) {
+            super.draw(canvas);
+            return;
+        }
+        if (edgeFadePaint == null) {
+            edgeFadePaint = new android.graphics.Paint();
+            edgeFadePaint.setXfermode(new android.graphics.PorterDuffXfermode(
+                    android.graphics.PorterDuff.Mode.DST_OUT));
+            // A unit-length ramp, stretched to the current length by the shader matrix. Eased
+            // rather than linear: the line thins out gently first and only vanishes right at
+            // the edge, which reads softer than an even fade.
+            edgeFadeShader = new android.graphics.LinearGradient(0f, 0f, 0f, 1f,
+                    new int[]{0xFF000000, 0xB0000000, 0x60000000, 0x24000000, 0x08000000, 0x00000000},
+                    new float[]{0f, 0.18f, 0.4f, 0.62f, 0.82f, 1f},
+                    android.graphics.Shader.TileMode.CLAMP);
+            edgeFadePaint.setShader(edgeFadeShader);
+        }
+        int top = getScrollY();
+        int save = canvas.saveLayer(0, top, w, top + h, null);
+        super.draw(canvas);
+        if (edgeFadeTop > 0) {
+            edgeFadeMatrix.setScale(1f, edgeFadeTop);
+            edgeFadeMatrix.postTranslate(0f, top);
+            edgeFadeShader.setLocalMatrix(edgeFadeMatrix);
+            canvas.drawRect(0, top, w, top + edgeFadeTop, edgeFadePaint);
+        }
+        if (edgeFadeBottom > 0) {
+            // The same ramp flipped, its edge at the bottom.
+            edgeFadeMatrix.setScale(1f, -edgeFadeBottom);
+            edgeFadeMatrix.postTranslate(0f, top + h);
+            edgeFadeShader.setLocalMatrix(edgeFadeMatrix);
+            canvas.drawRect(0, top + h - edgeFadeBottom, w, top + h, edgeFadePaint);
+        }
+        canvas.restoreToCount(save);
+    }
+
     /** A finger landing on a list that is still coasting remembers how fast it was going. */
     private void captureCarry(MotionEvent ev) {
         long age = System.nanoTime() - lastScrollNanos;
