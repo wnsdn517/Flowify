@@ -54,8 +54,19 @@ public class ElasticScrollView extends ScrollView {
     private float scrollVelocity;
     private long lastScrollNanos;
 
+    /** Scroll speed (px/s) the list still had when a finger landed on it mid-fling. */
+    private float carryVelocity;
+    private final int maxFlingVelocity;
+
     public ElasticScrollView(Context context) {
         super(context);
+        maxFlingVelocity = android.view.ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
+    }
+
+    /** A finger landing on a list that is still coasting remembers how fast it was going. */
+    private void captureCarry(MotionEvent ev) {
+        long age = System.nanoTime() - lastScrollNanos;
+        carryVelocity = lastScrollNanos != 0L && age < 70_000_000L ? scrollVelocity : 0f;
     }
 
     /** Apple Music enables the rubber band and the end limit; every other style turns both off. */
@@ -72,6 +83,7 @@ public class ElasticScrollView extends ScrollView {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) captureCarry(ev);
         if (!elasticEnabled) return super.onInterceptTouchEvent(ev);
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) beginGesture(ev);
         else lastRawY = ev.getRawY();
@@ -80,12 +92,17 @@ public class ElasticScrollView extends ScrollView {
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) captureCarry(ev);
         if (!elasticEnabled) return super.onTouchEvent(ev);
         int action = ev.getActionMasked();
         float rawY = ev.getRawY();
         if (action == MotionEvent.ACTION_DOWN) {
             beginGesture(ev);
-        } else if (action == MotionEvent.ACTION_MOVE && ev.getPointerCount() == 1) {
+        } else if (action == MotionEvent.ACTION_POINTER_DOWN || action == MotionEvent.ACTION_POINTER_UP) {
+            // The other hand takes over: measure from where the finger now is, or its distance
+            // from the old one is read as one huge step (the list jumped, or the pull was lost).
+            lastRawY = rawY;
+        } else if (action == MotionEvent.ACTION_MOVE) {
             float dy = rawY - lastRawY;
             lastRawY = rawY;
             trackPull(dy);
@@ -148,6 +165,14 @@ public class ElasticScrollView extends ScrollView {
 
     @Override
     public void fling(int velocityY) {
+        // Swiping again while the list is still coasting adds to its speed, as a list does under
+        // alternating hands, instead of starting over from the new swipe's speed alone.
+        float carry = carryVelocity;
+        carryVelocity = 0f;
+        if (carry != 0f && Math.signum(carry) == Math.signum((float) velocityY)) {
+            float boosted = velocityY + carry * 0.6f;
+            velocityY = Math.round(Math.max(-maxFlingVelocity, Math.min(maxFlingVelocity, boosted)));
+        }
         flinging = elasticEnabled;
         super.fling(velocityY);
     }
@@ -155,14 +180,15 @@ public class ElasticScrollView extends ScrollView {
     @Override
     protected void onScrollChanged(int l, int t, int oldl, int oldt) {
         super.onScrollChanged(l, t, oldl, oldt);
-        if (!elasticEnabled) return;
         long now = System.nanoTime();
         if (lastScrollNanos != 0L) {
             float dt = Math.max(1e-3f, (now - lastScrollNanos) / 1e9f);
             float v = (t - oldt) / dt;
-            scrollVelocity = scrollVelocity == 0f ? v : scrollVelocity * 0.4f + v * 0.6f;
+            // A long gap means a fresh motion: do not average it with the last one's speed.
+            scrollVelocity = scrollVelocity == 0f || dt > 0.1f ? v : scrollVelocity * 0.4f + v * 0.6f;
         }
         lastScrollNanos = now;
+        if (!elasticEnabled) return;
         if (!flinging || touching) return;
         int range = endRange();
         boolean hitTop = t <= 0 && oldt > 0 && scrollVelocity < 0f;

@@ -34,6 +34,7 @@ final class LyricsJumpToCurrentController {
     private final String followLabel;
     private final TextView button;
     private final PillProgressDrawable progressDrawable = new PillProgressDrawable();
+    private final WaveformIconDrawable waveIcon = new WaveformIconDrawable();
     private final Runnable collapse = () -> applyCollapsed(true);
     private String style = Settings.FOLLOW_CHIP_STYLE.defaultValue;
     private String position = Settings.FOLLOW_CHIP_POSITION.defaultValue;
@@ -57,7 +58,7 @@ final class LyricsJumpToCurrentController {
             SettingsUiStrings strings,
             Runnable onClick
     ) {
-        TextView view = textFactory.createChip(activity, "↓");
+        TextView view = textFactory.createChip(activity, "");
         view.setTextSize(13);
         view.setAlpha(0f);
         view.setVisibility(View.GONE);
@@ -127,9 +128,12 @@ final class LyricsJumpToCurrentController {
     }
 
     private void applyCollapsed(boolean collapsed) {
-        button.setText(collapsed ? "↓" : followLabel);
+        button.setText(collapsed ? "" : followLabel);
         button.setContentDescription(followLabel);
-        button.setPadding(collapsed ? 0 : dp(16), 0, collapsed ? 0 : dp(16), 0);
+        waveIcon.setBounds(0, 0, dp(18), dp(18));
+        button.setCompoundDrawablesRelative(waveIcon, null, null, null);
+        button.setCompoundDrawablePadding(collapsed ? 0 : dp(8));
+        button.setPadding(collapsed ? 0 : dp(16), 0, collapsed ? 0 : dp(18), 0);
         ViewGroup.LayoutParams lp = button.getLayoutParams();
         if (lp != null) {
             lp.width = collapsed ? dp(CHIP_HEIGHT_DP) : ViewGroup.LayoutParams.WRAP_CONTENT;
@@ -245,6 +249,38 @@ final class LyricsJumpToCurrentController {
             flp.bottomMargin = target;
             button.setLayoutParams(flp);
         }
+    }
+
+    /** Audio-waveform glyph: five rounded bars of varied height, centred. */
+    private static final class WaveformIconDrawable extends Drawable {
+        private static final float[] HEIGHTS = {0.38f, 0.7f, 1f, 0.62f, 0.3f};
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        WaveformIconDrawable() {
+            paint.setColor(Color.WHITE);
+        }
+
+        @Override public void draw(Canvas canvas) {
+            android.graphics.Rect b = getBounds();
+            int n = HEIGHTS.length;
+            float slot = b.width() / (float) n;
+            float bar = slot * 0.5f;
+            for (int i = 0; i < n; i++) {
+                float h = b.height() * HEIGHTS[i];
+                float cx = b.left + slot * (i + 0.5f);
+                float cy = b.exactCenterY();
+                canvas.drawRoundRect(cx - bar / 2f, cy - h / 2f, cx + bar / 2f, cy + h / 2f,
+                        bar / 2f, bar / 2f, paint);
+            }
+        }
+
+        @Override public int getIntrinsicWidth() { return dp(18); }
+        @Override public int getIntrinsicHeight() { return dp(18); }
+        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
+        @Override public void setColorFilter(android.graphics.ColorFilter filter) {
+            paint.setColorFilter(filter);
+        }
+        @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
     }
 
     /**
