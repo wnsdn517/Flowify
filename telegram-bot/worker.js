@@ -182,6 +182,10 @@ async function isAdmin(env, chatId, userId) {
   return ids.includes(userId);
 }
 
+// Asked for bug reports specifically (matches the group rule: version, device, steps to reproduce).
+const BUG_DETAILS_ASK =
+  "Reply to this message with your Spicy EX version, Spotify version, Android version/device, and steps to reproduce — it helps a lot. Then tap File (or tap File now without replying).";
+
 async function maybeOfferFeatureRequest(env, msg) {
   const text = msg.text || "";
   if (text.startsWith("/") || text.length < 12) return;
@@ -191,18 +195,37 @@ async function maybeOfferFeatureRequest(env, msg) {
 
   const id = crypto.randomUUID().slice(0, 8);
   const author = msg.from.username ? `@${msg.from.username}` : [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ");
-  await env.CI.put(
-    `fr:${id}`,
-    JSON.stringify({ text, kind, authorId: msg.from.id, author, chatId: msg.chat.id, messageId: msg.message_id }),
-    { expirationTtl: 1209600 } // 2 weeks to decide is plenty
-  );
-  const [prompt, label] = kind === "bug" ? ["Sounds like a bug report.", "🐛 File as GitHub issue"] : ["Sounds like a feature request.", "📝 File as GitHub issue"];
-  await tgCall(env, "sendMessage", {
+  const [intro, label] = kind === "bug" ? ["🐛 Sounds like a bug report.", "🐛 File as GitHub issue"] : ["📝 Sounds like a feature request.", "📝 File as GitHub issue"];
+  const ask = kind === "bug" ? `\n\n${BUG_DETAILS_ASK}` : "\n\nReply with any extra details first if you'd like, then tap File.";
+  const sent = await tgCall(env, "sendMessage", {
     chat_id: msg.chat.id,
     reply_to_message_id: msg.message_id,
-    text: `${prompt} File it on GitHub?`,
+    text: `${intro}${ask}`,
     reply_markup: { inline_keyboard: [[{ text: label, callback_data: `fr:${id}` }]] },
   });
+  await env.CI.put(
+    `fr:${id}`,
+    JSON.stringify({ text, kind, authorId: msg.from.id, author, chatId: msg.chat.id, messageId: msg.message_id, promptId: sent.result?.message_id }),
+    { expirationTtl: 1209600 } // 2 weeks to decide is plenty
+  );
+  if (sent.result?.message_id) await env.CI.put(`frprompt:${msg.chat.id}:${sent.result.message_id}`, id, { expirationTtl: 1209600 });
+}
+
+// A reply to the bot's "add details" prompt: append it to the filed report instead of re-running
+// bug/feature detection on it (replies like "Android 14, crashes on launch" would otherwise re-trigger).
+async function maybeCollectDetails(env, msg) {
+  const replyId = msg.reply_to_message?.message_id;
+  if (!replyId) return false;
+  const id = await env.CI.get(`frprompt:${msg.chat.id}:${replyId}`);
+  if (!id) return false;
+  const entry = JSON.parse((await env.CI.get(`fr:${id}`)) || "null");
+  if (!entry) return true;
+  if (msg.from.id !== entry.authorId && !(await isAdmin(env, msg.chat.id, msg.from.id))) return true;
+
+  entry.details = entry.details ? `${entry.details}\n${msg.text}` : msg.text;
+  await env.CI.put(`fr:${id}`, JSON.stringify(entry), { expirationTtl: 1209600 });
+  await tgCall(env, "sendMessage", { chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "Added to the report. Tap File when ready." });
+  return true;
 }
 
 async function fileIssue(env, cq) {
@@ -230,10 +253,10 @@ async function fileIssue(env, cq) {
   const prefix = isBug ? "Bug: " : "";
   const titleBody = entry.text.length > 80 - prefix.length ? entry.text.slice(0, 77 - prefix.length) + "…" : entry.text;
   const title = prefix + titleBody;
-  const body = [
-    entry.text, "",
-    `Filed from Telegram by ${entry.author}${link ? ` ([message](${link}))` : ""}.`,
-  ].join("\n");
+  const bodyParts = [entry.text];
+  if (entry.details) bodyParts.push("", "**Additional details:**", entry.details);
+  bodyParts.push("", `Filed from Telegram by ${entry.author}${link ? ` ([message](${link}))` : ""}.`);
+  const body = bodyParts.join("\n");
 
   const res = await gh(env, "/issues", {
     method: "POST",
@@ -283,7 +306,7 @@ export default {
     if (!msg?.text || msg.from?.is_bot) return new Response("ok");
     const m = msg.text.match(/^\/(release|beta|ci|help)(@\w+)?(\s|$)/i);
     if (m) ctx.waitUntil(command(env, m[1].toLowerCase(), msg));
-    else ctx.waitUntil(maybeOfferFeatureRequest(env, msg));
+    else ctx.waitUntil(maybeCollectDetails(env, msg).then((handled) => handled || maybeOfferFeatureRequest(env, msg)));
     return new Response("ok");
   },
 };
