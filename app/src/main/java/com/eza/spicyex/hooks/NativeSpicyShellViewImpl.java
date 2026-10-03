@@ -3691,8 +3691,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 if (line == null || line.dotLine || line.text == null || line.text.trim().isEmpty()) return;
                 View row = rowMountController.attachedRowView(line);
                 if (row == null || row.getWidth() <= 0) return;
-                row.setPivotX(row.getWidth() / 2f);
-                row.setPivotY(row.getHeight() / 2f);
+                // The pivot is left to applyEdgeRowScale, which owns the row's scale: moving it here
+                // while the row was still scaled made the line jump the moment a finger landed.
                 pressedLyricRow = row;
                 pressedLyricDownY = event.getY();
                 // A beat later, so a flick that starts on a line does not pulse it.
