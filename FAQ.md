@@ -43,7 +43,7 @@ double-tap like, picture-in-picture, AI, ad-free listening, diagnostics).
 ### How do I choose where lyrics come from?
 
 Settings → **Lyrics Sources**. Pick the source (Apple, Spotify native, AMLL, LRCLIB, QQ Music,
-NetEase, Musixmatch) and manage stored lyrics there. Availability and timing quality vary by track
+NetEase). Availability and timing quality vary by track
 and source.
 
 ### Double-tap like

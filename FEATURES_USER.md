@@ -39,8 +39,6 @@ from Settings when you want readings.
 
 - A source catalog with a picker: Apple, Spotify native, AMLL, LRCLIB, QQ Music and
   NetEase. Choose per song which source's lyrics to show. **Fork** — the NetEase and QQ sources.
-- **Fork** — Musixmatch as an additional source, with word-by-word timing.
-- **Fork** — Stored lyrics browser on the Lyrics Sources page to look at and manage cached lyrics.
 
 ## Layout Editor — Fork
 
@@ -100,7 +98,7 @@ from Settings when you want readings.
 
 ## Backgrounds
 
-- **Fork** — Audio-reactive animated background, album-art ambient colours, force-dark and extra-dark modes, fallback gradient for
+- **Fork** — Animated album-art ambient background, force-dark and extra-dark modes, fallback gradient for
   low-contrast art, and a render-quality option.
 
 ## Ad-Free Listening — Fork
