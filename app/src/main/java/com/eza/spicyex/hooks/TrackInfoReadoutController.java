@@ -1026,7 +1026,9 @@ final class TrackInfoReadoutController {
         if (headerTitle != null) headerTitle.setVisibility(header ? View.GONE : View.VISIBLE);
     }
 
-    /** PiP shows only lyrics, regardless of the stored track-info position. */
+    /** PiP shows only lyrics, regardless of the stored track-info position - except the
+     *  landscape window, which keeps the artwork and song info column beside the lyrics so it is
+     *  not one very wide strip of text. */
     void setPipPresentation() {
         pipPresentation = true;
         setMode("Off");
@@ -1064,7 +1066,7 @@ final class TrackInfoReadoutController {
     }
 
     private void setMode(String mode) {
-        if (pipPresentation) mode = "Off";
+        if (pipPresentation) mode = twoColumn ? "Top" : "Off";
         if (mode == null) mode = "Off";
         // Two-column's left column is this readout's column placement: it shows for every stored
         // position except Off, and hiding it collapses that column (the lyrics take the width).
