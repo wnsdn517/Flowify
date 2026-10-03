@@ -3105,7 +3105,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (s > 0f || edgeFadePx != target) edgeScaleSettling = true;
         if (lyricsScroll instanceof com.eza.spicyex.lyrics.ElasticScrollView) {
             int px = Math.round(edgeFadePx);
-            ((com.eza.spicyex.lyrics.ElasticScrollView) lyricsScroll).setEdgeFade(px, px);
+            // Below the song info the area's own top fade (lyricsTopFade) already dissolves the
+            // top edge; a second one there would double it.
+            ((com.eza.spicyex.lyrics.ElasticScrollView) lyricsScroll).setEdgeFade(
+                    lyricsTopFade != null ? 0 : px, px);
         }
         // Rows keep their own size; only the long-press feedback scales them.
         for (int i = 0; i < mountedRowsHost.getChildCount(); i++) {
