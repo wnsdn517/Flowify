@@ -1021,12 +1021,23 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         Thread worker = new Thread(() -> {
             String shown;
             try {
-                org.json.JSONObject release = githubJson("https://api.github.com/repos/" + FORK_REPO + "/releases/latest");
+                // The newest release, betas included ("releases/latest" leaves pre-releases out).
+                org.json.JSONObject release = null;
+                org.json.JSONArray list = githubJsonArray("https://api.github.com/repos/" + FORK_REPO + "/releases?per_page=10");
+                for (int i = 0; list != null && i < list.length(); i++) {
+                    org.json.JSONObject candidate = list.optJSONObject(i);
+                    if (candidate == null || candidate.optBoolean("draft")) continue;
+                    if (candidate.optString("tag_name", "").matches("v?[0-9]+[.][0-9]+[.][0-9]+.*")) {
+                        release = candidate;
+                        break;
+                    }
+                }
                 if (release != null) {
                     String tag = release.optString("tag_name", "");
                     String date = release.optString("published_at", "");
                     boolean newer = isNewer(tag.replaceFirst("^[vV]", ""), BuildStamp.VERSION);
-                    shown = tag + (date.length() >= 10 ? " · " + date.substring(0, 10) : "")
+                    shown = tag + (release.optBoolean("prerelease") ? " beta" : "")
+                            + (date.length() >= 10 ? " · " + date.substring(0, 10) : "")
                             + " · " + (newer ? uiStrings.get("settings_about_update", "Update available")
                             : uiStrings.get("settings_about_up_to_date", "Up to date"));
                 } else {
@@ -1051,7 +1062,17 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         worker.start();
     }
 
+    private static org.json.JSONArray githubJsonArray(String url) throws Exception {
+        String body = githubText(url);
+        return body == null ? null : new org.json.JSONArray(body);
+    }
+
     private static org.json.JSONObject githubJson(String url) throws Exception {
+        String body = githubText(url);
+        return body == null ? null : new org.json.JSONObject(body);
+    }
+
+    private static String githubText(String url) throws Exception {
         java.net.HttpURLConnection connection = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
         connection.setConnectTimeout(6000);
         connection.setReadTimeout(6000);
@@ -1063,7 +1084,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 byte[] buffer = new byte[8192];
                 int n;
                 while ((n = in.read(buffer)) > 0) out.write(buffer, 0, n);
-                return new org.json.JSONObject(out.toString("UTF-8"));
+                return out.toString("UTF-8");
             }
         } finally {
             connection.disconnect();
