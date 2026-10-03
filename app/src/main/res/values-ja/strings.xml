@@ -547,4 +547,5 @@
     <string name="settings_option_lyrics_double_tap_like_effect_classic">クラシック - リングと点</string>
     <string name="settings_action_try_double_tap_effect">試してみる</string>
     <string name="lyrics_double_tap_try_hint">画面をダブルタップして試せます</string>
+    <string name="lyrics_double_tap_trial_exit">終了</string>
 </resources>

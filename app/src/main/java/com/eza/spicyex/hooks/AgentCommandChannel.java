@@ -319,6 +319,19 @@ final class AgentCommandChannel {
                 case "footer":
                     readFooter(correlation);
                     return;
+                case "like-trial":
+                    onMain(verb, correlation, () -> {
+                        Activity activity = References.currentActivity();
+                        NativeSpicyShellView shell = activity == null || activity.getWindow() == null
+                                ? null : findShell(activity.getWindow().getDecorView());
+                        if (shell == null) {
+                            reply("error", verb, "no lyrics screen", correlation);
+                            return;
+                        }
+                        shell.startDoubleTapTrial();
+                        reply("ok", verb, "started", correlation);
+                    });
+                    return;
                 case "like-burst":
                     // The double-tap acknowledgement alone, mid-screen - no Liked Songs action, so
                     // it can be looked at without touching the library.

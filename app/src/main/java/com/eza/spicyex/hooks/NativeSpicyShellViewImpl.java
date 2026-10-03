@@ -5783,61 +5783,83 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      * tapping a song already liked just plays the burst again.
      */
     private LyricsTapSeekHandler tapSeekHandler;
-    /** "Try it" from the settings: until then, double taps only play the effect. */
-    private long doubleTapTrialUntilMs;
-    private View doubleTapHint;
-    private static final long DOUBLE_TAP_TRIAL_MS = 10_000L;
-    private final Runnable endDoubleTapTrial = () -> {
-        doubleTapTrialUntilMs = 0L;
-        if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(false);
-        hideDoubleTapHint();
-    };
+    /** "Try it" from the settings: while it is on, double taps only play the effect. */
+    private boolean doubleTapTrial;
+    private View doubleTapTrialBar;
 
-    /** Shows a double-tap hint; double taps then play the chosen effect without liking. */
-    private void startDoubleTapTrial() {
-        removeCallbacks(endDoubleTapTrial);
-        doubleTapTrialUntilMs = SystemClock.uptimeMillis() + DOUBLE_TAP_TRIAL_MS;
+    /**
+     * Shows the trial bar - the double-tap hint, the effect styles to switch between, and an
+     * exit. Until the user leaves, double taps play the chosen style without liking.
+     */
+    void startDoubleTapTrial() {
+        endDoubleTapTrial();
+        doubleTapTrial = true;
         if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(true);
-        postDelayed(endDoubleTapTrial, DOUBLE_TAP_TRIAL_MS);
-        hideDoubleTapHint();
-        View hint = new com.eza.spicyex.ui.DoubleTapHintView(activity,
-                uiText("lyrics_double_tap_try_hint", "Double-tap anywhere to try it"));
+        String[] styles = com.eza.spicyex.ui.LikeBursts.STYLES;
+        String[] labels = new String[styles.length];
+        for (int i = 0; i < styles.length; i++) {
+            String full = uiText("settings_option_lyrics_double_tap_like_effect_"
+                    + styles[i].toLowerCase(java.util.Locale.ROOT), styles[i]);
+            int dash = full.indexOf(" - ");
+            labels[i] = dash > 0 ? full.substring(0, dash) : full;
+        }
+        View bar = new com.eza.spicyex.ui.DoubleTapTrialBar(activity,
+                uiText("lyrics_double_tap_try_hint", "Double-tap anywhere to try it"),
+                uiText("lyrics_double_tap_trial_exit", "Exit"), styles, labels,
+                doubleTapEffect == null ? styles[0] : doubleTapEffect,
+                new com.eza.spicyex.ui.DoubleTapTrialBar.Listener() {
+                    @Override public void onStyle(String style) {
+                        doubleTapEffect = style;
+                        new com.eza.spicyex.settings.SettingsWriter(new SettingsStore(activity))
+                                .put(Settings.DOUBLE_TAP_LIKE_EFFECT, style);
+                        // Shown once right away, over the middle of the lyrics.
+                        playTrialBurst(getWidth() / 2f, getHeight() * 0.4f);
+                    }
+
+                    @Override public void onExit() {
+                        endDoubleTapTrial();
+                    }
+                });
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
-        lp.bottomMargin = dp(120);
-        hint.setAlpha(0f);
-        hint.setTranslationY(dp(12));
-        addView(hint, lp);
-        hint.animate().alpha(1f).translationY(0f).setDuration(260).start();
-        doubleTapHint = hint;
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM);
+        lp.leftMargin = dp(12);
+        lp.rightMargin = dp(12);
+        lp.bottomMargin = dp(28);
+        bar.setAlpha(0f);
+        bar.setTranslationY(dp(16));
+        addView(bar, lp);
+        bar.animate().alpha(1f).translationY(0f).setDuration(260).start();
+        doubleTapTrialBar = bar;
     }
 
-    private void hideDoubleTapHint() {
-        View hint = doubleTapHint;
-        doubleTapHint = null;
-        if (hint == null) return;
-        hint.animate().alpha(0f).translationY(dp(8)).setDuration(200)
-                .withEndAction(() -> removeView(hint)).start();
+    private void endDoubleTapTrial() {
+        doubleTapTrial = false;
+        if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(false);
+        View bar = doubleTapTrialBar;
+        doubleTapTrialBar = null;
+        if (bar == null) return;
+        bar.animate().alpha(0f).translationY(dp(12)).setDuration(200)
+                .withEndAction(() -> removeView(bar)).start();
+    }
+
+    /** The chosen style at (x, y) in this view, without liking. */
+    private void playTrialBurst(float x, float y) {
+        String mode = SpotifyCollectionAction.enabled(likedMode) ? likedMode : "Heart";
+        String mark = "Heart".equals(doubleTapMark) || "Star".equals(doubleTapMark) ? doubleTapMark : mode;
+        playLikeBurst(com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(mark)
+                == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR, x, y);
+        performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
     }
 
     private void likeFromDoubleTap(View source, float x, float y) {
-        if (SystemClock.uptimeMillis() < doubleTapTrialUntilMs) {
-            // Trial: the effect only, no Liked Songs action; each try extends it.
-            String mode = SpotifyCollectionAction.enabled(likedMode) ? likedMode : "Heart";
-            String mark = "Heart".equals(doubleTapMark) || "Star".equals(doubleTapMark) ? doubleTapMark : mode;
+        if (doubleTapTrial) {
+            // Trial: the effect only, no Liked Songs action.
             int[] here = new int[2];
             int[] from = new int[2];
             getLocationInWindow(here);
             source.getLocationInWindow(from);
-            playLikeBurst(com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(mark)
-                            == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR,
-                    from[0] - here[0] + x, from[1] - here[1] + y);
-            performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
-            hideDoubleTapHint();
-            removeCallbacks(endDoubleTapTrial);
-            doubleTapTrialUntilMs = SystemClock.uptimeMillis() + DOUBLE_TAP_TRIAL_MS;
-            postDelayed(endDoubleTapTrial, DOUBLE_TAP_TRIAL_MS);
+            playTrialBurst(from[0] - here[0] + x, from[1] - here[1] + y);
             return;
         }
         SpotifyTrack track = currentTrackThrottled();

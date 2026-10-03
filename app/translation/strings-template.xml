@@ -739,5 +739,6 @@
     <string name="settings_option_lyrics_double_tap_like_effect_classic">Classic - ring and dots</string>
     <string name="settings_action_try_double_tap_effect">Try it</string>
     <string name="lyrics_double_tap_try_hint">Double-tap anywhere to try it</string>
+    <string name="lyrics_double_tap_trial_exit">Exit</string>
     <string name="settings_search_lyrics_double_tap_like">heart, add to liked songs, instagram</string>
 </resources>

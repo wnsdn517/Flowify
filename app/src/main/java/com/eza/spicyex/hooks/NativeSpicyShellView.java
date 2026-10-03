@@ -44,6 +44,11 @@ final class NativeSpicyShellView extends FrameLayout {
         else delegate.playLikeBurst(style, star, x, y);
     }
 
+    /** The settings' "Try it" for the double-tap effect (agent entry point). */
+    void startDoubleTapTrial() {
+        delegate.startDoubleTapTrial();
+    }
+
     /** Lyrics (or a no-lyrics state) are on screen, not just the empty shell. */
     boolean hasLyricsDocument() {
         return delegate.hasLyricsDocument();
