@@ -10,6 +10,7 @@ final class CardRecipe {
 
     private final Maker make;
     private Bitmap square;
+    private Bitmap rounded;
 
     CardRecipe(Maker make) {
         this.make = make;
@@ -19,5 +20,11 @@ final class CardRecipe {
     synchronized Bitmap get() throws Exception {
         if (square == null) square = make.make(false);
         return square;
+    }
+
+    /** A story sticker: the card's own rounded shape, floating on the story's background. */
+    synchronized Bitmap sticker() throws Exception {
+        if (rounded == null) rounded = make.make(true);
+        return rounded;
     }
 }

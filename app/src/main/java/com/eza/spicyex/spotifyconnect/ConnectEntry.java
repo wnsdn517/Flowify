@@ -115,7 +115,7 @@ public final class ConnectEntry {
         try {
             String stored = com.eza.spicyex.SpotifyPlusConfig.from(context)
                     .get(com.eza.spicyex.Settings.UI_LANGUAGE);
-            return com.eza.spicyex.UiLanguage.strings(context, stored).selectedLanguage();
+            return com.eza.spicyex.ui.UiLanguage.strings(context, stored).selectedLanguage();
         } catch (Throwable t) {
             return null;
         }

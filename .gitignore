@@ -2,6 +2,7 @@
 build/
 .gradle/
 /.gradle-agent/
+.gradle-user/
 /app/release/
 local.properties
 *.class

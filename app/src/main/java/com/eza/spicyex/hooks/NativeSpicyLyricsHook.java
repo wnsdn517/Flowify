@@ -126,6 +126,11 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
     }
 
     @Override
+    public boolean openLyricsPipOnClose(Activity activity) {
+        return pipController.openOnClose(activity);
+    }
+
+    @Override
     public boolean launchNativeLyricsFullscreen(Activity activity) {
         return activityTakeoverHook.launchNativeLyricsFullscreen(activity);
     }
