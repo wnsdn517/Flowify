@@ -1,16 +1,25 @@
 // Cloudflare Worker for the Spicy EX Telegram bot.
 //  - Telegram webhook: /release, /beta, /ci in the discussion group; each answers with the APK itself.
+//  - Feature-request detection: a keyword match in the discussion group gets a "File as GitHub issue"
+//    button; clicking it (original author or a group admin) files the issue, deduped by message text.
 //  - POST /ci-update (from CI, header X-CI-Secret): stores the Telegram file_ids of the newest CI build.
-// Bindings: KV "CI". Secrets: TELEGRAM_BOT_TOKEN, WEBHOOK_SECRET, CI_NOTIFY_SECRET. Var: GITHUB_REPO.
+// Bindings: KV "CI". Secrets: TELEGRAM_BOT_TOKEN, WEBHOOK_SECRET, CI_NOTIFY_SECRET, GH_TOKEN (optional
+// but strongly recommended: raises the GitHub API rate limit from 60/hr per shared Worker IP to 5000/hr,
+// and is required for filing issues). Vars: GITHUB_REPO, DISCUSSION_CHAT_USERNAME.
 const TG = (env, method) => `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`;
-const gh = (env, path) =>
-  fetch(`https://api.github.com/repos/${env.GITHUB_REPO}${path}`, {
-    headers: { "User-Agent": "spicy-ex-bot", Accept: "application/vnd.github+json" },
-  }).then((r) => r.json());
+const ghHeaders = (env) => ({
+  "User-Agent": "spicy-ex-bot",
+  Accept: "application/vnd.github+json",
+  ...(env.GH_TOKEN ? { Authorization: `Bearer ${env.GH_TOKEN}` } : {}),
+});
+const gh = (env, path, init) =>
+  fetch(`https://api.github.com/repos/${env.GITHUB_REPO}${path}`, { ...init, headers: { ...ghHeaders(env), ...(init?.headers || {}) } }).then((r) => r.json());
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const tgCall = (env, method, body) =>
   fetch(TG(env, method), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+
+// ---------- /release, /beta, /ci ----------
 
 // Release notes -> a few readable lines: the "###" headings as highlights, else the first lines.
 function highlights(body) {
@@ -64,8 +73,8 @@ async function sendCi(env, chatId, replyTo) {
   return tgCall(env, "sendMediaGroup", { chat_id: chatId, media, reply_to_message_id: replyTo });
 }
 
-// Release list cached in KV (GitHub's unauthenticated API is rate limited on shared Worker IPs);
-// a stale copy is used if GitHub errors out.
+// Release list cached in KV (GitHub's API is rate limited per IP when unauthenticated, and Worker IPs
+// are shared across many Cloudflare customers); a stale copy is used if GitHub errors out.
 async function releases(env) {
   const hit = JSON.parse((await env.CI.get("releases")) || "null");
   if (hit && Date.now() - hit.at < 120000) return hit.list;
@@ -97,6 +106,107 @@ async function command(env, cmd, msg) {
   }
 }
 
+// ---------- Feature-request detection ----------
+
+// English and Korean phrasings for "please add this" / "it would be nice if". Loose substrings on
+// purpose (Korean particles attach directly to the verb stem, so a strict phrase won't catch most
+// real messages) - a false positive just shows an unused button, which is cheap, so flexible wins.
+const FEATURE_RE = new RegExp(
+  [
+    "feature request", "feature idea", "\\bfr:", "#feature",
+    "(could|can|would) you add", "please add", "add support for", "support for",
+    "it('?d| would) be (nice|great|cool|awesome)", "i wish", "suggestion:", "idea:",
+    "기능\\s*요청", "추가해", "추가\\s*좀", "넣어주", "달아주", "지원해주", "지원\\s*좀",
+    "(으면|면)\\s*좋겠", "(으면|면)\\s*좋을", "건의", "제안", "요청(드립니다|합니다|드려요)",
+  ].join("|"),
+  "i"
+);
+
+const normalize = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+async function sha1(s) {
+  const buf = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function isAdmin(env, chatId, userId) {
+  const cacheKey = `admins:${chatId}`;
+  let ids = JSON.parse((await env.CI.get(cacheKey)) || "null");
+  if (!ids) {
+    const res = await tgCall(env, "getChatAdministrators", { chat_id: chatId });
+    ids = (res.result || []).map((m) => m.user.id);
+    await env.CI.put(cacheKey, JSON.stringify(ids), { expirationTtl: 300 });
+  }
+  return ids.includes(userId);
+}
+
+async function maybeOfferFeatureRequest(env, msg) {
+  const text = msg.text || "";
+  if (text.startsWith("/") || text.length < 12 || !FEATURE_RE.test(text)) return;
+  if (env.DISCUSSION_CHAT_USERNAME && msg.chat.username !== env.DISCUSSION_CHAT_USERNAME) return;
+
+  const id = crypto.randomUUID().slice(0, 8);
+  const author = msg.from.username ? `@${msg.from.username}` : [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ");
+  await env.CI.put(
+    `fr:${id}`,
+    JSON.stringify({ text, authorId: msg.from.id, author, chatId: msg.chat.id, messageId: msg.message_id }),
+    { expirationTtl: 1209600 } // 2 weeks to decide is plenty
+  );
+  await tgCall(env, "sendMessage", {
+    chat_id: msg.chat.id,
+    reply_to_message_id: msg.message_id,
+    text: "Sounds like a feature request. File it on GitHub?",
+    reply_markup: { inline_keyboard: [[{ text: "📝 File as GitHub issue", callback_data: `fr:${id}` }]] },
+  });
+}
+
+async function fileIssue(env, cq) {
+  const answer = (text, alert) => tgCall(env, "answerCallbackQuery", { callback_query_id: cq.id, text, show_alert: !!alert });
+  const [, id] = cq.data.split(":");
+  const entry = JSON.parse((await env.CI.get(`fr:${id}`)) || "null");
+  if (!entry) return answer("This request has expired.", true);
+
+  const allowed = cq.from.id === entry.authorId || (await isAdmin(env, entry.chatId, cq.from.id));
+  if (!allowed) return answer("Only the original author or a group admin can file this.", true);
+
+  const hash = await sha1(normalize(entry.text));
+  const existing = await env.CI.get(`filed:${hash}`);
+  if (existing) {
+    await answer("Already filed.");
+    return tgCall(env, "editMessageReplyMarkup", {
+      chat_id: cq.message.chat.id, message_id: cq.message.message_id,
+      reply_markup: { inline_keyboard: [[{ text: "Already filed — view issue", url: existing }]] },
+    });
+  }
+
+  await answer("Filing…");
+  const link = env.DISCUSSION_CHAT_USERNAME ? `https://t.me/${env.DISCUSSION_CHAT_USERNAME}/${entry.messageId}` : null;
+  const title = entry.text.length > 80 ? entry.text.slice(0, 77) + "…" : entry.text;
+  const body = [
+    entry.text, "",
+    `Filed from Telegram by ${entry.author}${link ? ` ([message](${link}))` : ""}.`,
+  ].join("\n");
+
+  const res = await gh(env, "/issues", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, body, labels: ["enhancement", "from-telegram"] }),
+  });
+
+  if (!res.html_url) {
+    return tgCall(env, "editMessageReplyMarkup", {
+      chat_id: cq.message.chat.id, message_id: cq.message.message_id,
+      reply_markup: { inline_keyboard: [[{ text: "⚠️ Filing failed — tap to retry", callback_data: cq.data }]] },
+    });
+  }
+  await env.CI.put(`filed:${hash}`, res.html_url);
+  return tgCall(env, "editMessageReplyMarkup", {
+    chat_id: cq.message.chat.id, message_id: cq.message.message_id,
+    reply_markup: { inline_keyboard: [[{ text: `✅ Filed as #${res.number}`, url: res.html_url }]] },
+  });
+}
+
+// ---------- entrypoint ----------
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -108,9 +218,18 @@ export default {
       return new Response("ok");
     }
     if (req.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.WEBHOOK_SECRET) return new Response("forbidden", { status: 403 });
-    const msg = (await req.json()).message;
-    const m = msg?.text?.match(/^\/(release|beta|ci)(@\w+)?(\s|$)/i);
+    const update = await req.json();
+
+    if (update.callback_query?.data?.startsWith("fr:")) {
+      ctx.waitUntil(fileIssue(env, update.callback_query));
+      return new Response("ok");
+    }
+
+    const msg = update.message;
+    if (!msg?.text || msg.from?.is_bot) return new Response("ok");
+    const m = msg.text.match(/^\/(release|beta|ci)(@\w+)?(\s|$)/i);
     if (m) ctx.waitUntil(command(env, m[1].toLowerCase(), msg));
+    else ctx.waitUntil(maybeOfferFeatureRequest(env, msg));
     return new Response("ok");
   },
 };
