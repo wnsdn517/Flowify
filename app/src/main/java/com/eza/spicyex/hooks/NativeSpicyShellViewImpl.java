@@ -3097,14 +3097,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             f = f * f * (3f - 2f * f);
             float target = 1f - (1f - EDGE_SCALE_MIN) * f;
             Float known = edgeScales.get(row);
-            if (known != null) {
-                Float pr = pressScales.get(row);
-                float expectedNow = pr == null ? known : known * pr;
-                if (Math.abs(row.getScaleX() - expectedNow) > 0.02f) {
-                    com.eza.spicyex.xposed.XpLog.log("[SpotifyPlusSpicy] edge-scale interference row=" + i
-                            + " expected=" + expectedNow + " actual=" + row.getScaleX());
-                }
-            }
             float current = known == null ? target : known;
             // Shrinks with the edge at once; grows back no faster than the fixed rate.
             current = target <= current ? target : Math.min(target, current + grow);
