@@ -5789,8 +5789,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         int[] from = new int[2];
         getLocationInWindow(here);
         source.getLocationInWindow(from);
-        new com.eza.spicyex.ui.LikeBurstView(activity, star, true,
-                from[0] - here[0] + x, from[1] - here[1] + y, dp(92)).play(this);
+        playLikeBurst(star, from[0] - here[0] + x, from[1] - here[1] + y);
         performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
         boolean alreadyLiked = track.saved
                 || (!pendingLikedUri.isEmpty() && pendingLikedUri.equals(safe(track.uri))
@@ -5805,6 +5804,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                     uiText("lyrics_like_unavailable", "Liked Songs action unavailable"),
                     android.widget.Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /** The double-tap acknowledgement at (x, y) in this view: the backdrop behind the lyrics
+     *  bends and takes the colour, the lyrics catch the light (see LikeBurstView). */
+    void playLikeBurst(boolean star, float x, float y) {
+        new com.eza.spicyex.ui.LikeBurstView(activity, star, true, x, y, dp(92))
+                .play(this, ambientController == null ? null : ambientController.backgroundView(),
+                        lyricsFrame);
     }
 
     /**

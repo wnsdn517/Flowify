@@ -170,6 +170,14 @@ public final class LyricsAmbientController {
         }
     }
 
+    /** The animated backdrop's view while it is shown, else null. */
+    public android.view.View backgroundView() {
+        AmbientBackgroundLayer layer = animatedBackground;
+        if (layer == null) return null;
+        android.view.View view = layer.asView();
+        return view != null && view.getVisibility() == android.view.View.VISIBLE ? view : null;
+    }
+
     public void attachAnimatedLayer(FrameLayout parent, String style, boolean forceDark, int extraDark) {
         animatedParent = parent;
         textureEnabled = LyricsBackgroundStyle.usesTexture(style);

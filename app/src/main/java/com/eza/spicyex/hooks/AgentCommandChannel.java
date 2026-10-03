@@ -330,9 +330,7 @@ final class AgentCommandChannel {
                             reply("error", verb, "no lyrics screen", correlation);
                             return;
                         }
-                        float size = 92f * shell.getResources().getDisplayMetrics().density;
-                        new com.eza.spicyex.ui.LikeBurstView(activity, !"heart".equals(commandArgument),
-                                true, shell.getWidth() / 2f, shell.getHeight() * 0.42f, size).play(shell);
+                        shell.previewLikeBurst(!"heart".equals(commandArgument));
                         reply("ok", verb, "played", correlation);
                     });
                     return;
