@@ -29,13 +29,16 @@ final class LyricsJumpToCurrentController {
     private static final long COLLAPSE_DELAY_MS = 3200L;
     private static final int SIDE_MARGIN_DP = NativeLyricsUtils.EDGE_BUTTON_MARGIN_DP;
     private static final int CHIP_HEIGHT_DP = 44;
+    private static final int ICON_DP = 18;
+    private static final long COLLAPSE_DURATION_MS = 320L;
 
     private final SpotifyPlusConfig config;
     private final String followLabel;
     private final TextView button;
     private final PillProgressDrawable progressDrawable = new PillProgressDrawable();
     private final WaveformIconDrawable waveIcon = new WaveformIconDrawable();
-    private final Runnable collapse = () -> applyCollapsed(true);
+    private final Runnable collapse = this::collapseToIcon;
+    private ValueAnimator widthAnimator;
     private String style = Settings.FOLLOW_CHIP_STYLE.defaultValue;
     private String position = Settings.FOLLOW_CHIP_POSITION.defaultValue;
     private boolean shown;
@@ -128,17 +131,64 @@ final class LyricsJumpToCurrentController {
     }
 
     private void applyCollapsed(boolean collapsed) {
+        cancelWidthAnimation();
         button.setText(collapsed ? "" : followLabel);
         button.setContentDescription(followLabel);
-        waveIcon.setBounds(0, 0, dp(18), dp(18));
+        waveIcon.setBounds(0, 0, dp(ICON_DP), dp(ICON_DP));
         button.setCompoundDrawablesRelative(waveIcon, null, null, null);
         button.setCompoundDrawablePadding(collapsed ? 0 : dp(8));
-        button.setPadding(collapsed ? 0 : dp(16), 0, collapsed ? 0 : dp(18), 0);
+        // With no text the glyph sits at the start edge, not centred: the padding centres it.
+        int iconInset = (dp(CHIP_HEIGHT_DP) - dp(ICON_DP)) / 2;
+        button.setPaddingRelative(collapsed ? iconInset : dp(16), 0, collapsed ? 0 : dp(18), 0);
         ViewGroup.LayoutParams lp = button.getLayoutParams();
         if (lp != null) {
             lp.width = collapsed ? dp(CHIP_HEIGHT_DP) : ViewGroup.LayoutParams.WRAP_CONTENT;
             lp.height = dp(CHIP_HEIGHT_DP);
             button.setLayoutParams(lp);
+        }
+    }
+
+    /** The label pill narrows to the round icon, its text fading as it goes. */
+    private void collapseToIcon() {
+        if (button.getVisibility() != View.VISIBLE) return;
+        int startWidth = button.getWidth();
+        int endWidth = dp(CHIP_HEIGHT_DP);
+        if (startWidth <= endWidth || widthAnimator != null) {
+            applyCollapsed(true);
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofInt(startWidth, endWidth);
+        animator.setDuration(COLLAPSE_DURATION_MS);
+        animator.setInterpolator(new android.view.animation.PathInterpolator(0.3f, 0f, 0.1f, 1f));
+        animator.addUpdateListener(a -> {
+            int width = (Integer) a.getAnimatedValue();
+            ViewGroup.LayoutParams lp = button.getLayoutParams();
+            if (lp == null) return;
+            lp.width = width;
+            button.setLayoutParams(lp);
+            float progress = (float) (startWidth - width) / Math.max(1, startWidth - endWidth);
+            button.setTextColor(Color.argb(Math.round(255 * Math.max(0f, 1f - progress * 1.6f)),
+                    255, 255, 255));
+        });
+        animator.addListener(new AnimatorListenerAdapter() {
+            boolean cancelled;
+            @Override public void onAnimationCancel(Animator animation) { cancelled = true; }
+            @Override public void onAnimationEnd(Animator animation) {
+                if (widthAnimator == animation) widthAnimator = null;
+                button.setTextColor(Color.WHITE);
+                if (!cancelled && button.getVisibility() == View.VISIBLE) applyCollapsed(true);
+            }
+        });
+        widthAnimator = animator;
+        animator.start();
+    }
+
+    private void cancelWidthAnimation() {
+        ValueAnimator animator = widthAnimator;
+        widthAnimator = null;
+        if (animator != null) {
+            animator.cancel();
+            button.setTextColor(Color.WHITE);
         }
     }
 
@@ -181,6 +231,7 @@ final class LyricsJumpToCurrentController {
             }
         } else {
             button.removeCallbacks(collapse);
+            cancelWidthAnimation();
             if (button.getVisibility() == View.VISIBLE) {
                 button.animate().cancel();
                 button.animate()
@@ -274,8 +325,8 @@ final class LyricsJumpToCurrentController {
             }
         }
 
-        @Override public int getIntrinsicWidth() { return dp(18); }
-        @Override public int getIntrinsicHeight() { return dp(18); }
+        @Override public int getIntrinsicWidth() { return dp(ICON_DP); }
+        @Override public int getIntrinsicHeight() { return dp(ICON_DP); }
         @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
         @Override public void setColorFilter(android.graphics.ColorFilter filter) {
             paint.setColorFilter(filter);
