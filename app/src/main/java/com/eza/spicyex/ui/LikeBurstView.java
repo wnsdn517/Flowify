@@ -7,99 +7,177 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.CornerPathEffect;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
-import android.graphics.RadialGradient;
-import android.graphics.Shader;
-import android.graphics.SweepGradient;
 import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
 
 /**
- * The like acknowledgement as a drop of liquid glass, after iOS 26's material: where the finger
- * was, a lens forms over the screen itself - the lyrics and the backdrop behind it bend through
- * it, split into a faint rainbow at its edge (chromatic dispersion) and its outline ripples as it
- * spreads and thins out. The mark rides in it: soft-cornered, pearly, turning broadly into place
- * on a slow spring rather than snapping, then lifting away as the lens dissolves.
+ * The like acknowledgement as liquid glass, everything done on the screen itself by one AGSL
+ * shader (a RenderEffect on the parent, API 33+):
  *
- * <p>About a second in all - long enough to read as unhurried, short enough for a like. The lens
- * is an AGSL shader applied to the parent as a RenderEffect (API 33+); below that, the mark plays
- * on its own.
+ * <ol>
+ *   <li>Ripples - two waves run out from the finger across the whole screen; the lyrics and the
+ *       backdrop really bend in them, and their slopes split into a faint rainbow (each colour
+ *       channel is displaced by a different amount).</li>
+ *   <li>Drop to mark - a round drop of glass forms and flows into the mark (a soft-cornered star,
+ *       or a heart): the shape is a signed distance field morphing from a circle, its edge
+ *       rippling like liquid, the whole drop jiggling on squash-and-stretch springs while it
+ *       turns broadly into place.</li>
+ *   <li>Glass - inside it the screen is magnified and bent toward the rim, lightly frosted and
+ *       tinted with the Liked Songs colour; lit from the top left (a specular highlight on the
+ *       lit rim, shade on the far one), a band of light sweeps through, a rainbow fringe runs
+ *       round the edge and a soft glow follows the outline outside.</li>
+ *   <li>Melt - it softens back toward a drop, lifts and thins away, sending one last small
+ *       ripple out.</li>
+ * </ol>
  *
- * <p>The big form is the double-tap one, around the finger. The small form plays around the like
- * button (which is the icon there): a smaller lens, no mark.
+ * <p>Below API 33 a plain frosted mark plays instead. The small form (around the like button,
+ * which animates itself) is intentionally nothing - one acknowledgement is enough.
  *
  * <p>Add it over everything and call {@link #play}; it takes no touches and detaches itself (and
- * clears the lens from the parent) when done. One animator drives every part.
+ * clears the effect from the parent) when done.
  */
 public final class LikeBurstView extends View {
-    private static final long BIG_MS = 1050L;
-    private static final long SMALL_MS = 760L;
+    private static final long DURATION_MS = 1500L;
 
-    /**
-     * The lens: inside it the content is magnified a little; along its rim it is pushed outward
-     * and the three channels are pulled apart along the radius (the rainbow fringe), with a faint
-     * iridescent sheen. The rim ripples (two slow angular waves) and the whole lens fades with
-     * {@code strength}, so at 0 the content passes through untouched.
-     */
-    private static final String LENS_AGSL = ""
+    private static final String LIQUID_AGSL = ""
             + "uniform shader content;"
+            + "uniform float2 origin;"
             + "uniform float2 center;"
-            + "uniform float radius;"
-            + "uniform float strength;"
+            + "uniform float R;"
+            + "uniform float scale;"
+            + "uniform float sx;"
+            + "uniform float sy;"
+            + "uniform float angle;"
+            + "uniform float morph;"
+            + "uniform float wobble;"
+            + "uniform float glass;"
             + "uniform float time;"
-            + "uniform float aberration;"
+            + "uniform float4 ripA;"
+            + "uniform float4 ripB;"
+            + "uniform half3 tint;"
+            + "uniform float heart;"
+            + "uniform float2 bounds;"
+            // Every sample stays inside the view: past its edge there is nothing, and the ripples
+            // pulled that nothing in as dark seams along the sides.
+            + "half4 at(float2 q) { return content.eval(clamp(q, float2(0.5), bounds - 0.5)); }"
+
+            + "float dot2(float2 v) { return dot(v, v); }"
+            // Inigo Quilez's five-pointed star (y up), rounded by `rr`.
+            + "float sdStar(float2 p) {"
+            + "  float2 k1 = float2(0.809016994375, -0.587785252292);"
+            + "  float2 k2 = float2(-k1.x, k1.y);"
+            + "  float rr = 0.13;"
+            + "  float r = 0.92 - rr;"
+            + "  p.x = abs(p.x);"
+            + "  p -= 2.0 * max(dot(k1, p), 0.0) * k1;"
+            + "  p -= 2.0 * max(dot(k2, p), 0.0) * k2;"
+            + "  p.x = abs(p.x);"
+            + "  p.y -= r;"
+            + "  float2 ba = 0.48 * float2(-k1.y, k1.x) - float2(0.0, 1.0);"
+            + "  float h = clamp(dot(p, ba) / dot(ba, ba), 0.0, r);"
+            + "  return length(p - ba * h) * sign(p.y * ba.x - p.x * ba.y) - rr;"
+            + "}"
+            // Inigo Quilez's heart (y up, base at the origin).
+            + "float sdHeart(float2 p) {"
+            + "  p.x = abs(p.x);"
+            + "  if (p.y + p.x > 1.0) return sqrt(dot2(p - float2(0.25, 0.75))) - 0.35355339;"
+            + "  return sqrt(min(dot2(p - float2(0.0, 1.0)), dot2(p - 0.5 * max(p.x + p.y, 0.0))))"
+            + "      * sign(p.x - p.y);"
+            + "}"
+            // The drop: a circle flowing into the mark, its edge rippling (q in units of R, y down).
+            + "float shape(float2 q) {"
+            + "  float a = atan(q.y, q.x);"
+            + "  float mark = heart > 0.5"
+            + "      ? sdHeart(float2(q.x, -q.y) * 0.8 + float2(0.0, 0.5)) / 0.8"
+            + "      : sdStar(float2(q.x, -q.y));"
+            + "  float d = mix(length(q) - 0.7, mark, morph);"
+            + "  return d + wobble * 0.05 * (sin(3.0 * a + time * 7.0) + 0.6 * sin(5.0 * a - time * 5.3));"
+            + "}"
+            // A ripple ring: rp = (radius, amplitude px, width px, unused).
+            + "float2 ripple(float2 p, float4 rp) {"
+            + "  if (rp.y <= 0.01) return float2(0.0);"
+            + "  float2 v = p - origin;"
+            + "  float r = length(v);"
+            + "  if (r < 0.001) return float2(0.0);"
+            + "  float x = (r - rp.x) / rp.z;"
+            + "  return (v / r) * rp.y * exp(-x * x) * sin(x * 2.4);"
+            + "}"
+
             + "half4 main(float2 p) {"
-            + "  float2 d = p - center;"
-            + "  float r = length(d);"
-            + "  if (strength <= 0.001 || r > radius * 2.2) return content.eval(p);"
-            + "  float2 dir = r > 0.001 ? d / r : float2(0.0);"
-            + "  float ang = atan(d.y, d.x);"
-            + "  float wob = 1.0 + 0.07 * sin(ang * 3.0 + time * 5.0) + 0.045 * sin(ang * 5.0 - time * 3.7);"
-            + "  float R = radius * wob;"
-            + "  float x = r / R;"
-            + "  float k = (x - 1.0) * 3.0;"
-            + "  float rim = exp(-k * k);"
-            + "  float inside = 1.0 - smoothstep(0.0, 1.05, x);"
-            + "  float2 base = center + d * (1.0 - 0.13 * strength * inside) - dir * (0.11 * R * strength * rim);"
-            + "  float2 ca = dir * aberration * strength * (rim + 0.25 * inside * x);"
-            + "  half4 c = content.eval(base);"
-            + "  half3 col = half3(content.eval(base + ca).r, c.g, content.eval(base - ca).b);"
-            + "  float hue = ang / 6.2831853 + time * 0.12;"
-            + "  half3 iri = half3(0.5 + 0.5 * cos(6.2831853 * (hue + float3(0.0, 0.33, 0.67))));"
-            + "  col += iri * half(0.09 * strength * rim);"
-            + "  col += half3(0.06 * strength * rim * (0.5 + 0.5 * dir.y * -1.0));"
-            + "  return half4(col, c.a);"
+            + "  float2 disp = ripple(p, ripA) + ripple(p, ripB);"
+            // Dispersion: each channel bends by a different amount.
+            + "  half3 col = half3(at(p + disp * 1.35).r, at(p + disp).g,"
+            + "      at(p + disp * 0.65).b);"
+            + "  half alpha = at(p).a;"
+            + "  if (glass > 0.001) {"
+            + "    float2 d = p - center;"
+            + "    float c = cos(-angle);"
+            + "    float s = sin(-angle);"
+            + "    float2 q = float2(c * d.x - s * d.y, s * d.x + c * d.y)"
+            + "        / float2(R * scale * sx, R * scale * sy);"
+            + "    if (abs(q.x) < 1.7 && abs(q.y) < 1.7) {"
+            + "      float sd = shape(q);"
+            + "      float e = 0.01;"
+            + "      float2 n = float2(shape(q + float2(e, 0.0)) - shape(q - float2(e, 0.0)),"
+            + "                        shape(q + float2(0.0, e)) - shape(q - float2(0.0, e)));"
+            + "      n = n / max(length(n), 0.00001);"
+            + "      float2 ns = float2(c * n.x + s * n.y, -s * n.x + c * n.y);"
+            + "      float inside = smoothstep(0.02, -0.02, sd);"
+            + "      float depth = clamp(-sd / 0.35, 0.0, 1.0);"
+            + "      float edgeK = 1.0 - depth;"
+            // Refraction: pulled in hard along the rim, magnified through the middle.
+            + "      float2 sp = p + (-ns * R * scale * 0.38 * edgeK * edgeK + (center - p) * 0.24) * glass;"
+            + "      float ca = R * scale * 0.06 * edgeK * glass;"
+            + "      half3 g = half3(at(sp + ns * ca).r, at(sp).g, at(sp - ns * ca).b);"
+            + "      float f = R * 0.06;"
+            + "      half3 frost = (at(sp + float2(f, 0.0)).rgb + at(sp - float2(f, 0.0)).rgb"
+            + "          + at(sp + float2(0.0, f)).rgb + at(sp - float2(0.0, f)).rgb) * 0.25;"
+            + "      g = mix(g, frost, 0.38);"
+            + "      g = mix(g, half3(1.0), 0.12);"
+            + "      g = mix(g, tint, 0.17);"
+            // Light from the top left: highlight on the lit rim, shade on the far one.
+            + "      float2 L = normalize(float2(-0.45, -0.9));"
+            + "      float spec = pow(clamp(dot(ns, L), 0.0, 1.0), 6.0) * edgeK * edgeK * edgeK;"
+            + "      float shade = clamp(dot(ns, -L), 0.0, 1.0) * edgeK * edgeK;"
+            + "      g += half3(spec * 0.95);"
+            + "      g *= half(1.0 - 0.28 * shade);"
+            // A band of light sweeping through the body.
+            + "      float z = (q.x + q.y * 0.6 - (time * 1.5 - 1.3)) * 3.0;"
+            + "      g += half3(0.28 * exp(-z * z) * depth);"
+            // A rainbow fringe running round the rim.
+            + "      float hue = atan(q.y, q.x) / 6.2831853 + time * 0.15;"
+            + "      half3 iri = half3(0.5 + 0.5 * cos(6.2831853 * (hue + float3(0.0, 0.33, 0.67))));"
+            + "      g += iri * half(0.24 * edgeK * edgeK * edgeK * edgeK);"
+            + "      col = mix(col, clamp(g, 0.0, 1.0), half(inside * glass));"
+            // A soft glow that follows the outline outside it.
+            + "      col += tint * half(0.32 * glass * exp(-max(sd, 0.0) * 7.0) * (1.0 - inside));"
+            + "    }"
+            + "  }"
+            + "  return half4(clamp(col, 0.0, 1.0), alpha);"
             + "}";
 
-    private final Paint bodyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint pearlPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint rimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint flowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final SweepGradient flowShader;
-    private final android.graphics.Matrix flowMatrix = new android.graphics.Matrix();
-    private final Path icon = new Path();
+    private final Path mark = new Path();
+    private final Paint fallbackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final boolean big;
     private final boolean star;
     private final float cx;
     private final float cy;
     private final float radius;
     private final float density;
-    private Object lens;            // RuntimeShader, API 33+
+    private final int accent;
+    private Object liquid;          // RuntimeShader, API 33+
     private ViewGroup host;
     private float t;
-    private float appliedBlur = -1f;
 
     /**
-     * @param star  a star (gold) instead of a heart (pink)
-     * @param big   the double-tap form with the mark; false is the lens alone
+     * @param star  a star instead of a heart
+     * @param big   the double-tap form; false (around the like button) shows nothing
      * @param x     centre, in the parent's coordinates
-     * @param size  the mark's size in px (big), or the button's size (small)
+     * @param size  the mark's nominal size in px
      */
     public LikeBurstView(Context context, boolean star, boolean big, float x, float y, float size) {
         super(context);
@@ -107,49 +185,27 @@ public final class LikeBurstView extends View {
         this.star = star;
         this.cx = x;
         this.cy = y;
-        this.radius = size * 0.5f;
+        this.radius = size * 0.62f;
         this.density = context.getResources().getDisplayMetrics().density;
-        // Soft corners: the points are rounded off once, into the path every paint uses.
+        this.accent = star ? Color.rgb(255, 204, 64) : Color.rgb(255, 90, 120);
         Paint rounder = new Paint();
         rounder.setStyle(Paint.Style.FILL);
-        rounder.setPathEffect(new CornerPathEffect(star ? 2.6f : 1.4f));
+        rounder.setPathEffect(new CornerPathEffect(star ? 2.4f : 1.4f));
         rounder.getFillPath(ActionIconDrawable.pathOf(star ? ActionIconDrawable.Kind.STAR
-                : ActionIconDrawable.Kind.HEART), icon);
-        // The exact colours of the like button's saved state.
-        int accent = star ? Color.rgb(255, 214, 10) : Color.rgb(255, 55, 95);
-        int pale = blend(accent, Color.WHITE, 0.62f);
+                : ActionIconDrawable.Kind.HEART), mark);
 
-        // In the mark's own 24-unit space: pale at the top, the colour lower down.
-        bodyPaint.setStyle(Paint.Style.FILL);
-        bodyPaint.setShader(new LinearGradient(0f, 2f, 0f, 22f,
-                new int[]{pale, blend(accent, Color.WHITE, 0.18f), accent},
-                new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
-        // A pearly sheen resting in the upper left, as if lit by a soft window.
-        pearlPaint.setShader(new RadialGradient(8f, 7f, 12f,
-                new int[]{0x66FFFFFF, 0x14FFFFFF, 0x00FFFFFF},
-                new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));
-        rimPaint.setStyle(Paint.Style.STROKE);
-        rimPaint.setStrokeWidth(0.45f);
-        rimPaint.setStrokeJoin(Paint.Join.ROUND);
-        rimPaint.setShader(new LinearGradient(0f, 2f, 0f, 14f,
-                0x8CFFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
-        // Light flowing round the edge: two soft arcs on a sweep, turned as it plays.
-        flowShader = new SweepGradient(12f, 12f,
-                new int[]{0x00FFFFFF, 0xB0FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x80FFFFFF, 0x00FFFFFF},
-                new float[]{0f, 0.12f, 0.26f, 0.5f, 0.62f, 0.76f});
-        flowPaint.setStyle(Paint.Style.STROKE);
-        flowPaint.setStrokeWidth(0.7f);
-        flowPaint.setStrokeJoin(Paint.Join.ROUND);
-        flowPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.ADD));
-        flowPaint.setShader(flowShader);
-
-        if (Build.VERSION.SDK_INT >= 33) {
+        if (big && Build.VERSION.SDK_INT >= 33) {
             try {
-                lens = new android.graphics.RuntimeShader(LENS_AGSL);
+                android.graphics.RuntimeShader shader = new android.graphics.RuntimeShader(LIQUID_AGSL);
+                shader.setFloatUniform("tint", Color.red(accent) / 255f,
+                        Color.green(accent) / 255f, Color.blue(accent) / 255f);
+                shader.setFloatUniform("heart", star ? 0f : 1f);
+                shader.setFloatUniform("origin", x, y);
+                liquid = shader;
             } catch (Throwable t) {
                 // AGSL compiles on the device: a shader error shows up here, not at build time.
-                android.util.Log.w("SpicyLikeBurst", "lens shader unavailable: " + t);
-                lens = null;
+                android.util.Log.w("SpicyLikeBurst", "liquid shader unavailable: " + t);
+                liquid = null;
             }
         }
         setWillNotDraw(false);
@@ -160,29 +216,52 @@ public final class LikeBurstView extends View {
 
     /** Adds the burst to {@code parent} and plays it; it removes itself at the end. */
     public void play(ViewGroup parent) {
+        if (!big) return;
+        // One at a time per parent: both would drive the same RenderEffect, and the first to end
+        // would clear it from under the second.
+        LikeBurstView previous = PLAYING.get(parent);
+        if (previous != null) previous.finish();
+        PLAYING.put(parent, this);
         host = parent;
         parent.addView(this, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         ValueAnimator clock = ValueAnimator.ofFloat(0f, 1f);
-        clock.setDuration(big ? BIG_MS : SMALL_MS);
+        clock.setDuration(DURATION_MS);
         clock.setInterpolator(new LinearInterpolator());
         clock.addUpdateListener(a -> {
             t = (float) a.getAnimatedValue();
-            applyLens();
-            if (big) applyFocusBlur();
-            invalidate();
+            applyLiquid();
+            if (liquid == null) invalidate();
         });
         clock.addListener(new AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(Animator animation) {
-                clearLens();
-                if (getParent() instanceof ViewGroup) ((ViewGroup) getParent()).removeView(LikeBurstView.this);
+                finish();
             }
         });
+        this.clock = clock;
         clock.start();
     }
 
+    private static final java.util.WeakHashMap<ViewGroup, LikeBurstView> PLAYING =
+            new java.util.WeakHashMap<>();
+    private ValueAnimator clock;
+
+    private void finish() {
+        if (clock != null) {
+            ValueAnimator c = clock;
+            clock = null;
+            c.removeAllListeners();
+            c.removeAllUpdateListeners();
+            c.cancel();
+        }
+        ViewGroup h = host;
+        if (h != null && PLAYING.get(h) == this) PLAYING.remove(h);
+        clearLiquid();
+        if (getParent() instanceof ViewGroup) ((ViewGroup) getParent()).removeView(this);
+    }
+
     @Override protected void onDetachedFromWindow() {
-        clearLens();
+        clearLiquid();
         super.onDetachedFromWindow();
     }
 
@@ -190,79 +269,106 @@ public final class LikeBurstView extends View {
         return false;
     }
 
-    @Override protected void onDraw(Canvas canvas) {
-        if (big) drawMark(canvas);
+    // -- motion ------------------------------------------------------------------------------
+
+    private float exit() {
+        return smooth(phase(t, 0.72f, 1f));
     }
 
-    /** The lens over the parent: swells out from the finger, rippling, then thins away. */
-    private void applyLens() {
-        if (Build.VERSION.SDK_INT < 33 || lens == null || host == null) return;
-        android.graphics.RuntimeShader shader = (android.graphics.RuntimeShader) lens;
-        float grow = decelerate(phase(t, 0f, 0.8f));
-        float lensRadius = radius * (big ? 1.25f : 1.1f) * (0.55f + 0.95f * grow);
-        // Quick to form, slow to go: rises over the first fifth, then eases out to nothing.
-        float rise = smooth(phase(t, 0f, 0.2f));
-        float fall = 1f - smooth(phase(t, 0.3f, 1f));
-        float strength = rise * fall;
-        shader.setFloatUniform("center", cx, cy);
-        shader.setFloatUniform("radius", lensRadius);
-        shader.setFloatUniform("strength", strength);
-        shader.setFloatUniform("time", t * (big ? BIG_MS : SMALL_MS) / 1000f);
-        shader.setFloatUniform("aberration", density * (big ? 5f : 3.5f));
+    /** Pops in on a lively spring (a jelly overshoot), shrinks a little as it melts. */
+    private float scale() {
+        return spring(phase(t, 0.03f, 0.7f), 0.42, 11.0) * (1f - 0.35f * exit());
+    }
+
+    /** Squash and stretch, volume kept: x wide while y short and back, dying away. */
+    private float jiggle() {
+        float p = phase(t, 0.03f, 0.85f);
+        return 0.16f * (float) (Math.exp(-4.0 * p) * Math.sin(p * 19.0)) + 0.06f * exit();
+    }
+
+    /** Circle (0) to mark (1), slightly past it on the way, back toward a drop as it melts. */
+    private float morph() {
+        return spring(phase(t, 0.08f, 0.6f), 0.55, 10.0) * (1f - 0.65f * exit());
+    }
+
+    /** The liquid edge: restless as the drop forms, calm while held, restless as it melts. */
+    private float wobble() {
+        return 1.2f * (1f - smooth(phase(t, 0f, 0.5f))) + 0.22f + 0.9f * exit();
+    }
+
+    /** A broad, unhurried turn into place, a little further as it leaves. */
+    private float angleDegrees() {
+        float settle = star ? -44f : -14f;
+        return settle * (1f - spring(phase(t, 0f, 0.85f), 0.85, 6.0)) + 16f * exit();
+    }
+
+    private float presence() {
+        return smooth(phase(t, 0.02f, 0.14f)) * (1f - exit());
+    }
+
+    private float rise() {
+        float e = exit();
+        return density * 42f * e * e;
+    }
+
+    /** A ripple ring (radius, amplitude, width, -): runs out over [start, end], fading. */
+    private float[] ripple(float start, float end, float reach, float ampDp) {
+        float p = phase(t, start, end);
+        if (p <= 0f || p >= 1f) return new float[]{0f, 0f, 1f, 0f};
+        float fade = (1f - p);
+        return new float[]{
+                reach * decelerate(p),
+                density * ampDp * fade * (float) Math.sqrt(fade) * Math.min(1f, p * 8f),
+                density * (26f + 70f * p),
+                0f};
+    }
+
+    // -- drawing -----------------------------------------------------------------------------
+
+    private void applyLiquid() {
+        if (Build.VERSION.SDK_INT < 33 || liquid == null || host == null) return;
+        android.graphics.RuntimeShader shader = (android.graphics.RuntimeShader) liquid;
+        float reach = 0.62f * Math.max(host.getWidth(), host.getHeight());
+        float[] a = t < 0.74f ? ripple(0f, 0.74f, reach, 30f)
+                : ripple(0.74f, 1f, reach * 0.35f, 14f);   // the melt's own small ripple
+        float[] b = ripple(0.1f, 0.86f, reach * 0.85f, 15f);
+        float j = jiggle();
+        shader.setFloatUniform("bounds", host.getWidth(), host.getHeight());
+        shader.setFloatUniform("center", cx, cy - rise());
+        shader.setFloatUniform("R", radius);
+        shader.setFloatUniform("scale", Math.max(0.001f, scale()));
+        shader.setFloatUniform("sx", 1f + j);
+        shader.setFloatUniform("sy", 1f / (1f + j));
+        shader.setFloatUniform("angle", (float) Math.toRadians(angleDegrees()));
+        shader.setFloatUniform("morph", morph());
+        shader.setFloatUniform("wobble", wobble());
+        shader.setFloatUniform("glass", presence());
+        shader.setFloatUniform("time", t * DURATION_MS / 1000f);
+        shader.setFloatUniform("ripA", a[0], a[1], a[2], a[3]);
+        shader.setFloatUniform("ripB", b[0], b[1], b[2], b[3]);
         host.setRenderEffect(android.graphics.RenderEffect.createRuntimeShaderEffect(shader, "content"));
     }
 
-    private void clearLens() {
+    private void clearLiquid() {
         if (Build.VERSION.SDK_INT >= 31 && host != null) host.setRenderEffect(null);
         host = null;
     }
 
-    /** The mark blurs in as it arrives and back out as it leaves (API 31+). */
-    private void applyFocusBlur() {
-        if (Build.VERSION.SDK_INT < 31) return;
-        float focus = 1f - smooth(phase(t, 0f, 0.35f));
-        float blur = 8f * density * Math.max(focus, exit() * 1.1f);
-        if (Math.abs(blur - appliedBlur) < 0.25f) return;
-        appliedBlur = blur;
-        setRenderEffect(blur < 0.5f ? null
-                : android.graphics.RenderEffect.createBlurEffect(blur, blur, Shader.TileMode.DECAL));
-    }
-
-    /** The leaving part: 0 until the hold ends, then eases to 1. */
-    private float exit() {
-        return smooth(phase(t, 0.62f, 1f));
-    }
-
-    private void drawMark(Canvas canvas) {
-        float alpha = smooth(phase(t, 0f, 0.25f)) * (1f - exit());
-        if (alpha <= 0.003f) return;
-        float in = phase(t, 0f, 0.7f);
-        float scale = 0.5f + 0.5f * spring(in, 0.62, 10.0) + 0.06f * exit();
-        // A broad, unhurried turn into place on a slow spring - not a short snap.
-        float turn = (star ? -48f : -16f) * (1f - spring(in, 0.78, 7.0));
-        float size = radius * 2f * scale;
-        float e = exit();
-        float rise = density * 22f * e * e;
-
+    /** Only without the shader: a frosted mark on the same motion. */
+    @Override protected void onDraw(Canvas canvas) {
+        if (liquid != null) return;
+        float presence = presence();
+        if (presence <= 0.003f) return;
+        float size = radius * 2f * Math.max(0f, scale());
         canvas.save();
-        canvas.translate(cx, cy - rise);
-        canvas.rotate(turn);
+        canvas.translate(cx, cy - rise());
+        canvas.rotate(angleDegrees());
+        canvas.scale(1f + jiggle(), 1f / (1f + jiggle()));
         canvas.translate(-size / 2f, -size / 2f);
         canvas.scale(size / 24f, size / 24f);
-        int a255 = Math.round(255 * alpha);
-        bodyPaint.setAlpha(a255);
-        canvas.drawPath(icon, bodyPaint);
-        canvas.save();
-        canvas.clipPath(icon);
-        pearlPaint.setAlpha(a255);
-        canvas.drawRect(-2f, -2f, 26f, 26f, pearlPaint);
-        canvas.restore();
-        rimPaint.setAlpha(a255);
-        canvas.drawPath(icon, rimPaint);
-        flowMatrix.setRotate(-60f + 260f * smooth(phase(t, 0.05f, 0.9f)), 12f, 12f);
-        flowShader.setLocalMatrix(flowMatrix);
-        flowPaint.setAlpha(a255);
-        canvas.drawPath(icon, flowPaint);
+        fallbackPaint.setColor(blend(Color.WHITE, accent, 0.3f));
+        fallbackPaint.setAlpha(Math.round(220 * presence));
+        canvas.drawPath(mark, fallbackPaint);
         canvas.restore();
     }
 
@@ -287,7 +393,7 @@ public final class LikeBurstView extends View {
         return 1f - (1f - p) * (1f - p);
     }
 
-    /** A spring from 0 to 1 over p in [0, 1]; damping/omega set its overshoot and pace. */
+    /** A spring from 0 to 1 over p in [0, 1]; damping/omega set its bounce and pace. */
     private static float spring(float p, double damping, double omega) {
         double decay = Math.exp(-damping * omega * p);
         double wd = omega * Math.sqrt(1 - damping * damping);

@@ -319,6 +319,23 @@ final class AgentCommandChannel {
                 case "footer":
                     readFooter(correlation);
                     return;
+                case "like-burst":
+                    // The double-tap acknowledgement alone, mid-screen - no Liked Songs action, so
+                    // it can be looked at without touching the library.
+                    onMain(verb, correlation, () -> {
+                        Activity activity = References.currentActivity();
+                        NativeSpicyShellView shell = activity == null || activity.getWindow() == null
+                                ? null : findShell(activity.getWindow().getDecorView());
+                        if (shell == null) {
+                            reply("error", verb, "no lyrics screen", correlation);
+                            return;
+                        }
+                        float size = 92f * shell.getResources().getDisplayMetrics().density;
+                        new com.eza.spicyex.ui.LikeBurstView(activity, !"heart".equals(commandArgument),
+                                true, shell.getWidth() / 2f, shell.getHeight() * 0.42f, size).play(shell);
+                        reply("ok", verb, "played", correlation);
+                    });
+                    return;
                 case "picker":
                     picker(argument.isEmpty() ? "open" : argument, correlation);
                     return;
