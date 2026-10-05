@@ -486,7 +486,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         });
         android.widget.LinearLayout.LayoutParams params =
                 new android.widget.LinearLayout.LayoutParams(size, size);
-        params.setMarginStart(Math.round(6 * density));
+        params.setMarginStart(Math.round(8 * density));
         params.gravity = android.view.Gravity.CENTER_VERTICAL;
         row.addView(download, params);
         downloadButton = download;
@@ -572,10 +572,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private int addButtonStyledHeight = -1;
     private final WeakHashMap<View, AddButtonIconState> addButtonIconStates = new WeakHashMap<>();
 
-    /**
-     * Spotify's like/add button (a custom view, "Add item") in Apple's round, translucent style,
-     * the same disc as the "..." next to it; its own glyph (plus, then check) stays.
-     */
+    /** Keep Spotify's native add button and refine its visual size to match the neighboring actions. */
     private void styleAddButton() {
         View feedback = overlay.findViewById(id("feedback_buttons_container"));
         if (!(feedback instanceof ViewGroup)) return;
@@ -1800,7 +1797,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             centerY = location[1] - overlayLocation[1] + Math.round(18f * density);
         }
 
-        int edgeInset = Math.min(Math.round(20f * density), overlay.getWidth() / 2);
+        int edgeInset = Math.min(Math.round(24f * density), overlay.getWidth() / 2);
         int maxRight = Math.max(1, overlay.getWidth() - edgeInset);
         left = Math.max(edgeInset, Math.min(left, maxRight - 1));
         width = Math.max(1, Math.min(left + width, maxRight) - left);
