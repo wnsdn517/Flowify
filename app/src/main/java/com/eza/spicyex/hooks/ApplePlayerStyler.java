@@ -572,6 +572,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private boolean addButtonOriginalSizeCaptured;
     private int addButtonStyledWidth = -1;
     private int addButtonStyledHeight = -1;
+    private boolean addButtonMissingIconLogged;
     private final WeakHashMap<ImageView, AddButtonIconState> addButtonIconStates = new WeakHashMap<>();
 
     /** Keep Spotify's native add button and refine its visual size to match the neighboring actions. */
@@ -661,11 +662,26 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                 continue;
             }
             ImageView icon = (ImageView) view;
-            if (icon.getDrawable() == null) continue;
             AddButtonIconState state = addButtonIconStates.get(icon);
             if (state == null) {
                 state = new AddButtonIconState(icon);
                 addButtonIconStates.put(icon, state);
+            }
+            if (icon.getDrawable() == null) {
+                if (state.fallbackDrawable == null) {
+                    state.fallbackDrawable = new com.eza.spicyex.ui.ActionIconDrawable(
+                            com.eza.spicyex.ui.ActionIconDrawable.Kind.PLUS, Color.WHITE,
+                            density, ACTION_ICON_SIZE_DP);
+                }
+                icon.setImageDrawable(state.fallbackDrawable);
+                if (!addButtonMissingIconLogged) {
+                    addButtonMissingIconLogged = true;
+                    XpLog.log(NativeSpicyLyricsHook.TAG + " Spotify add button icon was empty; "
+                            + "showing fallback (view=" + icon.getClass().getName()
+                            + ", size=" + icon.getWidth() + "x" + icon.getHeight()
+                            + ", visibility=" + icon.getVisibility()
+                            + ", alpha=" + icon.getAlpha() + ")");
+                }
             }
             int contentWidth = Math.max(0,
                     icon.getWidth() - state.paddingLeft - state.paddingRight);
@@ -707,19 +723,23 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
         addButton = null;
         addButtonOriginalSizeCaptured = false;
+        addButtonMissingIconLogged = false;
         addButtonStyledBackground = null;
         addButtonStyledWidth = -1;
         addButtonStyledHeight = -1;
     }
 
     private static final class AddButtonIconState {
+        final Drawable originalDrawable;
         final int paddingLeft;
         final int paddingTop;
         final int paddingRight;
         final int paddingBottom;
         final ImageView.ScaleType scaleType;
+        Drawable fallbackDrawable;
 
         AddButtonIconState(ImageView imageView) {
+            originalDrawable = imageView.getDrawable();
             paddingLeft = imageView.getPaddingLeft();
             paddingTop = imageView.getPaddingTop();
             paddingRight = imageView.getPaddingRight();
@@ -728,6 +748,9 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
 
         void restore(ImageView imageView) {
+            if (fallbackDrawable != null && imageView.getDrawable() == fallbackDrawable) {
+                imageView.setImageDrawable(originalDrawable);
+            }
             imageView.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
             imageView.setScaleType(scaleType);
         }
