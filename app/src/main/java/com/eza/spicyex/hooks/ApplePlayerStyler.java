@@ -572,7 +572,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private boolean addButtonOriginalSizeCaptured;
     private int addButtonStyledWidth = -1;
     private int addButtonStyledHeight = -1;
-    private final WeakHashMap<View, AddButtonIconState> addButtonIconStates = new WeakHashMap<>();
+    private final WeakHashMap<ImageView, AddButtonIconState> addButtonIconStates = new WeakHashMap<>();
 
     /** Keep Spotify's native add button and refine its visual size to match the neighboring actions. */
     private void styleAddButton() {
@@ -664,17 +664,33 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             if (icon.getDrawable() == null) continue;
             AddButtonIconState state = addButtonIconStates.get(icon);
             if (state == null) {
-                state = new AddButtonIconState(icon.getScaleX(), icon.getScaleY());
+                state = new AddButtonIconState(icon);
                 addButtonIconStates.put(icon, state);
             }
-            float factor = Math.min(1f, targetSize / Math.max(icon.getWidth(), icon.getHeight()));
-            icon.setScaleX(state.scaleX * factor);
-            icon.setScaleY(state.scaleY * factor);
+            int contentWidth = Math.max(0,
+                    icon.getWidth() - state.paddingLeft - state.paddingRight);
+            int contentHeight = Math.max(0,
+                    icon.getHeight() - state.paddingTop - state.paddingBottom);
+            int insetX = Math.max(0, Math.round((contentWidth - targetSize) * 0.5f));
+            int insetY = Math.max(0, Math.round((contentHeight - targetSize) * 0.5f));
+            int paddingLeft = state.paddingLeft + insetX;
+            int paddingTop = state.paddingTop + insetY;
+            int paddingRight = state.paddingRight + insetX;
+            int paddingBottom = state.paddingBottom + insetY;
+            if (icon.getPaddingLeft() != paddingLeft || icon.getPaddingTop() != paddingTop
+                    || icon.getPaddingRight() != paddingRight
+                    || icon.getPaddingBottom() != paddingBottom) {
+                icon.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
+            }
+            if (icon.getScaleType() != ImageView.ScaleType.CENTER_INSIDE) {
+                icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            }
         }
     }
 
     private void restoreAddButton() {
-        for (java.util.Map.Entry<View, AddButtonIconState> entry : addButtonIconStates.entrySet()) {
+        for (java.util.Map.Entry<ImageView, AddButtonIconState> entry
+                : addButtonIconStates.entrySet()) {
             entry.getValue().restore(entry.getKey());
         }
         addButtonIconStates.clear();
@@ -697,17 +713,23 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     }
 
     private static final class AddButtonIconState {
-        final float scaleX;
-        final float scaleY;
+        final int paddingLeft;
+        final int paddingTop;
+        final int paddingRight;
+        final int paddingBottom;
+        final ImageView.ScaleType scaleType;
 
-        AddButtonIconState(float scaleX, float scaleY) {
-            this.scaleX = scaleX;
-            this.scaleY = scaleY;
+        AddButtonIconState(ImageView imageView) {
+            paddingLeft = imageView.getPaddingLeft();
+            paddingTop = imageView.getPaddingTop();
+            paddingRight = imageView.getPaddingRight();
+            paddingBottom = imageView.getPaddingBottom();
+            scaleType = imageView.getScaleType();
         }
 
-        void restore(View view) {
-            view.setScaleX(scaleX);
-            view.setScaleY(scaleY);
+        void restore(ImageView imageView) {
+            imageView.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
+            imageView.setScaleType(scaleType);
         }
     }
 
