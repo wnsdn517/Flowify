@@ -629,7 +629,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
     private void shrinkAddButtonIcons(View root) {
         float density = activity.getResources().getDisplayMetrics().density;
-        float targetSize = ACTION_ICON_SIZE_DP * density;
+        float targetSize = (ACTION_ICON_SIZE_DP + 2f) * density;
         ArrayDeque<View> pending = new ArrayDeque<>();
         pending.add(root);
         while (!pending.isEmpty()) {
