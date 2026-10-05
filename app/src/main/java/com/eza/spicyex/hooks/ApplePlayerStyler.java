@@ -573,6 +573,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private int addButtonStyledWidth = -1;
     private int addButtonStyledHeight = -1;
     private boolean addButtonMissingIconLogged;
+    private String addButtonLastLayoutSignature = "";
     private final WeakHashMap<ImageView, AddButtonIconState> addButtonIconStates = new WeakHashMap<>();
 
     /** Keep Spotify's native add button and refine its visual size to match the neighboring actions. */
@@ -589,6 +590,16 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             }
         }
         if (found == null || found.getVisibility() == View.GONE) return;
+        int[] buttonLocation = new int[2];
+        found.getLocationInWindow(buttonLocation);
+        ViewGroup.LayoutParams originalParams = found.getLayoutParams();
+        String layoutSignature = buttonLocation[0] + "," + buttonLocation[1] + " "
+                + found.getWidth() + "x" + found.getHeight() + " lp="
+                + (originalParams == null ? "none" : originalParams.width + "x" + originalParams.height);
+        if (!layoutSignature.equals(addButtonLastLayoutSignature)) {
+            addButtonLastLayoutSignature = layoutSignature;
+            XpLog.log(NativeSpicyLyricsHook.TAG + " Spotify add button layout " + layoutSignature);
+        }
         if (addButton != found) {
             restoreAddButton();
             addButton = found;
@@ -658,9 +669,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                     pending.addLast(group.getChildAt(i));
                 }
             }
-            if (!(view instanceof ImageView) || view.getWidth() <= 0 || view.getHeight() <= 0) {
-                continue;
-            }
+            if (!(view instanceof ImageView)) continue;
             ImageView icon = (ImageView) view;
             AddButtonIconState state = addButtonIconStates.get(icon);
             if (state == null) {
@@ -683,6 +692,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                             + ", alpha=" + icon.getAlpha() + ")");
                 }
             }
+            if (icon.getWidth() <= 0 || icon.getHeight() <= 0) continue;
             int contentWidth = Math.max(0,
                     icon.getWidth() - state.paddingLeft - state.paddingRight);
             int contentHeight = Math.max(0,
@@ -724,6 +734,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         addButton = null;
         addButtonOriginalSizeCaptured = false;
         addButtonMissingIconLogged = false;
+        addButtonLastLayoutSignature = "";
         addButtonStyledBackground = null;
         addButtonStyledWidth = -1;
         addButtonStyledHeight = -1;
