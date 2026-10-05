@@ -592,10 +592,11 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         if (found == null || found.getVisibility() == View.GONE) return;
         int[] buttonLocation = new int[2];
         found.getLocationInWindow(buttonLocation);
-        ViewGroup.LayoutParams originalParams = found.getLayoutParams();
+        ViewGroup.LayoutParams measuredParams = found.getLayoutParams();
         String layoutSignature = buttonLocation[0] + "," + buttonLocation[1] + " "
                 + found.getWidth() + "x" + found.getHeight() + " lp="
-                + (originalParams == null ? "none" : originalParams.width + "x" + originalParams.height);
+                + (measuredParams == null ? "none"
+                : measuredParams.width + "x" + measuredParams.height);
         if (!layoutSignature.equals(addButtonLastLayoutSignature)) {
             addButtonLastLayoutSignature = layoutSignature;
             XpLog.log(NativeSpicyLyricsHook.TAG + " Spotify add button layout " + layoutSignature);
