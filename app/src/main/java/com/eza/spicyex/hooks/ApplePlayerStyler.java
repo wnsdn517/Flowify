@@ -808,6 +808,20 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             layerParams.height = wantedHeight;
             animatedArtworkLayer.setLayoutParams(layerParams);
         }
+        FrameLayout.LayoutParams motionParams = motionView.getLayoutParams()
+                instanceof FrameLayout.LayoutParams
+                ? (FrameLayout.LayoutParams) motionView.getLayoutParams()
+                : new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, carousel.getWidth()),
+                        Gravity.TOP | Gravity.LEFT);
+        int squareSide = Math.max(1, carousel.getWidth());
+        if (motionParams.width != ViewGroup.LayoutParams.MATCH_PARENT
+                || motionParams.height != squareSide || motionParams.gravity != (Gravity.TOP | Gravity.LEFT)) {
+            motionParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            motionParams.height = squareSide;
+            motionParams.gravity = Gravity.TOP | Gravity.LEFT;
+            motionView.setLayoutParams(motionParams);
+        }
         if (swiping) {
             // The clip belongs to the track being left: dropped now, re-resolved once the
             // carousel settles on the next one.
@@ -834,19 +848,21 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
     private static final class FadingArtworkFrame extends FrameLayout {
         private final Paint mask = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private int maskContentHeight = -1;
 
         FadingArtworkFrame(Activity activity) {
             super(activity);
             setWillNotDraw(false);
+            setLayerType(View.LAYER_TYPE_HARDWARE, null);
             setClickable(false);
             setFocusable(false);
             setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
 
-        @Override
-        protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
-            super.onSizeChanged(width, height, oldWidth, oldHeight);
-            if (height <= 0) return;
+        private void updateMask(int contentHeight) {
+            int height = Math.max(1, Math.min(getHeight(), contentHeight));
+            if (height == maskContentHeight) return;
+            maskContentHeight = height;
             mask.setShader(new LinearGradient(0f, 0f, 0f, height,
                     new int[]{Color.TRANSPARENT, Color.WHITE, Color.WHITE, Color.TRANSPARENT},
                     new float[]{0f, 0.12f, 0.58f, 1f}, android.graphics.Shader.TileMode.CLAMP));
@@ -1660,7 +1676,14 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private Bitmap bitmapOf(Drawable drawable, ImageView view) {
         if (drawable instanceof BitmapDrawable) {
             Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
-            if (bitmap != null && !bitmap.isRecycled()) return bitmap;
+            if (bitmap != null && !bitmap.isRecycled()) {
+                int[] crop = centerCropSourceBounds(bitmap.getWidth(), bitmap.getHeight());
+                if (crop == null) return null;
+                if (crop[0] == 0 && crop[1] == 0
+                        && crop[2] == bitmap.getWidth() && crop[3] == bitmap.getHeight()) return bitmap;
+                return Bitmap.createBitmap(bitmap, crop[0], crop[1],
+                        crop[2] - crop[0], crop[3] - crop[1]);
+            }
         }
         int size = Math.max(view.getWidth(), view.getHeight());
         if (size <= 0) size = drawable.getIntrinsicWidth();
@@ -1668,14 +1691,41 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         size = Math.min(size, 1080);
         Bitmap out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(out);
-        // Spotify's own drawable, drawn at our size and put back as it was. Drawn slightly
-        // larger than the square so its rounded corners fall outside it.
+        // Preserve non-bitmap drawable aspect ratios and centre-crop just as the motion clip
+        // does. Stretching an animated placeholder or vector here made the backdrop palette and
+        // the replacement video disagree with the square artwork frame.
         savedBounds.set(drawable.getBounds());
-        int bleed = Math.round(size * 0.02f);
-        drawable.setBounds(-bleed, -bleed, size + bleed, size + bleed);
-        drawable.draw(canvas);
-        drawable.setBounds(savedBounds);
+        int sourceWidth = drawable.getIntrinsicWidth() > 0
+                ? drawable.getIntrinsicWidth() : Math.max(1, view.getWidth());
+        int sourceHeight = drawable.getIntrinsicHeight() > 0
+                ? drawable.getIntrinsicHeight() : Math.max(1, view.getHeight());
+        float aspect = sourceWidth / (float) sourceHeight;
+        int drawWidth = aspect >= 1f ? Math.round(size * aspect) : size;
+        int drawHeight = aspect >= 1f ? size : Math.round(size / aspect);
+        int left = (size - drawWidth) / 2;
+        int top = (size - drawHeight) / 2;
+        int bleedX = Math.round(drawWidth * 0.02f);
+        int bleedY = Math.round(drawHeight * 0.02f);
+        try {
+            drawable.setBounds(left - bleedX, top - bleedY,
+                    left + drawWidth + bleedX, top + drawHeight + bleedY);
+            drawable.draw(canvas);
+        } finally {
+            drawable.setBounds(savedBounds);
+        }
         return out;
+    }
+
+    static int[] centerCropSourceBounds(int width, int height) {
+        if (width <= 0 || height <= 0) return null;
+        if (width > height) {
+            int side = height;
+            int left = (width - side) / 2;
+            return new int[]{left, 0, left + side, height};
+        }
+        int side = width;
+        int top = (height - side) / 2;
+        return new int[]{0, top, width, top + side};
     }
 
     // --- Times -------------------------------------------------------------------------------

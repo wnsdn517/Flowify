@@ -1,7 +1,9 @@
 package com.eza.spicyex.hooks;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -33,5 +35,16 @@ public class ApplePlayerClockTest {
         assertTrue(ApplePlayerStyler.isContinuousClockTransition(120, 122));
         assertFalse(ApplePlayerStyler.isContinuousClockTransition(120, 300));
         assertTrue(ApplePlayerStyler.isContinuousClockTransition(-1, 300));
+    }
+
+    @Test
+    public void artworkSourcesAreCentreCroppedToTheSameSquareWithoutStretching() {
+        assertArrayEquals(new int[]{200, 0, 800, 600},
+                ApplePlayerStyler.centerCropSourceBounds(1000, 600));
+        assertArrayEquals(new int[]{0, 200, 600, 800},
+                ApplePlayerStyler.centerCropSourceBounds(600, 1000));
+        assertArrayEquals(new int[]{0, 0, 600, 600},
+                ApplePlayerStyler.centerCropSourceBounds(600, 600));
+        assertNull(ApplePlayerStyler.centerCropSourceBounds(0, 600));
     }
 }
