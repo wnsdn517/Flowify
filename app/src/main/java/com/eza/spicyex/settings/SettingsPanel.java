@@ -924,6 +924,18 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         version.setPadding(0, style.dp(8), 0, 0);
         hero.addView(version);
 
+        // Official / Unofficial badge
+        boolean officialBuild = AppSigningIdentity.isOfficial(context);
+        TextView signingStatus = style.text(
+                uiStrings.get(officialBuild ? "settings_about_official" : "settings_about_unofficial",
+                        officialBuild ? "Official" : "Unofficial"),
+                12, officialBuild ? PanelStyle.COL_ACCENT : PanelStyle.COL_TITLE, true);
+        signingStatus.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams signingStatusLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        signingStatusLp.topMargin = style.dp(4);
+        hero.addView(signingStatus, signingStatusLp);
+
         // Subtle build badge (commit + date)
         TextView clue = style.text(BuildStamp.CLUE, 11, PanelStyle.COL_SUMMARY, false);
         clue.setPadding(style.dp(14), style.dp(4), style.dp(14), style.dp(4));
