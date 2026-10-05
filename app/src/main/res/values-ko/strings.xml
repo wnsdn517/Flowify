@@ -802,14 +802,12 @@
     <string name="settings_about_discussion">토론방</string>
     <string name="settings_about_ci_channel">CI 빌드 채널</string>
     <string name="settings_about_latest">GitHub 최신 버전</string>
+    <string name="settings_about_latest_commit">최신 커밋</string>
     <string name="settings_about_checking">확인 중…</string>
     <string name="settings_about_update">업데이트 있음</string>
+    <string name="settings_about_ahead">GitHub보다 최신</string>
     <string name="settings_about_up_to_date">최신 버전</string>
     <string name="settings_about_unavailable">확인할 수 없음</string>
-    <string name="settings_about_channel_released">released</string>
-    <string name="settings_about_channel_nightly">nightly-released</string>
-    <string name="settings_about_channel_unreleased">unreleased</string>
-    <string name="settings_about_current_newer">현재 빌드가 GitHub보다 최신입니다</string>
     <string name="settings_about_device">기기</string>
     <string name="settings_about_framework">프레임워크</string>
     <string name="settings_about_build">빌드</string>

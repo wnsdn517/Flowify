@@ -912,42 +912,30 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         LinearLayout hero = new LinearLayout(context);
         hero.setOrientation(LinearLayout.VERTICAL);
         hero.setGravity(Gravity.CENTER_HORIZONTAL);
-        hero.setPadding(style.dp(8), style.dp(18), style.dp(8), style.dp(18));
+        hero.setPadding(style.dp(8), style.dp(20), style.dp(8), style.dp(18));
         java.lang.ref.WeakReference<android.graphics.Typeface> font = com.eza.spicyex.References.beautifulFont;
         hero.addView(new com.eza.spicyex.ui.WordmarkView(context, uiStrings.appName(),
                         PanelStyle.COL_ACCENT, font == null ? null : font.get()),
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView version = style.text(BuildStamp.VERSION + "  (" + BuildStamp.VERSION_CODE + ")",
-                17, PanelStyle.COL_TITLE, true);
+
+        // Main version: just "nightly 2.0.0"
+        TextView version = style.text(BuildStamp.VERSION, 18, PanelStyle.COL_TITLE, true);
         version.setGravity(Gravity.CENTER);
-        version.setPadding(0, style.dp(6), 0, 0);
+        version.setPadding(0, style.dp(8), 0, 0);
         hero.addView(version);
-        boolean officialBuild = AppSigningIdentity.isOfficial(context);
-        TextView signingStatus = style.text(
-                uiStrings.get(officialBuild ? "settings_about_official" : "settings_about_unofficial",
-                        officialBuild ? "Official" : "Unofficial"),
-                12, officialBuild ? PanelStyle.COL_ACCENT : PanelStyle.COL_TITLE, true);
-        signingStatus.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams signingStatusLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        signingStatusLp.topMargin = style.dp(4);
-        hero.addView(signingStatus, signingStatusLp);
-        TextView releaseChannel = style.text(uiStrings.get("settings_about_checking", "Checking…"),
-                12, PanelStyle.COL_ACCENT, true);
-        LinearLayout.LayoutParams releaseChannelLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        releaseChannelLp.topMargin = style.dp(3);
-        hero.addView(releaseChannel, releaseChannelLp);
-        TextView clue = style.text(BuildStamp.CLUE, 12, PanelStyle.COL_ACCENT, false);
-        clue.setPadding(style.dp(12), style.dp(4), style.dp(12), style.dp(4));
+
+        // Subtle build badge (commit + date)
+        TextView clue = style.text(BuildStamp.CLUE, 11, PanelStyle.COL_SUMMARY, false);
+        clue.setPadding(style.dp(14), style.dp(4), style.dp(14), style.dp(4));
         android.graphics.drawable.GradientDrawable clueBg = new android.graphics.drawable.GradientDrawable();
-        clueBg.setCornerRadius(style.dp(12));
-        clueBg.setColor((PanelStyle.COL_ACCENT & 0x00FFFFFF) | 0x24000000);
+        clueBg.setCornerRadius(style.dp(14));
+        clueBg.setColor((PanelStyle.COL_ACCENT & 0x00FFFFFF) | 0x1A000000);
         clue.setBackground(clueBg);
         LinearLayout.LayoutParams clueLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        clueLp.topMargin = style.dp(8);
+        clueLp.topMargin = style.dp(6);
         hero.addView(clue, clueLp);
+
         LinearLayout heroCard = style.newCard();
         heroCard.addView(hero);
         style.attachCard(parent, heroCard, -1);
@@ -961,11 +949,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         // pill says so on its own - this caption is the only thing that does.
         people.addView(style.groupCaption(uiStrings.get("settings_about_telegram_caption", "Telegram")));
         communityRow(people);
-        TextView latest = rows.infoRow(people, uiStrings.get("settings_about_latest", "Latest on GitHub"),
-                uiStrings.get("settings_about_checking", "Checking…"));
-        View latestRow = (View) latest.getParent();
-        latestRow.setOnClickListener(v -> openUrl("https://github.com/" + FORK_REPO + "/releases"));
-        checkLatestRelease(latest, releaseChannel);
+        addLatestGithubRelease(people);
         style.attachCard(parent, people, -1);
 
         LinearLayout system = style.newCard();
@@ -978,18 +962,68 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             rows.infoRow(system, uiStrings.get("settings_about_framework", "Framework"), framework);
         }
         rows.infoRow(system, uiStrings.get("settings_about_build", "Build"),
-                com.eza.spicyex.BuildConfig.BUILD_DATE + " · " + com.eza.spicyex.BuildConfig.GIT_SHA
-                        + " · B" + com.eza.spicyex.BuildConfig.UPSTREAM_BASE_CODE);
+                com.eza.spicyex.BuildConfig.BUILD_DATE + " · " + com.eza.spicyex.BuildConfig.GIT_SHA);
         rows.actionRow(system, Kind.BUG, uiStrings.get("settings_about_share_bug_info", "Share for a bug report"),
                 v -> shareBugReportInfo());
         style.attachCard(parent, system, -1);
+    }
+
+    private void addLatestGithubRelease(LinearLayout parent) {
+        LinearLayout card = new LinearLayout(context);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(style.dp(12), style.dp(10), style.dp(12), style.dp(10));
+        android.graphics.drawable.GradientDrawable background =
+                new android.graphics.drawable.GradientDrawable();
+        background.setColor(0x12FFFFFF);
+        background.setCornerRadius(style.dp(16));
+        background.setStroke(Math.max(1, style.dp(1)), PanelStyle.COL_CARD_BORDER);
+        card.setBackground(background);
+
+        LinearLayout heading = new LinearLayout(context);
+        heading.setOrientation(LinearLayout.HORIZONTAL);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        TextView label = style.text(uiStrings.get("settings_about_latest", "Latest on GitHub"),
+                12, PanelStyle.COL_SUMMARY, true);
+        heading.addView(label, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView status = style.text(uiStrings.get("settings_about_checking", "Checking…"),
+                11, PanelStyle.COL_ACCENT, true);
+        status.setPadding(style.dp(9), style.dp(4), style.dp(9), style.dp(4));
+        android.graphics.drawable.GradientDrawable statusBackground =
+                new android.graphics.drawable.GradientDrawable();
+        statusBackground.setColor((PanelStyle.COL_ACCENT & 0x00FFFFFF) | 0x26000000);
+        statusBackground.setCornerRadius(style.dp(12));
+        status.setBackground(statusBackground);
+        heading.addView(status);
+        card.addView(heading);
+
+        LinearLayout details = new LinearLayout(context);
+        details.setOrientation(LinearLayout.HORIZONTAL);
+        details.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams detailsLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        detailsLp.topMargin = style.dp(7);
+        TextView version = style.text("—", 18, PanelStyle.COL_TITLE, true);
+        details.addView(version, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView date = style.text("", 12, PanelStyle.COL_SUMMARY, false);
+        details.addView(date);
+        card.addView(details, detailsLp);
+
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardLp.topMargin = style.dp(8);
+        parent.addView(card, cardLp);
+        card.setOnClickListener(v -> openUrl("https://github.com/" + FORK_REPO + "/releases"));
+        checkLatestRelease(version, status, date);
     }
 
     /** Shares app/Spotify/Android/device info as plain text, so a bug report always carries exact
      *  version numbers instead of relying on the reporter to remember or retype them. */
     private void shareBugReportInfo() {
         String framework = com.eza.spicyex.xposed.XpHooks.frameworkLabel();
-        String info = "Spicy EX " + BuildStamp.VERSION + " (" + BuildStamp.VERSION_CODE + ")\n"
+        String info = "Spicy EX " + BuildStamp.NAME + " (" + BuildStamp.VERSION_CODE + ")\n"
                 + "Spotify: " + spotifyVersion() + "\n"
                 + "Android: " + android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")\n"
                 + "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
@@ -1100,11 +1134,12 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         }
     }
 
-    /** Compares the installed build with GitHub releases, including prereleases. */
-    private void checkLatestRelease(TextView target, TextView channelTarget) {
+    /** Shows the newest GitHub version, its update state, and publication date separately. */
+    private void checkLatestRelease(TextView versionTarget, TextView statusTarget, TextView dateTarget) {
         Thread worker = new Thread(() -> {
-            String shown;
-            String channel;
+            String shownVersion;
+            String shownStatus;
+            String shownDate = "";
             try {
                 org.json.JSONObject release = null;
                 org.json.JSONArray list = githubJsonArray("https://api.github.com/repos/" + FORK_REPO + "/releases?per_page=10");
@@ -1128,74 +1163,43 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                     String date = release.optString("published_at", "");
                     boolean githubNewer = isNewer(latestVersion, BuildStamp.VERSION);
                     boolean currentNewer = isNewer(BuildStamp.VERSION, latestVersion);
-                    boolean sameVersion = sameNumericVersion(latestVersion, BuildStamp.VERSION);
-                    channel = currentNewer ? uiStrings.get("settings_about_channel_unreleased", "unreleased")
-                            : sameVersion && release.optBoolean("prerelease")
-                            ? uiStrings.get("settings_about_channel_nightly", "nightly-released")
-                            : sameVersion ? uiStrings.get("settings_about_channel_released", "released")
-                            : findCurrentReleaseChannel(list);
-                    String status = githubNewer
+                    shownVersion = latestVersion;
+                    shownDate = date.length() >= 10 ? date.substring(0, 10) : "";
+                    shownStatus = githubNewer
                             ? uiStrings.get("settings_about_update", "Update available")
                             : currentNewer
-                            ? uiStrings.get("settings_about_current_newer", "Current build is newer than GitHub")
+                            ? uiStrings.get("settings_about_ahead", "Ahead")
                             : uiStrings.get("settings_about_up_to_date", "Up to date");
-                    shown = tag + (release.optBoolean("prerelease")
-                            ? " · " + uiStrings.get("settings_about_channel_nightly", "nightly-released") : "")
-                            + (date.length() >= 10 ? " · " + date.substring(0, 10) : "")
-                            + " · " + status;
                 } else {
                     org.json.JSONObject commit = githubJson("https://api.github.com/repos/" + FORK_REPO + "/commits/main");
                     if (commit == null) {
-                        shown = uiStrings.get("settings_about_unavailable", "Unavailable");
-                        channel = uiStrings.get("settings_about_unavailable", "Unavailable");
+                        shownVersion = uiStrings.get("settings_about_unavailable", "Unavailable");
+                        shownStatus = "";
                     } else {
                         String sha = commit.optString("sha", "");
                         String date = commit.optJSONObject("commit") == null ? ""
                                 : commit.optJSONObject("commit").optJSONObject("committer").optString("date", "");
-                        shown = sha.substring(0, Math.min(8, sha.length()))
-                                + (date.length() >= 10 ? " · " + date.substring(0, 10) : "");
-                        channel = uiStrings.get("settings_about_channel_unreleased", "unreleased");
+                        shownVersion = sha.substring(0, Math.min(8, sha.length()));
+                        shownStatus = uiStrings.get("settings_about_latest_commit", "Latest commit");
+                        shownDate = date.length() >= 10 ? date.substring(0, 10) : "";
                     }
                 }
             } catch (Throwable t) {
-                shown = uiStrings.get("settings_about_unavailable", "Unavailable");
-                channel = uiStrings.get("settings_about_unavailable", "Unavailable");
+                shownVersion = uiStrings.get("settings_about_unavailable", "Unavailable");
+                shownStatus = "";
             }
-            final String text = shown;
-            final String channelText = channel;
+            final String fVersion = shownVersion;
+            final String fStatus = shownStatus;
+            final String fDate = shownDate;
             uiHandler.post(() -> {
-                target.setText(text);
-                channelTarget.setText(channelText);
+                versionTarget.setText(fVersion);
+                statusTarget.setText(fStatus);
+                statusTarget.setVisibility(fStatus.isEmpty() ? View.GONE : View.VISIBLE);
+                dateTarget.setText(fDate);
             });
         }, "SpicyAboutLatest");
         worker.setDaemon(true);
         worker.start();
-    }
-
-    private String findCurrentReleaseChannel(org.json.JSONArray releases) {
-        for (int i = 0; releases != null && i < releases.length(); i++) {
-            org.json.JSONObject candidate = releases.optJSONObject(i);
-            if (candidate == null || candidate.optBoolean("draft")) continue;
-            String version = candidate.optString("tag_name", "").replaceFirst("^[vV]", "");
-            if (sameNumericVersion(version, BuildStamp.VERSION)) {
-                return uiStrings.get(candidate.optBoolean("prerelease")
-                        ? "settings_about_channel_nightly" : "settings_about_channel_released",
-                        candidate.optBoolean("prerelease") ? "nightly-released" : "released");
-            }
-        }
-        return uiStrings.get("settings_about_channel_unreleased", "unreleased");
-    }
-
-    private static boolean sameNumericVersion(String first, String second) {
-        String[] a = first.split("[^0-9]+");
-        String[] b = second.split("[^0-9]+");
-        int length = Math.max(a.length, b.length);
-        for (int i = 0; i < length; i++) {
-            int left = i < a.length && !a[i].isEmpty() ? Integer.parseInt(a[i]) : 0;
-            int right = i < b.length && !b[i].isEmpty() ? Integer.parseInt(b[i]) : 0;
-            if (left != right) return false;
-        }
-        return true;
     }
 
     private static org.json.JSONArray githubJsonArray(String url) throws Exception {

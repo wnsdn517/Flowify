@@ -726,14 +726,12 @@
     <string name="settings_about_discussion">ディスカッション</string>
     <string name="settings_about_ci_channel">CIビルド</string>
     <string name="settings_about_latest">GitHubの最新版</string>
+    <string name="settings_about_latest_commit">最新コミット</string>
     <string name="settings_about_checking">確認中…</string>
     <string name="settings_about_update">アップデートあり</string>
+    <string name="settings_about_ahead">GitHubより新しい</string>
     <string name="settings_about_up_to_date">最新です</string>
     <string name="settings_about_unavailable">確認できません</string>
-    <string name="settings_about_channel_released">released</string>
-    <string name="settings_about_channel_nightly">nightly-released</string>
-    <string name="settings_about_channel_unreleased">unreleased</string>
-    <string name="settings_about_current_newer">現在のビルドはGitHubより新しいです</string>
     <string name="settings_about_device">端末</string>
     <string name="settings_about_framework">フレームワーク</string>
     <string name="settings_about_build">ビルド</string>

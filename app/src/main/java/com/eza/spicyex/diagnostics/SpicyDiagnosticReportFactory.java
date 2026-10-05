@@ -432,7 +432,7 @@ public final class SpicyDiagnosticReportFactory {
                 .append(description.trim()).append("\n\n")
                 .append("## Report details\n\n")
                 .append("- **Report ID:** `").append(reportId).append("`\n")
-                .append("- **Spicy EX:** `").append(markdownText(BuildConfig.VERSION_NAME))
+                .append("- **Spicy EX:** `").append(markdownText(BuildConfig.FORK_VERSION))
                 .append("` (`vC").append(BuildConfig.VERSION_CODE).append("`)\n")
                 .append("- **Device:** ")
                 .append(markdownText(bounded(Build.MANUFACTURER + " " + Build.MODEL, 256)))

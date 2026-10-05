@@ -441,14 +441,12 @@
     <string name="settings_about_discussion">讨论群</string>
     <string name="settings_about_ci_channel">CI 构建频道</string>
     <string name="settings_about_latest">GitHub 最新版本</string>
+    <string name="settings_about_latest_commit">最新提交</string>
     <string name="settings_about_checking">检查中…</string>
     <string name="settings_about_update">有更新</string>
+    <string name="settings_about_ahead">比 GitHub 更新</string>
     <string name="settings_about_up_to_date">已是最新</string>
     <string name="settings_about_unavailable">无法获取</string>
-    <string name="settings_about_channel_released">released</string>
-    <string name="settings_about_channel_nightly">nightly-released</string>
-    <string name="settings_about_channel_unreleased">unreleased</string>
-    <string name="settings_about_current_newer">当前构建比 GitHub 更新</string>
     <string name="settings_about_device">设备</string>
     <string name="settings_about_framework">框架</string>
     <string name="settings_about_build">构建</string>

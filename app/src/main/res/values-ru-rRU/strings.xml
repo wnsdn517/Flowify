@@ -411,14 +411,12 @@
     <string name="settings_about_discussion">Обсуждение</string>
     <string name="settings_about_ci_channel">Сборки CI</string>
     <string name="settings_about_latest">Последняя версия на GitHub</string>
+    <string name="settings_about_latest_commit">Последний коммит</string>
     <string name="settings_about_checking">Проверка…</string>
     <string name="settings_about_update">Есть обновление</string>
+    <string name="settings_about_ahead">Новее GitHub</string>
     <string name="settings_about_up_to_date">Актуальная версия</string>
     <string name="settings_about_unavailable">Недоступно</string>
-    <string name="settings_about_channel_released">released</string>
-    <string name="settings_about_channel_nightly">nightly-released</string>
-    <string name="settings_about_channel_unreleased">unreleased</string>
-    <string name="settings_about_current_newer">Текущая сборка новее версии на GitHub</string>
     <string name="settings_about_device">Устройство</string>
     <string name="settings_about_framework">Фреймворк</string>
     <string name="settings_about_build">Сборка</string>

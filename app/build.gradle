@@ -95,10 +95,10 @@ android {
         minSdk 27
         targetSdk 35
         // Fork version: MAJOR (large refactor) . MINOR (features) . PATCH (bug fixes), set in
-        // gradle.properties; the version code is computed below. Shown as "1.6.0 (11172) [C172B918_20261004]": C = this fork's commit count,
+        // gradle.properties; the version code is computed below. Shown as "nightly 2.0.0": C = this fork's commit count,
         // B = the version code of the upstream build the fork is based on, then the build date.
-        def forkMajor = (project.findProperty("spicyForkMajor") ?: "1").toString().toInteger()
-        def forkMinor = (project.findProperty("spicyForkMinor") ?: "6").toString().toInteger()
+        def forkMajor = (project.findProperty("spicyForkMajor") ?: "2").toString().toInteger()
+        def forkMinor = (project.findProperty("spicyForkMinor") ?: "0").toString().toInteger()
         def forkPatch = (project.findProperty("spicyForkPatch") ?: "0").toString().toInteger()
         def git = { List<String> args ->
             try {
@@ -125,9 +125,10 @@ android {
         }
         def buildDate = new Date().format("yyyyMMdd", TimeZone.getTimeZone("UTC"))
         def forkVersion = "${forkMajor}.${forkMinor}.${forkPatch}"
+        def forkVersionName = "nightly ${forkVersion}"
         def buildTag = "C${commitCount}B${upstreamBase}_${buildDate}"
         versionCode forkCode
-        versionName forkVersion
+        versionName forkVersionName
         buildConfigField "String", "FORK_VERSION", "\"${forkVersion}\""
         buildConfigField "int", "FORK_VERSION_CODE", "${forkCode}"
         buildConfigField "String", "BUILD_TAG", "\"${buildTag}\""
