@@ -1384,31 +1384,6 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             trackInfoTranslations.put(feedback, originalTranslation);
         }
 
-        private void allowPlayerChromeOverflow() {
-            if (overlay == null) return;
-            if (header != null) {
-                allowChromeOverflowFrom(header.findViewById(id("context_header_title")));
-                allowChromeOverflowFrom(header.findViewById(id("context_header_subtitle")));
-            }
-            allowChromeOverflowFrom(overlay.findViewById(id("track_info_feedback_container")));
-            allowChromeOverflowFrom(overlay.findViewById(id("feedback_buttons_container")));
-        }
-
-        private void allowChromeOverflowFrom(View view) {
-            for (View current = view; current != null; ) {
-                if (current instanceof ViewGroup) {
-                    ViewGroup group = (ViewGroup) current;
-                    if (!playerChromeClipping.containsKey(group)) {
-                        playerChromeClipping.put(group, new ViewGroupClippingState(group));
-                    }
-                    if (group.getClipChildren()) group.setClipChildren(false);
-                    if (group.getClipToPadding()) group.setClipToPadding(false);
-                }
-                if (current == overlay) return;
-                android.view.ViewParent parent = current.getParent();
-                current = parent instanceof View ? (View) parent : null;
-            }
-        }
         float raisedTranslation = originalTranslation
                 - 16f * activity.getResources().getDisplayMetrics().density;
         if (Math.abs(feedback.getTranslationY() - raisedTranslation) > 0.5f) {
@@ -1435,6 +1410,32 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                 XpLog.log(NativeSpicyLyricsHook.TAG + " apple player: lyrics line moved under the title");
             }
             break;
+        }
+    }
+
+    private void allowPlayerChromeOverflow() {
+        if (overlay == null) return;
+        if (header != null) {
+            allowChromeOverflowFrom(header.findViewById(id("context_header_title")));
+            allowChromeOverflowFrom(header.findViewById(id("context_header_subtitle")));
+        }
+        allowChromeOverflowFrom(overlay.findViewById(id("track_info_feedback_container")));
+        allowChromeOverflowFrom(overlay.findViewById(id("feedback_buttons_container")));
+    }
+
+    private void allowChromeOverflowFrom(View view) {
+        for (View current = view; current != null; ) {
+            if (current instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) current;
+                if (!playerChromeClipping.containsKey(group)) {
+                    playerChromeClipping.put(group, new ViewGroupClippingState(group));
+                }
+                if (group.getClipChildren()) group.setClipChildren(false);
+                if (group.getClipToPadding()) group.setClipToPadding(false);
+            }
+            if (current == overlay) return;
+            android.view.ViewParent parent = current.getParent();
+            current = parent instanceof View ? (View) parent : null;
         }
     }
 
@@ -1478,25 +1479,25 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             ellipsize = text.getEllipsize();
         }
 
-        private static final class ViewGroupClippingState {
-            private final boolean clipChildren;
-            private final boolean clipToPadding;
-
-            ViewGroupClippingState(ViewGroup group) {
-                clipChildren = group.getClipChildren();
-                clipToPadding = group.getClipToPadding();
-            }
-
-            void restore(ViewGroup group) {
-                group.setClipChildren(clipChildren);
-                group.setClipToPadding(clipToPadding);
-            }
-        }
-
         void restore(TextView text) {
             text.setSingleLine(singleLine);
             if (!singleLine && maxLines > 0) text.setMaxLines(maxLines);
             text.setEllipsize(ellipsize);
+        }
+    }
+
+    private static final class ViewGroupClippingState {
+        private final boolean clipChildren;
+        private final boolean clipToPadding;
+
+        ViewGroupClippingState(ViewGroup group) {
+            clipChildren = group.getClipChildren();
+            clipToPadding = group.getClipToPadding();
+        }
+
+        void restore(ViewGroup group) {
+            group.setClipChildren(clipChildren);
+            group.setClipToPadding(clipToPadding);
         }
     }
 
