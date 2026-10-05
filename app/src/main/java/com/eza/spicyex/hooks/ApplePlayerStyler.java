@@ -59,6 +59,9 @@ import java.util.concurrent.Executors;
 final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private static final WeakHashMap<Activity, ApplePlayerStyler> ATTACHED = new WeakHashMap<>();
     private static final String NOW_PLAYING = "com.spotify.nowplaying.musicinstallation.NowPlayingActivity";
+    private static final long SCREEN_MAINTENANCE_INTERVAL_MS = 250L;
+    private static final int ACTION_BUTTON_SIZE_DP = 32;
+    private static final int ACTION_ICON_SIZE_DP = 16;
     private static final ExecutorService ARTWORK_WORKER = Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "spicy-player-artwork");
         thread.setDaemon(true);
@@ -89,6 +92,9 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private final WeakHashMap<ImageView, LikeButtonState> likeButtonStates = new WeakHashMap<>();
     private final WeakHashMap<View, Integer> hiddenPlaylistControls = new WeakHashMap<>();
     private final WeakHashMap<View, Float> trackInfoTranslations = new WeakHashMap<>();
+    private final WeakHashMap<TextView, TrackTextLayoutState> trackTextLayouts = new WeakHashMap<>();
+    private final WeakHashMap<ViewGroup, ViewGroupClippingState> playerChromeClipping =
+            new WeakHashMap<>();
     private boolean transportScanLogged;
     private boolean statusBarStateCaptured;
     private int originalStatusBarColor;
@@ -105,6 +111,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private int nativeProgressVisibility = View.VISIBLE;
     private long playbackDurationMs;
     private long playbackReadAt;
+    private long playbackBoundsReadAt;
     private long seekCapabilityReadAt;
     private long progressScanAt;
     private boolean canSeekPlayback;
@@ -198,6 +205,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
     private int frame;
     private int failures;
+    private long screenMaintenanceAt;
 
     @Override
     public boolean onPreDraw() {
@@ -218,7 +226,20 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                 if (frame % 4 != 1 && frame > 2) return true;
                 if (!resolve()) return true;
             }
-            if (styleScreen) maintainScreen();
+            if (styleScreen) {
+                // Spotify briefly restores its native play/pause treatment while its playback
+                // state animation runs. Keep this small, idempotent override on every draw;
+                // broader layout maintenance remains throttled below.
+                styleTransportButton();
+                long now = android.os.SystemClock.elapsedRealtime();
+                if (now - screenMaintenanceAt >= SCREEN_MAINTENANCE_INTERVAL_MS) {
+                    screenMaintenanceAt = now;
+                    maintainScreen();
+                } else {
+                    updateBackdrop();
+                    updatePlaybackBar();
+                }
+            }
             if (positionClock != null) pollClocks();
             failures = 0;
         } catch (Throwable t) {
@@ -255,7 +276,17 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             entry.getKey().setTranslationY(entry.getValue());
         }
         trackInfoTranslations.clear();
+        for (java.util.Map.Entry<TextView, TrackTextLayoutState> entry : trackTextLayouts.entrySet()) {
+            entry.getValue().restore(entry.getKey());
+        }
+        trackTextLayouts.clear();
+        for (java.util.Map.Entry<ViewGroup, ViewGroupClippingState> entry
+                : playerChromeClipping.entrySet()) {
+            entry.getValue().restore(entry.getKey());
+        }
+        playerChromeClipping.clear();
         transportScanLogged = false;
+        screenMaintenanceAt = 0L;
         if (playbackBar != null && playbackBar.getParent() instanceof ViewGroup) {
             ((ViewGroup) playbackBar.getParent()).removeView(playbackBar);
         }
@@ -265,6 +296,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         playbackBar = null;
         nativeProgress = null;
         progressScanAt = 0L;
+        playbackBoundsReadAt = 0L;
         if (backdrop != null && backdrop.getParent() instanceof ViewGroup) {
             ((ViewGroup) backdrop.getParent()).removeView(backdrop);
         }
@@ -396,12 +428,13 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         if (menuButton == null || !(feedback instanceof android.widget.LinearLayout)) return;
         android.widget.LinearLayout row = (android.widget.LinearLayout) feedback;
         float density = activity.getResources().getDisplayMetrics().density;
-        int size = Math.round(34 * density);
+        int size = Math.round(ACTION_BUTTON_SIZE_DP * density);
         android.widget.ImageButton more = new android.widget.ImageButton(activity);
         more.setImageDrawable(new com.eza.spicyex.ui.ActionIconDrawable(
-                com.eza.spicyex.ui.ActionIconDrawable.Kind.ELLIPSIS, Color.WHITE, density, 18));
+                com.eza.spicyex.ui.ActionIconDrawable.Kind.ELLIPSIS, Color.WHITE, density,
+                ACTION_ICON_SIZE_DP));
         more.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        int inset = Math.round(8 * density);
+        int inset = Math.round((ACTION_BUTTON_SIZE_DP - ACTION_ICON_SIZE_DP) * 0.5f * density);
         more.setPadding(inset, inset, inset, inset);
         android.graphics.drawable.GradientDrawable circle = new android.graphics.drawable.GradientDrawable();
         circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
@@ -431,12 +464,13 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         if (!(feedback instanceof android.widget.LinearLayout)) return;
         android.widget.LinearLayout row = (android.widget.LinearLayout) feedback;
         float density = activity.getResources().getDisplayMetrics().density;
-        int size = Math.round(34 * density);
+        int size = Math.round(ACTION_BUTTON_SIZE_DP * density);
         android.widget.ImageButton download = new android.widget.ImageButton(activity);
         download.setImageDrawable(new com.eza.spicyex.ui.ActionIconDrawable(
-                com.eza.spicyex.ui.ActionIconDrawable.Kind.DOWNLOAD, Color.WHITE, density, 18));
+                com.eza.spicyex.ui.ActionIconDrawable.Kind.DOWNLOAD, Color.WHITE, density,
+                ACTION_ICON_SIZE_DP));
         download.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        int inset = Math.round(8 * density);
+        int inset = Math.round((ACTION_BUTTON_SIZE_DP - ACTION_ICON_SIZE_DP) * 0.5f * density);
         download.setPadding(inset, inset, inset, inset);
         android.graphics.drawable.GradientDrawable circle = new android.graphics.drawable.GradientDrawable();
         circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
@@ -452,7 +486,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         });
         android.widget.LinearLayout.LayoutParams params =
                 new android.widget.LinearLayout.LayoutParams(size, size);
-        params.setMarginStart(Math.round(8 * density));
+        params.setMarginStart(Math.round(6 * density));
         params.gravity = android.view.Gravity.CENTER_VERTICAL;
         row.addView(download, params);
         downloadButton = download;
@@ -461,6 +495,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     // --- Screen ------------------------------------------------------------------------------
 
     private void maintainScreen() {
+        allowPlayerChromeOverflow();
         // Spotify fades these back in on its own transitions; keep them as styled.
         if (statusBarBackground != null && statusBarBackground.getAlpha() != 0f) {
             statusBarBackground.setAlpha(0f);
@@ -477,7 +512,6 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         placeTop();
         styleTrackInfo();
         hidePlaylistHideButton();
-        styleTransportButton();
         styleLikeButton();
         styleAddButton();
         boolean backdropReady = updateBackdrop();
@@ -698,6 +732,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         private final Drawable originalDrawable;
         private final ColorStateList imageTint;
         private final android.graphics.ColorFilter colorFilter;
+        private final ImageView.ScaleType scaleType;
         private Drawable styledDrawable;
         private int styledColor;
 
@@ -705,24 +740,29 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             originalDrawable = button.getDrawable();
             imageTint = button.getImageTintList();
             colorFilter = button.getColorFilter();
+            scaleType = button.getScaleType();
         }
 
         void apply(ImageView button, boolean liked, float density) {
             int color = liked ? 0xFF1ED760 : Color.WHITE;
             if (styledDrawable == null || styledColor != color) {
                 styledDrawable = new com.eza.spicyex.ui.ActionIconDrawable(
-                        com.eza.spicyex.ui.ActionIconDrawable.Kind.HEART, color, density, 20);
+                        com.eza.spicyex.ui.ActionIconDrawable.Kind.HEART, color, density, 14);
                 styledColor = color;
             }
             if (button.getImageTintList() != null) button.setImageTintList(null);
             if (button.getColorFilter() != null) button.setColorFilter(null);
             if (button.getDrawable() != styledDrawable) button.setImageDrawable(styledDrawable);
+            if (button.getScaleType() != ImageView.ScaleType.CENTER_INSIDE) {
+                button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            }
         }
 
         void restore(ImageView button) {
             if (button.getDrawable() == styledDrawable) button.setImageDrawable(originalDrawable);
             button.setImageTintList(imageTint);
             button.setColorFilter(colorFilter);
+            button.setScaleType(scaleType);
         }
     }
 
@@ -871,6 +911,9 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
         @Override
         protected void dispatchDraw(Canvas canvas) {
+            View artwork = getChildCount() == 0 ? null : getChildAt(0);
+            int artworkBottom = artwork == null ? getHeight() : artwork.getBottom();
+            updateMask(artworkBottom);
             int save = canvas.saveLayer(0f, 0f, getWidth(), getHeight(), null);
             super.dispatchDraw(canvas);
             canvas.drawRect(0f, 0f, getWidth(), getHeight(), mask);
@@ -1340,13 +1383,43 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             originalTranslation = feedback.getTranslationY();
             trackInfoTranslations.put(feedback, originalTranslation);
         }
+
+        private void allowPlayerChromeOverflow() {
+            if (overlay == null) return;
+            if (header != null) {
+                allowChromeOverflowFrom(header.findViewById(id("context_header_title")));
+                allowChromeOverflowFrom(header.findViewById(id("context_header_subtitle")));
+            }
+            allowChromeOverflowFrom(overlay.findViewById(id("track_info_feedback_container")));
+            allowChromeOverflowFrom(overlay.findViewById(id("feedback_buttons_container")));
+        }
+
+        private void allowChromeOverflowFrom(View view) {
+            for (View current = view; current != null; ) {
+                if (current instanceof ViewGroup) {
+                    ViewGroup group = (ViewGroup) current;
+                    if (!playerChromeClipping.containsKey(group)) {
+                        playerChromeClipping.put(group, new ViewGroupClippingState(group));
+                    }
+                    if (group.getClipChildren()) group.setClipChildren(false);
+                    if (group.getClipToPadding()) group.setClipToPadding(false);
+                }
+                if (current == overlay) return;
+                android.view.ViewParent parent = current.getParent();
+                current = parent instanceof View ? (View) parent : null;
+            }
+        }
         float raisedTranslation = originalTranslation
-                - 10f * activity.getResources().getDisplayMetrics().density;
+                - 16f * activity.getResources().getDisplayMetrics().density;
         if (Math.abs(feedback.getTranslationY() - raisedTranslation) > 0.5f) {
             feedback.setTranslationY(raisedTranslation);
         }
-        scaleText(feedback.findViewById(id("track_info_view_title")), TITLE_SCALE, true);
-        scaleText(feedback.findViewById(id("track_info_view_subtitle")), ARTIST_SCALE, false);
+        View title = feedback.findViewById(id("track_info_view_title"));
+        View subtitle = feedback.findViewById(id("track_info_view_subtitle"));
+        keepTrackTextOnOneLine(title);
+        keepTrackTextOnOneLine(subtitle);
+        scaleText(title, TITLE_SCALE, true);
+        scaleText(subtitle, ARTIST_SCALE, false);
         if (!(feedback.getParent() instanceof ViewGroup)) return;
         // Checked on every pass, not latched: Spotify rebuilds the footer around the first open
         // and the injected lyrics card can arrive after this runs, either of which would
@@ -1365,6 +1438,20 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
     }
 
+    private void keepTrackTextOnOneLine(View view) {
+        if (!(view instanceof TextView)) return;
+        TextView text = (TextView) view;
+        TrackTextLayoutState state = trackTextLayouts.get(text);
+        if (state == null) {
+            state = new TrackTextLayoutState(text);
+            trackTextLayouts.put(text, state);
+        }
+        if (!text.isSingleLine()) text.setSingleLine(true);
+        if (text.getEllipsize() != android.text.TextUtils.TruncateAt.END) {
+            text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        }
+    }
+
     private void scaleText(View view, float scale, boolean bold) {
         if (!(view instanceof TextView)) return;
         TextView text = (TextView) view;
@@ -1377,6 +1464,39 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         if (Math.abs(text.getTextSize() - wanted) > 0.5f) {
             text.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, wanted);
             if (bold) text.setTypeface(text.getTypeface(), android.graphics.Typeface.BOLD);
+        }
+    }
+
+    private static final class TrackTextLayoutState {
+        private final boolean singleLine;
+        private final int maxLines;
+        private final android.text.TextUtils.TruncateAt ellipsize;
+
+        TrackTextLayoutState(TextView text) {
+            singleLine = text.isSingleLine();
+            maxLines = text.getMaxLines();
+            ellipsize = text.getEllipsize();
+        }
+
+        private static final class ViewGroupClippingState {
+            private final boolean clipChildren;
+            private final boolean clipToPadding;
+
+            ViewGroupClippingState(ViewGroup group) {
+                clipChildren = group.getClipChildren();
+                clipToPadding = group.getClipToPadding();
+            }
+
+            void restore(ViewGroup group) {
+                group.setClipChildren(clipChildren);
+                group.setClipToPadding(clipToPadding);
+            }
+        }
+
+        void restore(TextView text) {
+            text.setSingleLine(singleLine);
+            if (!singleLine && maxLines > 0) text.setMaxLines(maxLines);
+            text.setEllipsize(ellipsize);
         }
     }
 
@@ -1499,9 +1619,12 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         if (!styleScreen || hook == null) return;
         if (playbackBar == null) attachPlaybackBar();
         if (playbackBar == null) return;
-        updatePlaybackBarBounds();
 
         long now = android.os.SystemClock.elapsedRealtime();
+        if (now - playbackBoundsReadAt >= 100L) {
+            playbackBoundsReadAt = now;
+            updatePlaybackBarBounds();
+        }
         if (now - playbackReadAt < 50L) return;
         playbackReadAt = now;
         com.eza.spicyex.SpotifyTrack track = hook.getCurrentTrackSafely();
