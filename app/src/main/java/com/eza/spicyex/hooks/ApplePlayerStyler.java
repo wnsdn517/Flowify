@@ -568,6 +568,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private Drawable addButtonBackground;
     private Drawable addButtonStyledBackground;
     private int addButtonPaddingLeft, addButtonPaddingTop, addButtonPaddingRight, addButtonPaddingBottom;
+    private int addButtonOriginalWidth, addButtonOriginalHeight;
+    private boolean addButtonOriginalSizeCaptured;
     private int addButtonStyledWidth = -1;
     private int addButtonStyledHeight = -1;
     private final WeakHashMap<View, AddButtonIconState> addButtonIconStates = new WeakHashMap<>();
@@ -594,12 +596,27 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             addButtonPaddingTop = found.getPaddingTop();
             addButtonPaddingRight = found.getPaddingRight();
             addButtonPaddingBottom = found.getPaddingBottom();
+            ViewGroup.LayoutParams originalParams = found.getLayoutParams();
+            if (originalParams != null) {
+                addButtonOriginalWidth = originalParams.width;
+                addButtonOriginalHeight = originalParams.height;
+                addButtonOriginalSizeCaptured = true;
+            }
             int contentInset = Math.round(
                     4f * activity.getResources().getDisplayMetrics().density);
             found.setPadding(addButtonPaddingLeft + contentInset,
                     addButtonPaddingTop + contentInset,
                     addButtonPaddingRight + contentInset,
                     addButtonPaddingBottom + contentInset);
+        }
+        int buttonSize = Math.round(
+                ACTION_BUTTON_SIZE_DP * activity.getResources().getDisplayMetrics().density);
+        ViewGroup.LayoutParams buttonParams = found.getLayoutParams();
+        if (buttonParams != null
+                && (buttonParams.width != buttonSize || buttonParams.height != buttonSize)) {
+            buttonParams.width = buttonSize;
+            buttonParams.height = buttonSize;
+            found.setLayoutParams(buttonParams);
         }
         int width = found.getWidth();
         int height = found.getHeight();
@@ -662,11 +679,18 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
         addButtonIconStates.clear();
         if (addButton != null) {
+            ViewGroup.LayoutParams params = addButton.getLayoutParams();
+            if (addButtonOriginalSizeCaptured && params != null) {
+                params.width = addButtonOriginalWidth;
+                params.height = addButtonOriginalHeight;
+                addButton.setLayoutParams(params);
+            }
             addButton.setBackground(addButtonBackground);
             addButton.setPadding(addButtonPaddingLeft, addButtonPaddingTop,
                     addButtonPaddingRight, addButtonPaddingBottom);
         }
         addButton = null;
+        addButtonOriginalSizeCaptured = false;
         addButtonStyledBackground = null;
         addButtonStyledWidth = -1;
         addButtonStyledHeight = -1;
