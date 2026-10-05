@@ -629,7 +629,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
     private void shrinkAddButtonIcons(View root) {
         float density = activity.getResources().getDisplayMetrics().density;
-        float targetSize = (ACTION_ICON_SIZE_DP + 2f) * density;
+        float targetSize = ACTION_ICON_SIZE_DP * density;
         ArrayDeque<View> pending = new ArrayDeque<>();
         pending.add(root);
         while (!pending.isEmpty()) {
@@ -806,29 +806,63 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
     private static final class LikeButtonState {
         private final Drawable originalDrawable;
+        private final Drawable originalBackground;
         private final ColorStateList imageTint;
         private final android.graphics.ColorFilter colorFilter;
         private final ImageView.ScaleType scaleType;
+        private final int originalPaddingLeft;
+        private final int originalPaddingTop;
+        private final int originalPaddingRight;
+        private final int originalPaddingBottom;
         private Drawable styledDrawable;
+        private Drawable styledBackground;
         private int styledColor;
+        private int styledBackgroundWidth = -1;
+        private int styledBackgroundHeight = -1;
 
         LikeButtonState(ImageView button) {
             originalDrawable = button.getDrawable();
+            originalBackground = button.getBackground();
             imageTint = button.getImageTintList();
             colorFilter = button.getColorFilter();
             scaleType = button.getScaleType();
+            originalPaddingLeft = button.getPaddingLeft();
+            originalPaddingTop = button.getPaddingTop();
+            originalPaddingRight = button.getPaddingRight();
+            originalPaddingBottom = button.getPaddingBottom();
         }
 
         void apply(ImageView button, boolean liked, float density) {
             int color = liked ? 0xFF1ED760 : Color.WHITE;
             if (styledDrawable == null || styledColor != color) {
                 styledDrawable = new com.eza.spicyex.ui.ActionIconDrawable(
-                        com.eza.spicyex.ui.ActionIconDrawable.Kind.HEART, color, density, 14);
+                        com.eza.spicyex.ui.ActionIconDrawable.Kind.HEART, color, density,
+                        ACTION_ICON_SIZE_DP);
                 styledColor = color;
+            }
+            int width = button.getWidth();
+            int height = button.getHeight();
+            if (styledBackground == null || width != styledBackgroundWidth
+                    || height != styledBackgroundHeight) {
+                styledBackgroundWidth = width;
+                styledBackgroundHeight = height;
+                int circleSize = Math.round(ACTION_BUTTON_SIZE_DP * density);
+                int insetX = width > circleSize ? (width - circleSize) / 2 : 0;
+                int insetY = height > circleSize ? (height - circleSize) / 2 : 0;
+                android.graphics.drawable.GradientDrawable circle =
+                        new android.graphics.drawable.GradientDrawable();
+                circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                circle.setColor(0x33FFFFFF);
+                styledBackground = insetX == 0 && insetY == 0 ? circle
+                        : new android.graphics.drawable.InsetDrawable(
+                                circle, insetX, insetY, insetX, insetY);
             }
             if (button.getImageTintList() != null) button.setImageTintList(null);
             if (button.getColorFilter() != null) button.setColorFilter(null);
             if (button.getDrawable() != styledDrawable) button.setImageDrawable(styledDrawable);
+            if (button.getBackground() != styledBackground) {
+                button.setBackground(styledBackground);
+            }
             if (button.getScaleType() != ImageView.ScaleType.CENTER_INSIDE) {
                 button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             }
@@ -836,9 +870,14 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
         void restore(ImageView button) {
             if (button.getDrawable() == styledDrawable) button.setImageDrawable(originalDrawable);
+            if (button.getBackground() == styledBackground) {
+                button.setBackground(originalBackground);
+            }
             button.setImageTintList(imageTint);
             button.setColorFilter(colorFilter);
             button.setScaleType(scaleType);
+            button.setPadding(originalPaddingLeft, originalPaddingTop,
+                    originalPaddingRight, originalPaddingBottom);
         }
     }
 
