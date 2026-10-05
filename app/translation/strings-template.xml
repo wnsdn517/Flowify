@@ -804,6 +804,13 @@
     <string name="settings_language_models_delete">Delete language models (%1$s)</string>
     <string name="settings_language_models_delete_title">Delete language models?</string>
     <string name="settings_language_models_delete_body">Japanese and Chinese readings and offline language detection stop working until they are downloaded again.</string>
+    <string name="settings_local_files_action">Hide Local Files folders</string>
+    <string name="settings_local_files_title">Spotify Local Files folders</string>
+    <string name="settings_local_files_empty">No local audio folders were found.</string>
+    <string name="settings_local_files_error">Spotify could not read Local Files. Check audio permission and try again.</string>
+    <string name="settings_local_files_save">Save</string>
+    <string name="settings_local_files_unhide_all">Unhide all</string>
+    <string name="settings_local_files_changed">Saved. Reopen Spotify Local Files to apply the folder changes.</string>
     <string name="settings_cache_delete">Delete</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_empty">No matching settings</string>
@@ -928,6 +935,10 @@
     <string name="settings_about_update">Update available</string>
     <string name="settings_about_up_to_date">Up to date</string>
     <string name="settings_about_unavailable">Unavailable</string>
+    <string name="settings_about_channel_released">released</string>
+    <string name="settings_about_channel_nightly">nightly-released</string>
+    <string name="settings_about_channel_unreleased">unreleased</string>
+    <string name="settings_about_current_newer">Current build is newer than GitHub</string>
     <string name="settings_about_device">Device</string>
     <string name="settings_about_framework">Framework</string>
     <string name="settings_about_build">Build</string>
