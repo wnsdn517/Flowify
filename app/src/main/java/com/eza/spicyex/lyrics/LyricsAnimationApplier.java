@@ -16,14 +16,22 @@ public final class LyricsAnimationApplier {
     public static float stepLineOpacity(AppliedLine line, boolean active, boolean sung, float deltaSeconds,
                                         boolean appleDimPassed) {
         if (line == null) return 1f;
-        if (line.dotLine && !active) return LyricsLineViewState.stepOpacity(line, 0f, deltaSeconds);
+        return LyricsLineViewState.stepOpacity(line,
+                lineOpacityTarget(line, active, sung, appleDimPassed), deltaSeconds);
+    }
+
+    /** Where a row's opacity is headed in its current state. */
+    public static float lineOpacityTarget(AppliedLine line, boolean active, boolean sung,
+                                          boolean appleDimPassed) {
+        if (line == null) return 1f;
+        if (line.dotLine && !active) return 0f;
         // Desktop's ~0.5 sung opacity is too low against mobile album-art washes; keep past lines
         // readable while upcoming lines stay clearly recessed.
         float target = active ? 1.0f : (sung
                 ? (appleDimPassed ? 0.72f : 0.82f)
                 : (appleDimPassed ? 0.38f : 0.42f));
         if (line.bgLine && !active) target *= 0.90f;
-        return LyricsLineViewState.stepOpacity(line, target, deltaSeconds);
+        return target;
     }
 
     public static float stepLineScale(AppliedLine line, float targetScale, float deltaSeconds) {

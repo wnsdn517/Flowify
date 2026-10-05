@@ -33,7 +33,8 @@ public final class SettingsUiSchema {
                 Settings.TRANSLATION,
                 Settings.AI,
                 Settings.PIP,
-                Settings.AD_FREE));
+                Settings.AD_FREE,
+                Settings.LABS));
     }
 
     /**
@@ -57,6 +58,11 @@ public final class SettingsUiSchema {
             Settings.DEVICE_CHANGE_BANNER,
             Settings.SYNC_OFFSET_MS,
             Settings.MINI_PLAYER_LYRICS_ICON,
+            Settings.LYRICS_IN_PLAYER,
+            Settings.HIDE_SPOTIFY_LYRICS_CARD,
+            Settings.PLAYER_APPLE_STYLE,
+            Settings.PLAYER_APPLE_TIME,
+            Settings.PLAYER_ANIMATED_ARTWORK,
             Settings.HYPERGLOW_ENABLED,
             Settings.LONG_PRESS_SHARE,
             Settings.SHARE_GESTURE_HINT,
@@ -65,7 +71,6 @@ public final class SettingsUiSchema {
             Settings.LYRICS_SOURCE_OVERRIDE,
             Settings.SPICY_MANUAL_TOKEN,
             Settings.LYRICS_SOURCE_ORDER,
-            Settings.KARAOKE_ORIGINAL_LYRICS,
             Settings.CACHE_SIZE,
             // Layout editor (tap behaviour stays in the panel; looks are edited on-screen)
             // Editor-managed (PanelPolicy hides these); the schema test requires every
@@ -109,7 +114,11 @@ public final class SettingsUiSchema {
             Settings.AD_MUSIC_THEME,
             Settings.CONNECT_ENABLED,
             Settings.CONNECT_AUTO_SWITCH,
-            Settings.CONNECT_NETWORK_RECOVERY));
+            Settings.CONNECT_NETWORK_RECOVERY,
+            // Labs
+            Settings.KARAOKE_ORIGINAL_LYRICS,
+            Settings.CONTEXT_TRANSLATION,
+            Settings.ARTWORK_FRAME_FIT));
 
     /** Every renderable setting, in panel row order. */
     public static List<Settings.Setting<?>> orderedSettings() {
@@ -140,7 +149,9 @@ public final class SettingsUiSchema {
                 Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS, Settings.AUTO_SKIP_INTRO_OUTRO,
                 Settings.STATUS_BAR_HIDDEN_MODE, Settings.TRANSITION_FEEL, Settings.DEVICE_CHANGE_BANNER);
         group("general_timing", Settings.SYNC_OFFSET_MS);
-        group("general_outside", Settings.MINI_PLAYER_LYRICS_ICON, Settings.HYPERGLOW_ENABLED);
+        group("general_outside", Settings.MINI_PLAYER_LYRICS_ICON, Settings.LYRICS_IN_PLAYER,
+                Settings.HIDE_SPOTIFY_LYRICS_CARD, Settings.PLAYER_APPLE_STYLE,
+                Settings.PLAYER_APPLE_TIME, Settings.HYPERGLOW_ENABLED);
         group("gestures_seek", Settings.TAP_SEEK_MODE);
         group("gestures_like", Settings.DOUBLE_TAP_LIKE, Settings.DOUBLE_TAP_LIKE_MARK,
                 Settings.DOUBLE_TAP_LIKE_EFFECT);
@@ -148,6 +159,8 @@ public final class SettingsUiSchema {
         group("sources_sources", Settings.LYRICS_SOURCE_MODE, Settings.LYRICS_SOURCE_OVERRIDE,
                 Settings.SPICY_MANUAL_TOKEN, Settings.LYRICS_SOURCE_ORDER);
         group("sources_karaoke", Settings.KARAOKE_ORIGINAL_LYRICS);
+        group("labs_translation", Settings.CONTEXT_TRANSLATION);
+        group("labs_artwork", Settings.ARTWORK_FRAME_FIT);
         group("sources_storage", Settings.CACHE_SIZE);
         group("pip_open", Settings.PIP_ENABLED, Settings.PIP_ON_CLOSE);
         group("pip_window", Settings.PIP_SHAPE, Settings.PIP_CONTROLS, Settings.PIP_SONG_INFO,

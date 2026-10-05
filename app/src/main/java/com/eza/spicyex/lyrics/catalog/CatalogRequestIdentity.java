@@ -36,7 +36,7 @@ public final class CatalogRequestIdentity {
     /**
      * The auth epoch for one source given the Spotify token generation bound to this fetch
      * ({@link #TOKEN_GENERATION_NONE} when no usable token is sent). Only token-bound sources
-     * observe the token; Apple, AMLL, LRCLIB, QQ, and NetEase requests are credential-free and
+     * observe the token; Apple, AMLL, LRCLIB, QQ, NetEase, KuGou, and Genius requests are credential-free and
      * native reads are local.
      */
     public static String authEpoch(SourceId sourceId, int spotifyTokenGeneration) {
@@ -49,6 +49,11 @@ public final class CatalogRequestIdentity {
             case LRCLIB:
             case QQ:
             case NETEASE:
+            case KUGOU:
+            case GENIUS:
+            case MUSIXMATCH:
+            case BETTERLYRICS:
+            case BINILYRICS:
                 return EPOCH_CREDENTIAL_FREE;
             default:
                 return EPOCH_CREDENTIAL_FREE;

@@ -132,7 +132,8 @@ public final class LyricsSourcePickerDialog implements LyricsSessionManager.List
             }
             state = CatalogPickerState.initial(uri);
             dialog = new PanelDialog(activity,
-                    text(strings, "source_picker_title", "Choose lyrics source"));
+                    text(strings, "source_picker_title", "Choose lyrics source")).sheet();
+            dialog.pinned(buildTopBar());
             rows = new LinearLayout(activity);
             rows.setOrientation(LinearLayout.VERTICAL);
             dialog.add(rows);
@@ -269,7 +270,17 @@ public final class LyricsSourcePickerDialog implements LyricsSessionManager.List
     /** Keyed sync: stale views out, mounted views patched, missing ones built, order projected. */
     private void render() {
         if (closed || dialog == null || rows == null) return;
-        List<CatalogPickerState.Shown> shown = state.project(checkingLabel(), confirmLabel());
+        List<CatalogPickerState.Shown> all = state.project(checkingLabel(), confirmLabel());
+        // Auto and "Check all" are the buttons on top, not rows in the list.
+        List<CatalogPickerState.Shown> shown = new ArrayList<>(all.size());
+        autoShown = null;
+        checkAllShown = null;
+        for (CatalogPickerState.Shown row : all) {
+            if (row.source.kind == CatalogPickerModel.RowKind.AUTO) autoShown = row;
+            else if (row.source.kind == CatalogPickerModel.RowKind.ACTION_CHECK_ALL) checkAllShown = row;
+            else shown.add(row);
+        }
+        patchTopBar();
         Map<String, CatalogPickerState.Shown> byKey = new LinkedHashMap<>();
         List<String> keys = new ArrayList<>(shown.size());
         for (CatalogPickerState.Shown row : shown) {
@@ -304,7 +315,10 @@ public final class LyricsSourcePickerDialog implements LyricsSessionManager.List
 
     private void patch(RowView view, CatalogPickerState.Shown shown) {
         CatalogPickerModel.Row row = shown.row;
-        view.title.setText((row.selected ? "✓ " : "") + row.title);
+        view.title.setText(row.title);
+        view.dot.setImageDrawable(new ActionIconDrawable(row.selected
+                ? ActionIconDrawable.Kind.CIRCLE_CHECK : ActionIconDrawable.Kind.CIRCLE,
+                row.selected ? PanelDialog.COL_ACCENT : 0x59FFFFFF, density()));
         view.title.setTextColor(row.selected ? PanelDialog.COL_ACCENT : PanelDialog.COL_TITLE);
         view.subtitle.setText(row.subtitle);
         patchTrailing(view, row);
@@ -541,6 +555,7 @@ public final class LyricsSourcePickerDialog implements LyricsSessionManager.List
         final TextView subtitle;
         final LinearLayout.LayoutParams params;
         ImageView trailing;
+        final ImageView dot;
 
         RowView(String key) {
             int pad = dp(12);
@@ -552,6 +567,13 @@ public final class LyricsSourcePickerDialog implements LyricsSessionManager.List
             root.setFocusable(true);
             // The listener captures the stable key only; the row it means is read on tap.
             root.setOnClickListener(v -> onTap(key));
+
+            // The lyric picker's selection mark, on the left.
+            dot = new ImageView(activity);
+            dot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dp(22), dp(22));
+            dotParams.rightMargin = dp(12);
+            root.addView(dot, dotParams);
 
             LinearLayout labels = new LinearLayout(activity);
             labels.setOrientation(LinearLayout.VERTICAL);
@@ -574,6 +596,66 @@ public final class LyricsSourcePickerDialog implements LyricsSessionManager.List
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             params.bottomMargin = dp(8);
         }
+    }
+
+    // --- Top buttons ---
+
+    private CatalogPickerState.Shown autoShown;
+    private CatalogPickerState.Shown checkAllShown;
+    private TextView autoButton;
+    private TextView checkAllButton;
+
+    private View buildTopBar() {
+        LinearLayout bar = new LinearLayout(activity);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        autoButton = pillButton(text(strings, "source_picker_auto", "Auto"));
+        autoButton.setOnClickListener(v -> {
+            if (autoShown != null) onTap(autoShown.key);
+        });
+        checkAllButton = pillButton(text(strings, "source_picker_check_all", "Check all"));
+        checkAllButton.setOnClickListener(v -> {
+            if (checkAllShown != null) onTap(checkAllShown.key);
+        });
+        LinearLayout.LayoutParams left = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        left.rightMargin = dp(8);
+        bar.addView(autoButton, left);
+        bar.addView(checkAllButton, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        return bar;
+    }
+
+    private TextView pillButton(String label) {
+        TextView button = new TextView(activity);
+        button.setText(label);
+        button.setTextSize(15);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setGravity(Gravity.CENTER);
+        button.setClickable(true);
+        button.setFocusable(true);
+        return button;
+    }
+
+    /** Auto lights up while it is the choice; "Check all" shows its progress while it runs. */
+    private void patchTopBar() {
+        if (autoButton == null) return;
+        boolean autoOn = autoShown != null && autoShown.row.selected;
+        stylePill(autoButton, autoOn);
+        autoButton.setEnabled(autoShown != null && !autoShown.pending);
+        autoButton.setAlpha(autoShown == null || autoShown.pending ? 0.5f : 1f);
+        boolean checking = checkAllShown != null && checkAllShown.pending;
+        checkAllButton.setText(checking ? checkingLabel()
+                : text(strings, "source_picker_check_all", "Check all"));
+        stylePill(checkAllButton, false);
+        checkAllButton.setEnabled(checkAllShown != null && !checking);
+        checkAllButton.setAlpha(checkAllShown == null || checking ? 0.5f : 1f);
+    }
+
+    private void stylePill(TextView button, boolean on) {
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setCornerRadius(dp(22));
+        bg.setColor(on ? (PanelDialog.COL_ACCENT & 0x00FFFFFF) | 0x33000000 : 0x14FFFFFF);
+        bg.setStroke(Math.max(1, dp(1)), on ? PanelDialog.COL_ACCENT : 0x26FFFFFF);
+        button.setBackground(bg);
+        button.setTextColor(on ? PanelDialog.COL_ACCENT : PanelDialog.COL_TITLE);
     }
 
     // --- Shared helpers ---

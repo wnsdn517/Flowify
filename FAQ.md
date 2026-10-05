@@ -38,7 +38,7 @@ Still broken? Open an issue with your Spotify version and the module version.
 In the **Layout Editor**: open the lyrics screen and edit the artwork, track text, focus point,
 background, chips, top controls or now-playing card in place. Those settings are deliberately not
 repeated in the Settings panel, which holds everything else (sources, readings, translation,
-double-tap like, picture-in-picture, AI, ad-free listening, diagnostics).
+double-tap like, picture-in-picture, AI, Seamless Listening, diagnostics).
 
 ### How do I choose where lyrics come from?
 
@@ -54,7 +54,7 @@ turn double-tap like off — the two cannot share the gesture.
 
 ### Ads and Spicy Connect
 
-- **Ads**: Settings → Ad-free listening → mute, or play generated music during the break.
+- **Ads**: Settings → Seamless Listening → mute, or play generated music during the break.
 - **Spicy Connect**: a background web player that shows up as a Connect device. Sign in from Settings.
   It needs Spotify's web player to keep working, so it can break when Spotify changes it.
 - Both are fork-only features and are not part of upstream.

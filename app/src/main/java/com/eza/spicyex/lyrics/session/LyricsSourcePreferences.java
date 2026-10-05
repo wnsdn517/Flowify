@@ -13,7 +13,8 @@ import java.util.Locale;
 public final class LyricsSourcePreferences {
     public enum Source {
         APPLE_MUSIC("apple"), SPICY("spicy"), SPOTIFY("spotify"), AMLL("amll"), LRCLIB("lrclib"),
-        QQ("qq"), NETEASE("netease");
+        QQ("qq"), NETEASE("netease"), KUGOU("kugou"), GENIUS("genius"),
+        MUSIXMATCH("musixmatch"), BETTERLYRICS("betterlyrics"), BINILYRICS("binilyrics");
         public final String id;
         Source(String id) { this.id = id; }
         public static Source parse(String value) {
@@ -52,8 +53,10 @@ public final class LyricsSourcePreferences {
     private static final String OVERRIDE_ORDER = "override_order";
     private static final int MAX_OVERRIDES = 200;
     private static final List<Source> DEFAULT_ORDER = Collections.unmodifiableList(
-            java.util.Arrays.asList(Source.APPLE_MUSIC, Source.SPICY, Source.SPOTIFY, Source.AMLL,
-                    Source.LRCLIB, Source.QQ, Source.NETEASE));
+            java.util.Arrays.asList(Source.APPLE_MUSIC, Source.SPICY, Source.BETTERLYRICS,
+                    Source.SPOTIFY, Source.AMLL,
+                    Source.LRCLIB, Source.QQ, Source.NETEASE, Source.KUGOU, Source.GENIUS,
+                    Source.MUSIXMATCH, Source.BINILYRICS));
 
     private LyricsSourcePreferences() {}
 
@@ -88,10 +91,17 @@ public final class LyricsSourcePreferences {
                 .getBoolean(ENABLED_PREFIX + source.id, enabledByDefault(source));
     }
 
-    /** Network search sources are opt-in; established ID-based sources retain their defaults. */
+    /**
+     * Network search sources are opt-in; established ID-based sources retain their defaults.
+     * BetterLyrics is the exception: an Apple Music TTML mirror asked by name, it is what finds
+     * word-timed lyrics when the Apple route has no ID mapping for a new release. BiniLyrics stays
+     * opt-in: Cloudflare challenges it on some networks.
+     */
     public static boolean enabledByDefault(Source source) {
         return source != null && source != Source.SPICY
-                && source != Source.QQ && source != Source.NETEASE;
+                && source != Source.QQ && source != Source.NETEASE
+                && source != Source.KUGOU && source != Source.GENIUS
+                && source != Source.MUSIXMATCH && source != Source.BINILYRICS;
     }
 
     public static void setSourceEnabled(Context context, Source source, boolean enabled) {

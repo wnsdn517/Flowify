@@ -300,6 +300,9 @@ final class LyricsSessionManager {
 
     private void adoptTrack(SpotifyTrack next) {
         String uri = next == null || next.uri == null ? "" : next.uri;
+        if (next != null) {
+            com.eza.spicyex.lyrics.processing.SongContext.remember(uri, next.title, next.artist);
+        }
         if (!policy.adoptTrack(uri)) {
             track = next;
             return;
@@ -534,27 +537,72 @@ final class LyricsSessionManager {
                     automaticResult(requestedTrack, requestedUri, requestedGeneration));
             return;
         }
+        // BitChord's rule for Genius: plain text scraped from a web page, so it is asked last and
+        // only when nothing else found synced lyrics - never raced against the synced sources,
+        // where its (unsynced, name-matched) answer could take the seat for a track that has
+        // timed lyrics elsewhere, or be the wrong song entirely.
+        boolean geniusEnabled = scope.sources.contains(CatalogSource.SourceId.GENIUS);
+        java.util.List<CatalogSource.SourceId> first = new java.util.ArrayList<>();
+        for (CatalogSource.SourceId source : scope.sources) {
+            if (source != CatalogSource.SourceId.GENIUS) first.add(source);
+        }
+        if (first.isEmpty()) first.addAll(scope.sources);
+        boolean geniusDeferred = geniusEnabled && !first.contains(CatalogSource.SourceId.GENIUS);
         java.util.concurrent.atomic.AtomicInteger remaining =
-                new java.util.concurrent.atomic.AtomicInteger(scope.sources.size());
+                new java.util.concurrent.atomic.AtomicInteger(first.size());
         java.util.concurrent.atomic.AtomicBoolean delivered =
                 new java.util.concurrent.atomic.AtomicBoolean(false);
-        NativeSpicyLyricsHook.LyricsResultCallback result =
+        java.util.concurrent.atomic.AtomicBoolean synced =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        java.util.concurrent.atomic.AtomicBoolean geniusStarted =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        NativeSpicyLyricsHook.LyricsResultCallback geniusResult =
                 new NativeSpicyLyricsHook.LyricsResultCallback() {
                     @Override public void onSuccess(LyricsDocument document) {
                         delivered.set(true);
                         acceptProviderResult(requestedTrack, requestedUri, requestedGeneration,
                                 document, null);
-                        remaining.decrementAndGet();
                     }
 
                     @Override public void onError(String error) {
-                        if (remaining.decrementAndGet() == 0 && !delivered.get()) {
+                        if (!delivered.get()) {
                             handler.post(() -> acceptError(requestedTrack, requestedUri,
                                     requestedGeneration, error));
                         }
                     }
                 };
-        for (CatalogSource.SourceId source : scope.sources) {
+        Runnable lastResort = () -> {
+            if (geniusStarted.compareAndSet(false, true)) {
+                fetchCoordinator.fetchCatalogSource(context, requestedTrack, requestedGeneration,
+                        CatalogSource.SourceId.GENIUS, geniusResult);
+            }
+        };
+        NativeSpicyLyricsHook.LyricsResultCallback result =
+                new NativeSpicyLyricsHook.LyricsResultCallback() {
+                    @Override public void onSuccess(LyricsDocument document) {
+                        delivered.set(true);
+                        if (document != null && document.type != null
+                                && !"Static".equalsIgnoreCase(document.type)) {
+                            synced.set(true);
+                        }
+                        acceptProviderResult(requestedTrack, requestedUri, requestedGeneration,
+                                document, null);
+                        if (remaining.decrementAndGet() == 0 && geniusDeferred && !synced.get()) {
+                            lastResort.run();
+                        }
+                    }
+
+                    @Override public void onError(String error) {
+                        if (remaining.decrementAndGet() != 0) return;
+                        if (geniusDeferred && !synced.get()) {
+                            lastResort.run();
+                        } else if (!delivered.get()) {
+                            handler.post(() -> acceptError(requestedTrack, requestedUri,
+                                    requestedGeneration, error));
+                        }
+                    }
+                };
+        for (CatalogSource.SourceId source : first) {
             fetchCoordinator.fetchCatalogSource(context, requestedTrack, requestedGeneration,
                     source, result);
         }
@@ -946,14 +994,14 @@ final class LyricsSessionManager {
         });
     }
 
-    /** Runs both explicit-check adapters; each commits and the seat decides what renders. */
+    /** Runs every explicit-check adapter; each commits and the seat decides what renders. */
     void checkOtherCatalogSources(LyricsHost.CatalogActionCallback callback) {
         if (track == null || policy.trackUri().isEmpty()) {
             completeCatalogAction(callback, false, "No current track");
             return;
         }
         java.util.concurrent.atomic.AtomicInteger remaining =
-                new java.util.concurrent.atomic.AtomicInteger(2);
+                new java.util.concurrent.atomic.AtomicInteger(7);
         java.util.concurrent.atomic.AtomicBoolean anySuccess =
                 new java.util.concurrent.atomic.AtomicBoolean(false);
         LyricsHost.CatalogActionCallback one = (success, detail) -> {
@@ -965,6 +1013,11 @@ final class LyricsSessionManager {
         };
         refreshCatalogSource(CatalogSource.SourceId.QQ, one);
         refreshCatalogSource(CatalogSource.SourceId.NETEASE, one);
+        refreshCatalogSource(CatalogSource.SourceId.KUGOU, one);
+        refreshCatalogSource(CatalogSource.SourceId.GENIUS, one);
+        refreshCatalogSource(CatalogSource.SourceId.MUSIXMATCH, one);
+        refreshCatalogSource(CatalogSource.SourceId.BETTERLYRICS, one);
+        refreshCatalogSource(CatalogSource.SourceId.BINILYRICS, one);
     }
 
     /**

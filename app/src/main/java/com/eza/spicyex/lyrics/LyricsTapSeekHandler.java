@@ -181,6 +181,12 @@ public final class LyricsTapSeekHandler implements View.OnTouchListener {
         doubleTapCallback = callback;
     }
 
+    /** Whether a double tap currently likes (setting on, or a "Try it" trial running). */
+    public boolean doubleTapLikeActive() {
+        return doubleTapCallback != null && config != null
+                && (doubleTapForced || Boolean.TRUE.equals(config.get(Settings.DOUBLE_TAP_LIKE)));
+    }
+
     public void setDoubleTapForced(boolean forced) {
         doubleTapForced = forced;
     }

@@ -235,6 +235,16 @@ final class LyricsFetchCoordinator {
                 return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.QQ;
             case NETEASE:
                 return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.NETEASE;
+            case KUGOU:
+                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.KUGOU;
+            case GENIUS:
+                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.GENIUS;
+            case MUSIXMATCH:
+                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.MUSIXMATCH;
+            case BETTERLYRICS:
+                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.BETTERLYRICS;
+            case BINILYRICS:
+                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.BINILYRICS;
             default:
                 return null;
         }

@@ -236,6 +236,13 @@ public final class TrackMatchScorer {
             if (target.contains(artist)) shared++;
         }
         if (shared == target.size() && target.size() == found.size()) return Tier.PERFECT;
+        // Not in Lyricify: the track credits several artists (Spotify lists every feature) while
+        // the lyrics site files it under fewer - usually just the lead ("The Weeknd" for "The
+        // Weeknd, JENNIE, Lily-Rose Depp"). Every name the hit gives is on the track, so it is the
+        // same song; with the lead among them, near certain.
+        if (shared == found.size() && shared >= 1 && target.size() > found.size()) {
+            return found.contains(target.get(0)) ? Tier.HIGH : Tier.MEDIUM;
+        }
         if (shared + 1 >= target.size() && target.size() >= 2
                 || target.size() > 6 && shared / (double) target.size() > 0.8d) {
             return Tier.VERY_HIGH;
@@ -367,7 +374,8 @@ public final class TrackMatchScorer {
         // matches, because there is no word boundary between "." and the following space, which
         // would leave a stray "." glued to the next credited name.
         for (String part : value.toLowerCase(Locale.ROOT)
-                .split(",|&|/|\\bfeat\\b\\.?|\\bft\\b\\.?|\\bwith\\b|\\bx\\b")) {
+                // "、" "，" "；": KuGou and other CJK catalogues list "ROSÉ、Bruno Mars".
+                .split(",|&|/|、|，|；|;|×|\\bfeat\\b\\.?|\\bft\\b\\.?|\\bwith\\b|\\bx\\b")) {
             String trimmed = part.trim();
             if (!trimmed.isEmpty()) names.add(trimmed);
         }

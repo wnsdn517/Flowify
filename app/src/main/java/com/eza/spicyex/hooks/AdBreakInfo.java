@@ -77,7 +77,7 @@ public final class AdBreakInfo {
         // song played in between, so this is a new break even if nobody said the last one ended.
         if (lastAskedAt > 0L && now - lastAskedAt > 20_000L) noteBreakOver();
         lastAskedAt = now;
-        adPlaying = true;
+        setAdPlaying(true);
         AdBreakInfo meta = uri.equals(metadataUri) ? fromMetadata : null;
         if (meta != null && meta.known()) {
             remember(uri, meta, null);
@@ -117,7 +117,7 @@ public final class AdBreakInfo {
 
     /** A song is playing: the break is over. */
     static synchronized void noteBreakOver() {
-        adPlaying = false;
+        setAdPlaying(false);
         // The session and notification announce the next break's first ad a moment before the
         // player reports the ad itself: a reading that fresh belongs to the new break.
         if (SystemClock.uptimeMillis() - heardAt > 3000L) {
@@ -159,6 +159,36 @@ public final class AdBreakInfo {
     private static long lastAskedAt;
     /** Set while an ad plays, so the text hooks cost one volatile read the rest of the time. */
     private static volatile boolean adPlaying;
+    /** The label hook, present only while an ad plays (see {@link #setAdPlaying}). */
+    private static io.github.libxposed.api.XposedInterface.HookHandle labelHook;
+
+    /**
+     * TextView#setText runs for every text Spotify shows, and a hook on it costs on every call
+     * (the callback, an argument array, and the method no longer being inlined) whether or not
+     * it does anything - so it is only installed while an ad plays and removed when the break
+     * ends. The break's "37s left" label is re-set every second, so attaching late misses nothing.
+     */
+    private static synchronized void setAdPlaying(boolean playing) {
+        adPlaying = playing;
+        if (playing && labelHook == null) {
+            try {
+                labelHook = com.eza.spicyex.xposed.XpHooks.findAfter(TextView.class, "setText",
+                        "adBreak:TextView#setText",
+                        param -> {
+                            if (adPlaying) offerLabel((CharSequence) param.args[0]);
+                        },
+                        CharSequence.class, TextView.BufferType.class, boolean.class, int.class);
+            } catch (Throwable t) {
+                XpLog.log(TAG + " label hook unavailable: " + t.getClass().getSimpleName());
+            }
+        } else if (!playing && labelHook != null) {
+            try {
+                labelHook.unhook();
+            } catch (Throwable ignored) {
+            }
+            labelHook = null;
+        }
+    }
     private static AdBreakInfo heardPosition;
     private static String heardPositionText = "";
     private static long heardAt;
@@ -240,15 +270,6 @@ public final class AdBreakInfo {
                     String.class, int.class, android.app.Notification.class);
         } catch (Throwable t) {
             XpLog.log(TAG + " notification hook unavailable: " + t.getClass().getSimpleName());
-        }
-        try {
-            com.eza.spicyex.xposed.XpHooks.findAfter(TextView.class, "setText", "adBreak:TextView#setText",
-                    param -> {
-                        if (adPlaying) offerLabel((CharSequence) param.args[0]);
-                    },
-                    CharSequence.class, TextView.BufferType.class, boolean.class, int.class);
-        } catch (Throwable t) {
-            XpLog.log(TAG + " label hook unavailable: " + t.getClass().getSimpleName());
         }
     }
 

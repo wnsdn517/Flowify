@@ -38,6 +38,19 @@ public final class GoogleEnhancer {
     private static final long GOOGLE_REQUEST_MIN_INTERVAL_MS = 150L;
     private static final long GOOGLE_REQUEST_RETRY_DELAY_MS = 1000L;
     /**
+     * The Chrome dictionary extension's client on clients5. It answers the same
+     * {@code translate_a/single} request with the same JSON (translation, {@code dt=rm}
+     * romanization, batch markers kept) as {@code client=gtx}, but {@code gtx} is the client
+     * every scraper uses and Google blocks it per address with a 429 "Sorry..." page - for a
+     * single one-word request, on networks that never sent a burst. Measured 2026-10: gtx 429,
+     * this endpoint 200 from the same address.
+     */
+    static final String PRIMARY_ENDPOINT =
+            "https://clients5.google.com/translate_a/single?client=dict-chrome-ex";
+    /** Asked once when the primary endpoint answers 429, before backing off. */
+    static final String FALLBACK_ENDPOINT =
+            "https://translate.googleapis.com/translate_a/single?client=gtx";
+    /**
      * One throttle per lane, not one for the whole client.
      *
      * <p>A single global gate made the Sound and Meaning lanes queue behind each other even though
@@ -78,12 +91,16 @@ public final class GoogleEnhancer {
         if (lines == null || lines.isEmpty()) return result;
 
         String target = isBlank(targetLang) ? "en" : targetLang;
+        // Labs: context-aware translation rewrites the request and the answer, so its results
+        // are cached apart from plain Google's.
+        boolean contextual = contextTranslationEnabled(context);
+        String cacheTarget = contextual ? target + "+ctx" : target;
         List<BatchLine> pending = new ArrayList<>();
         for (BatchLine line : lines) {
             if (line == null || isBlank(line.text)) continue;
             result.requestedCount++;
             String cached = LyricCaches.getProcessingValue(context, processingVersion,
-                    LyricCaches.translationKey(trackId, sourceLang, target, line.text));
+                    LyricCaches.translationKey(trackId, sourceLang, cacheTarget, line.text));
             if (!isBlank(cached) && shouldDisplayTranslation(line.text, cached)) {
                 result.translations.put(line.index, cached);
                 result.cachedIndices.add(line.index);
@@ -94,10 +111,17 @@ public final class GoogleEnhancer {
         if (pending.isEmpty()) return result;
 
         String source = LyricCaches.sourceLanguageForCache(sourceLang);
-        String url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl="
+        String url = PRIMARY_ENDPOINT + "&sl="
                 + Uri.encode(source)
                 + "&tl=" + Uri.encode(target)
-                + "&dt=t&q=" + Uri.encode(batchQuery(pending));
+                + "&dt=t&q=" + Uri.encode(batchQuery(contextual ? contextualQuery(pending) : pending));
+        SongContext.Register register = SongContext.Register.KEEP;
+        if (contextual) {
+            List<String> texts = new ArrayList<>(lines.size());
+            for (BatchLine line : lines) if (line != null) texts.add(line.text);
+            SongContext.noteLyrics(trackId, texts);
+            register = SongContext.register(http, trackId);
+        }
         HttpResult response = executeRequest(taggedRequest(url, cancelTag), http);
         result.networkAttempts = response.attempts;
         result.httpStatus = response.status;
@@ -112,10 +136,11 @@ public final class GoogleEnhancer {
             String translated = parsed.get(i);
             if (isBlank(translated)) continue;
             translated = stripMarkerEcho(translated, i).trim();
+            if (contextual) translated = SongContext.postprocess(translated, target, register);
             if (!shouldDisplayTranslation(line.text, translated)) continue;
             result.translations.put(line.index, translated);
             result.networkTranslatedCount++;
-            cacheWrites.put(LyricCaches.translationKey(trackId, sourceLang, target, line.text), translated);
+            cacheWrites.put(LyricCaches.translationKey(trackId, sourceLang, cacheTarget, line.text), translated);
         }
         if (result.networkTranslatedCount > 0 && result.networkTranslatedCount < pending.size()) {
             result.failureReason = "partial_parse";
@@ -200,7 +225,7 @@ public final class GoogleEnhancer {
                                                    List<BatchLine> lines, String cancelTag,
                                                    String trackId, Map<Integer, String> result,
                                                    Map<String, String> cacheWrites) {
-        String url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl="
+        String url = PRIMARY_ENDPOINT + "&sl="
                 + Uri.encode(LyricCaches.sourceLanguageForCache(sourceLang))
                 + "&tl=en&dt=t&dt=rm&q=" + Uri.encode(batchQuery(lines));
         HttpResult response = executeRequest(taggedRequest(url, cancelTag), http);
@@ -235,6 +260,22 @@ public final class GoogleEnhancer {
     }
 
     /** "[[SPX_000]] first line\n[[SPX_001]] second line..." - the batch request's text. */
+    /** The lines as sent with context-aware translation: slang spelled out (see SongContext). */
+    private static List<BatchLine> contextualQuery(List<BatchLine> lines) {
+        List<BatchLine> out = new ArrayList<>(lines.size());
+        for (BatchLine line : lines) out.add(new BatchLine(line.index, SongContext.preprocess(line.text)));
+        return out;
+    }
+
+    private static boolean contextTranslationEnabled(Context context) {
+        try {
+            return context != null && Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(context)
+                    .get(com.eza.spicyex.Settings.CONTEXT_TRANSLATION));
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     static String batchQuery(List<BatchLine> lines) {
         StringBuilder query = new StringBuilder();
         for (int i = 0; i < lines.size(); i++) {
@@ -441,6 +482,13 @@ public final class GoogleEnhancer {
                 }
                 result.failureReason = "http_" + response.code();
                 if (response.code() == 429) {
+                    Request alternate = alternateEndpoint(request);
+                    if (alternate != null) {
+                        // The two clients are limited separately: one is not the other's limit.
+                        request = alternate;
+                        attempt--;
+                        continue;
+                    }
                     // Retrying a second later only extends the limit; back off instead.
                     COOLDOWN.onRateLimited(SystemClock.elapsedRealtime(),
                             GoogleCooldown.parseRetryAfterMs(response.header("Retry-After")));
@@ -459,6 +507,16 @@ public final class GoogleEnhancer {
             if (attempt < GOOGLE_REQUEST_RETRIES) quietSleep(GOOGLE_REQUEST_RETRY_DELAY_MS);
         }
         return result;
+    }
+
+    /** The same request on the fallback client, or null when it already is the fallback. */
+    static Request alternateEndpoint(Request request) {
+        if (request == null) return null;
+        String url = request.url().toString();
+        if (!url.startsWith(PRIMARY_ENDPOINT)) return null;
+        return request.newBuilder()
+                .url(FALLBACK_ENDPOINT + url.substring(PRIMARY_ENDPOINT.length()))
+                .build();
     }
 
     /** Lane identity from the call tag: "SOUND#12" and "MEANING#13" throttle independently. */

@@ -44,13 +44,10 @@ public class CatalogSourceTest {
     }
 
     @Test
-    public void directMusixmatchHasNoRoute() {
-        assertNull(CatalogSource.inferSourceId("musixmatch", "Musixmatch"));
+    public void directMusixmatchIsItsOwnSource() {
+        assertEquals(SourceId.MUSIXMATCH, CatalogSource.inferSourceId("musixmatch", "Musixmatch"));
         assertNull(CatalogSource.inferSourceId("unknown", null));
         assertNull(CatalogSource.inferSourceId(null, null));
-        for (SourceId source : SourceId.values()) {
-            assertTrue(!"musixmatch".equals(source.id));
-        }
     }
 
     @Test
@@ -60,6 +57,15 @@ public class CatalogSourceTest {
         assertTrue(SourceId.AMLL.ordinal() < SourceId.LRCLIB.ordinal());
         assertTrue(SourceId.LRCLIB.ordinal() < SourceId.QQ.ordinal());
         assertTrue(SourceId.QQ.ordinal() < SourceId.NETEASE.ordinal());
+        assertTrue(SourceId.NETEASE.ordinal() < SourceId.KUGOU.ordinal());
+        assertTrue(SourceId.KUGOU.ordinal() < SourceId.GENIUS.ordinal());
+        assertTrue(SourceId.GENIUS.ordinal() < SourceId.MUSIXMATCH.ordinal());
+    }
+
+    @Test
+    public void inferSourceIdRecognizesKugouAndGenius() {
+        assertEquals(SourceId.KUGOU, CatalogSource.inferSourceId("kugou", "KuGou"));
+        assertEquals(SourceId.GENIUS, CatalogSource.inferSourceId("", "Genius"));
     }
 
     @Test

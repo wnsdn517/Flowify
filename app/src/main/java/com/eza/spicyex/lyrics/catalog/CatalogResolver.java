@@ -24,7 +24,7 @@ import java.util.List;
  *   <li>Completeness: complete candidates outrank incomplete ones.</li>
  *   <li>Identity: exact Spotify ID, exact provider mapping, karaoke substitution, strong
  *       search. Weak matches are rejected, never ranked.</li>
- *   <li>Provider tie-break: Apple, Spotify native, AMLL, LRCLIB, QQ, NetEase.</li>
+ *   <li>Provider tie-break: Apple, Spotify native, AMLL, LRCLIB, QQ, NetEase, KuGou, Genius.</li>
  *   <li>Capabilities: provider translation/transliteration, background vocals, duet, credits.</li>
  *   <li>Health: timing-healthy first, then confidence, duration fit, stable ID order.</li>
  * </ol>

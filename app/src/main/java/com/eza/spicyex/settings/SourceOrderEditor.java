@@ -217,6 +217,11 @@ public final class SourceOrderEditor {
         if (source == Source.AMLL) return "AMLL";
         if (source == Source.QQ) return "QQ Music";
         if (source == Source.NETEASE) return "NetEase";
+        if (source == Source.KUGOU) return "KuGou";
+        if (source == Source.GENIUS) return "Genius";
+        if (source == Source.MUSIXMATCH) return "Musixmatch";
+        if (source == Source.BETTERLYRICS) return "BetterLyrics";
+        if (source == Source.BINILYRICS) return "BiniLyrics";
         return "LRCLIB";
     }
 

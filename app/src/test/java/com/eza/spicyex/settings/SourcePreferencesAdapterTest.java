@@ -64,7 +64,8 @@ public class SourcePreferencesAdapterTest {
         assertEquals(Boolean.FALSE, sink.enabled.get(Source.SPICY));
         assertEquals(Arrays.asList("rankingMode", "sourceOrder",
                 "enabled:apple", "enabled:spicy", "enabled:spotify", "enabled:amll",
-                "enabled:lrclib", "enabled:qq", "enabled:netease"),
+                "enabled:lrclib", "enabled:qq", "enabled:netease", "enabled:kugou", "enabled:genius",
+                "enabled:musixmatch", "enabled:betterlyrics", "enabled:binilyrics"),
                 sink.calls);
     }
 

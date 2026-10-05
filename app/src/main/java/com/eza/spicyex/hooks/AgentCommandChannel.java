@@ -382,6 +382,9 @@ final class AgentCommandChannel {
                 case "sources":
                     sources(argument, correlation);
                     return;
+                case "views":
+                    views(correlation);
+                    return;
                 case "action":
                     onMain(verb, correlation, () -> {
                         NativeSpicyShellView shell = requireShell(verb, correlation);
@@ -1026,6 +1029,60 @@ final class AgentCommandChannel {
             return current.uri;
         } catch (Throwable t) {
             return "error";
+        }
+    }
+
+    /**
+     * The current activity's view tree (class, resource entry, bounds, visibility, alpha) written
+     * to {@code views.txt} next to {@code out}: uiautomator cannot dump a screen that animates
+     * continuously, as Spotify's player does.
+     */
+    private void views(String correlation) {
+        onMain("views", correlation, () -> {
+            Activity activity = References.currentActivity();
+            if (activity == null || activity.getWindow() == null || dir == null) {
+                reply("error", "views", "no current activity", correlation);
+                return;
+            }
+            StringBuilder out = new StringBuilder(activity.getClass().getName()).append("\n");
+            int[] count = {0};
+            dumpView(activity.getWindow().getDecorView(), 0, out, count);
+            try (FileOutputStream stream = new FileOutputStream(new File(dir, "views.txt"), false)) {
+                stream.write(out.toString().getBytes(UTF8));
+            } catch (Throwable t) {
+                reply("error", "views", String.valueOf(t), correlation);
+                return;
+            }
+            reply("ok", "views", "views=" + count[0], correlation);
+        });
+    }
+
+    private static void dumpView(View view, int depth, StringBuilder out, int[] count) {
+        if (view == null || count[0] > 4000) return;
+        count[0]++;
+        for (int i = 0; i < depth; i++) out.append(' ');
+        String entry = "";
+        try {
+            if (view.getId() != View.NO_ID) entry = view.getResources().getResourceEntryName(view.getId());
+        } catch (Throwable ignored) {
+        }
+        int[] at = new int[2];
+        view.getLocationOnScreen(at);
+        out.append(view.getClass().getName()).append(' ').append(entry)
+                .append(" [").append(at[0]).append(',').append(at[1]).append(' ')
+                .append(view.getWidth()).append('x').append(view.getHeight()).append(']')
+                .append(view.getVisibility() == View.VISIBLE ? "" : view.getVisibility() == View.GONE ? " GONE" : " INVISIBLE")
+                .append(view.getAlpha() < 1f ? " a=" + view.getAlpha() : "");
+        CharSequence text = view instanceof android.widget.TextView ? ((android.widget.TextView) view).getText() : null;
+        if (text != null && text.length() > 0) {
+            out.append(" \"").append(text.length() > 30 ? text.subSequence(0, 30) : text).append('"')
+                    .append(" c=").append(Integer.toHexString(((android.widget.TextView) view).getCurrentTextColor()))
+                    .append(view.getForeground() != null ? " fg=" + view.getForeground().getClass().getSimpleName() : "");
+        }
+        out.append("\n");
+        if (view instanceof ViewGroup && view.getVisibility() != View.GONE) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) dumpView(group.getChildAt(i), depth + 1, out, count);
         }
     }
 

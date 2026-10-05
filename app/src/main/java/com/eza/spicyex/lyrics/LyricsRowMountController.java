@@ -16,6 +16,8 @@ public final class LyricsRowMountController {
     private final int fullRenderThreshold;
     private final int edgeBuffer;
     private int[] rowHeightPrefix;
+    /** Rows mounted below the anchor while a fresh document warms up; -1 once the window is full. */
+    private int warmupAfter = -1;
 
     public LyricsRowMountController(
             LinearLayout mountedRowsHost,
@@ -57,6 +59,31 @@ public final class LyricsRowMountController {
         mountedRows.markDirty();
     }
 
+    /**
+     * Mounts only {@code after} rows below the anchor for now. Building every row of the window
+     * in one go (21 rows, ~11 ms each before the JIT has seen the code) held the first frame of
+     * the lyrics screen for a quarter second. Rows above the anchor still all mount at once, so
+     * nothing on screen moves when the rest are added below by {@link #growWarmup}.
+     */
+    public void beginWarmup(int after) {
+        warmupAfter = Math.max(0, after);
+    }
+
+    /** Lets {@code step} more rows mount below the anchor; false once the window is complete. */
+    public boolean growWarmup(int step) {
+        if (warmupAfter < 0) return false;
+        warmupAfter += Math.max(1, step);
+        return true;
+    }
+
+    public void endWarmup() {
+        warmupAfter = -1;
+    }
+
+    public boolean warmingUp() {
+        return warmupAfter >= 0;
+    }
+
     public void reset() {
         invalidateRowHeightPrefix();
         mountedRows.reset(mountedRowsHost);
@@ -75,6 +102,11 @@ public final class LyricsRowMountController {
     ) {
         if (lines == null || lines.isEmpty()) return false;
         BoundedLyricWindow.Range range = lyricWindow.rangeFor(lines.size(), anchor);
+        if (warmupAfter >= 0) {
+            BoundedLyricWindow.Range capped = range.cappedAt(Math.max(0, anchor) + warmupAfter);
+            if (capped == range) warmupAfter = -1;
+            range = capped;
+        }
         if (mountedRows.matches(range)) {
             updateSpacerHeights(lines, rowHeightEstimator);
             return false;

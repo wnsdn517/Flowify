@@ -101,7 +101,7 @@ from Settings when you want readings.
 - **Fork** — Animated album-art ambient background, force-dark and extra-dark modes, fallback gradient for
   low-contrast art, and a render-quality option.
 
-## Ad-Free Listening — Fork
+## Seamless Listening — Fork
 
 - Mute Spotify's ads, or replace the ad break with soft generated music (Lofi, Cafe jazz, Bossa
   nova, Ambient, or random). Only Spotify's own audio is muted; the phone's media volume is not
@@ -124,7 +124,7 @@ from Settings when you want readings.
 ## In-Spotify Settings
 
 - Settings panel grouped by behavior, lyrics sources, reading, translation, layout
-  editor, Apple animation style, now-playing, picture-in-picture, AI, ad-free listening and
+  editor, Apple animation style, now-playing, picture-in-picture, AI, Seamless Listening and
   diagnostics. Anything the Layout Editor can change is edited there, not duplicated in the panel.
 - Cache actions for translation and lyric responses, a status panel, and English, Korean, Japanese, Russian
   and Simplified Chinese interface languages.

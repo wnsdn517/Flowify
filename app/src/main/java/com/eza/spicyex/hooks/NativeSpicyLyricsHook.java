@@ -74,6 +74,7 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
                 this::getCurrentTrackSafely
         ).hook();
         playbackBridge.install(lpparm, symbols);
+        PlaybackBridge.setLyricsStateUpdateListener(activityTakeoverHook::onPlayerStateUpdate);
         activityTakeoverHook.hook();
         pipController.hook(lpparm.classLoader());
         String processName = Application.getProcessName();
@@ -92,6 +93,8 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             new AdMuteController(this, applicationContext).start();
             SpotifyConnectHook.init(applicationContext);
             ConnectTransfer.install(lpparm.classLoader(), symbols);
+            SpotifyLyricsCardHider.install(applicationContext, lpparm.classLoader(), symbols);
+            LocalFilesFolderHook.install(applicationContext, lpparm.classLoader());
             // Connect auto-start + auto-connect fire on Spotify's first resumed activity, not
             // here: at process start Spotify isn't foreground yet, and only a foreground sender
             // can get the player's foreground service past Android 12+'s background-start ban.
@@ -114,6 +117,28 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
 
     boolean isPlayerStatePaused() {
         return playbackBridge.isPlayerStatePaused();
+    }
+
+    /** Whether {@code activity} shows the takeover lyrics shell (it is our lyrics screen). */
+    boolean isLyricsPipHost(Activity activity) {
+        return pipController.isLyricsHost(activity);
+    }
+
+    /** The player screen is showing again after our lyrics were over it. */
+    void resumePlayerScreen(Activity activity) {
+        activityTakeoverHook.resumePlayerScreen(activity);
+    }
+
+    boolean lyricsTakeoverWouldApply() {
+        return activityTakeoverHook.takeoverWouldApply();
+    }
+
+    void disarmLyricsTakeover() {
+        activityTakeoverHook.disarmTakeover();
+    }
+
+    boolean hasNativeLyricsShell(Activity activity) {
+        return activityTakeoverHook.hasNativeShell(activity);
     }
 
     public void markExplicitLyricsExit(Activity activity) {

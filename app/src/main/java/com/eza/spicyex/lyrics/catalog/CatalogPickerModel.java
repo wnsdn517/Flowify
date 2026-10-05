@@ -39,7 +39,8 @@ public final class CatalogPickerModel {
     /** Source display order matches the automatic tie-break. */
     static final SourceId[] SOURCE_ORDER = {
             SourceId.APPLE, SourceId.SPOTIFY_NATIVE, SourceId.AMLL, SourceId.LRCLIB,
-            SourceId.QQ, SourceId.NETEASE,
+            SourceId.QQ, SourceId.NETEASE, SourceId.KUGOU, SourceId.GENIUS,
+            SourceId.MUSIXMATCH, SourceId.BETTERLYRICS, SourceId.BINILYRICS,
     };
 
     public static final class Row {
@@ -122,7 +123,7 @@ public final class CatalogPickerModel {
                 bestBySource.put(pinned.sourceId, pinned);
             }
         }
-        for (SourceId source : SOURCE_ORDER) {
+        for (SourceId source : displayOrder()) {
             CatalogCandidate best = bestBySource.get(source);
             ProviderStatus status = stateFor(states, source);
             boolean selected = manual && selection != null && best != null
@@ -154,9 +155,8 @@ public final class CatalogPickerModel {
                 enabled.length() == 0 ? "Check every enabled source"
                         : "Check all: " + enabled,
                 false, false, false, DataMark.NONE, "", null));
-        rows.add(new Row(RowKind.ACTION_DELETE_TRACK, "Clear saved lyrics",
-                "stored candidates and states", false, false, false, DataMark.NONE,
-                "", null));
+        // No "Clear saved lyrics" row: one mistaken tap wiped every stored candidate for the
+        // track. Deleting stays reachable from the debug agent ("delete-track").
         return Collections.unmodifiableList(rows);
     }
 
@@ -193,6 +193,26 @@ public final class CatalogPickerModel {
         }
     }
 
+    /**
+     * The sources on by default first, in tie-break order, then the opt-in ones: a list led by
+     * sources the user never turned on read as if those were the main ones.
+     */
+    static List<SourceId> displayOrder() {
+        List<SourceId> on = new ArrayList<>();
+        List<SourceId> off = new ArrayList<>();
+        for (SourceId source : SOURCE_ORDER) {
+            com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source pref =
+                    CatalogPolicy.preferenceSource(source);
+            if (pref != null && com.eza.spicyex.lyrics.session.LyricsSourcePreferences.enabledByDefault(pref)) {
+                on.add(source);
+            } else {
+                off.add(source);
+            }
+        }
+        on.addAll(off);
+        return on;
+    }
+
     public static String displaySource(SourceId source) {
         if (source == null) return "Unknown";
         switch (source) {
@@ -202,6 +222,11 @@ public final class CatalogPickerModel {
             case LRCLIB: return "LRCLIB";
             case QQ: return "QQ Music";
             case NETEASE: return "NetEase";
+            case KUGOU: return "KuGou";
+            case GENIUS: return "Genius";
+            case MUSIXMATCH: return "Musixmatch";
+            case BETTERLYRICS: return "BetterLyrics";
+            case BINILYRICS: return "BiniLyrics";
             default: return source.id;
         }
     }

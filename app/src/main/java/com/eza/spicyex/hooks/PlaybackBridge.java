@@ -31,9 +31,14 @@ final class PlaybackBridge {
      *  every time Spotify's own state machine builds a new PlayerState - e.g. AdMuteController
      *  uses this for near-instant ad-track detection instead of a slower poll. */
     private static volatile Runnable stateUpdateListener;
+    private static volatile Runnable lyricsStateUpdateListener;
 
     static void setStateUpdateListener(Runnable listener) {
         stateUpdateListener = listener;
+    }
+
+    static void setLyricsStateUpdateListener(Runnable listener) {
+        lyricsStateUpdateListener = listener;
     }
 
     private volatile boolean isPlaying;
@@ -127,6 +132,15 @@ final class PlaybackBridge {
                             } catch (Throwable t) {
                                 XpLog.log(NativeSpicyLyricsHook.TAG
                                         + " state update listener failed: " + t);
+                            }
+                        }
+                        Runnable lyricsListener = lyricsStateUpdateListener;
+                        if (lyricsListener != null) {
+                            try {
+                                lyricsListener.run();
+                            } catch (Throwable t) {
+                                XpLog.log(NativeSpicyLyricsHook.TAG
+                                        + " lyrics state update listener failed: " + t);
                             }
                         }
                     });

@@ -75,6 +75,18 @@ public class GoogleEnhancerTest {
         assertEquals("default", GoogleEnhancer.laneOf(null));
     }
 
+    @Test
+    public void rateLimitedPrimaryFallsBackToGtxOnceWithTheSameQuery() {
+        okhttp3.Request primary = new okhttp3.Request.Builder()
+                .url(GoogleEnhancer.PRIMARY_ENDPOINT + "&sl=ja&tl=en&dt=t&q=%E5%90%9B")
+                .get().tag(String.class, "MEANING#3").build();
+        okhttp3.Request fallback = GoogleEnhancer.alternateEndpoint(primary);
+        assertEquals(GoogleEnhancer.FALLBACK_ENDPOINT + "&sl=ja&tl=en&dt=t&q=%E5%90%9B",
+                fallback.url().toString());
+        assertEquals("MEANING#3", fallback.tag(String.class));
+        assertEquals(null, GoogleEnhancer.alternateEndpoint(fallback));
+    }
+
     private static okhttp3.Request tagged(String tag) {
         okhttp3.Request.Builder builder = new okhttp3.Request.Builder().url("https://example.invalid/").get();
         if (tag != null) builder.tag(String.class, tag);

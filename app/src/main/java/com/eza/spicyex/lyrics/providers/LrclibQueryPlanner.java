@@ -113,6 +113,51 @@ public final class LrclibQueryPlanner {
     }
 
     /** Free-text fallback query ({@code q=title artist}) using the normalized title. */
+    /**
+     * The candidates that are this recording, by the same test QQ Music and NetEase hits pass
+     * ({@link TrackMatchScorer}, Lyricify's CompareHelper): title, artist, album and length graded
+     * and weighted, below the accept line rejected. A free-text search for a common title
+     * ("Patient Zero") returns several artists' songs of similar length, and duration alone then
+     * picked a stranger's lyrics. Nothing passing is a miss, not a reason to take the rest.
+     * Records carrying no name at all (other providers' text wrapped in this shape) are kept.
+     */
+    public static List<JsonObject> matching(List<JsonObject> candidates, String title,
+                                            String artist, String album, long durationMs) {
+        if (candidates == null || candidates.isEmpty() || isBlank(title)) return candidates;
+        TrackMatchScorer.Target target = new TrackMatchScorer.Target(
+                AppleTtmlMirrorAdapter.searchTitle(title), artist, album, durationMs);
+        List<JsonObject> kept = new ArrayList<>();
+        for (JsonObject candidate : candidates) {
+            String name = Json.optString(candidate, "trackName", "name");
+            String who = Json.optString(candidate, "artistName");
+            if (isBlank(name) && isBlank(who)) {
+                kept.add(candidate);
+                continue;
+            }
+            name = withoutArtistPrefix(name, artist);
+            long seconds = Math.round(Json.optDouble(candidate, 0d, "duration") * 1000d);
+            TrackMatchScorer.Score score = TrackMatchScorer.score(target,
+                    AppleTtmlMirrorAdapter.searchTitle(name), TrackMatchScorer.splitArtists(who),
+                    Json.optString(candidate, "albumName"), seconds);
+            if (score.accepted()) kept.add(candidate);
+        }
+        return kept;
+    }
+
+    /**
+     * "The Weeknd, JENNIE & Lily Rose Depp - One Of The Girls": some uploads put the artists in
+     * the title. The prefix goes when it names the track's lead artist; otherwise the title is
+     * left as it is (a real title can contain " - ").
+     */
+    static String withoutArtistPrefix(String name, String trackArtist) {
+        if (isBlank(name) || isBlank(trackArtist)) return name;
+        int dash = name.indexOf(" - ");
+        if (dash <= 0) return name;
+        String lead = AppleTtmlMirrorAdapter.primaryArtist(trackArtist).toLowerCase(Locale.ROOT);
+        String prefix = name.substring(0, dash).toLowerCase(Locale.ROOT);
+        return !lead.isEmpty() && prefix.contains(lead) ? name.substring(dash + 3).trim() : name;
+    }
+
     public static String freeTextQuery(String rawTitle, String artist) {
         String title = normalizedTitle(rawTitle);
         if (isBlank(title)) title = rawTitle == null ? "" : rawTitle.trim();

@@ -47,14 +47,20 @@ final class NowPlayingInjector {
         if (activity == null) return;
         try {
             if (!hook.isNativeSpicyEnabled(activity)) return;
+            if (hook.isLyricsPipHost(activity)) {
+                // Our own lyrics screen (PiP or dock), not Spotify's now-playing page.
+                stop(activity);
+                return;
+            }
             View decor = activity.getWindow() == null ? null : activity.getWindow().getDecorView();
             if (decor == null) return;
+            ApplePlayerStyler.attach(activity, hook);
             cancelRetry(activity);
             RetryState state = new RetryState(activity, decor);
             synchronized (retries) {
                 retries.put(activity, state);
             }
-            state.postNext();
+            state.start();
         } catch (Throwable t) {
             XpLog.log(NativeSpicyLyricsHook.TAG + " schedule live card injection failed: " + t);
         }
@@ -73,6 +79,7 @@ final class NowPlayingInjector {
 
     void destroy(Activity activity) {
         stop(activity);
+        ApplePlayerStyler.detach(activity);
         synchronized (controllers) {
             controllers.remove(activity);
         }
@@ -83,6 +90,7 @@ final class NowPlayingInjector {
     }
 
     boolean consumeArtworkBack(Activity activity) {
+        if (ApplePlayerStyler.consumeRecentCarouselSwipe(activity)) return true;
         NowPlayingLyricController controller;
         synchronized (controllers) {
             controller = controllers.get(activity);
@@ -103,7 +111,12 @@ final class NowPlayingInjector {
                 if (controller != null) controller.start();
                 return true;
             }
-            View lyricsElement = findViewByResourceEntryName(content, "lyrics_element");
+            // By id (one lookup) rather than by walking every view's resource name: this runs on
+            // each frame until the element exists.
+            int elementId = activity.getResources().getIdentifier(
+                    "lyrics_element", "id", activity.getPackageName());
+            View lyricsElement = elementId != 0 ? content.findViewById(elementId)
+                    : findViewByResourceEntryName(content, "lyrics_element");
             if (lyricsElement == null || !(lyricsElement.getParent() instanceof ViewGroup)) return false;
             ViewGroup parent = (ViewGroup) lyricsElement.getParent();
             if (parent.findViewWithTag(TAG_LIVE_CARD) != null) return true;
@@ -563,15 +576,34 @@ final class NowPlayingInjector {
         if (retry != null) retry.cancel();
     }
 
-    private final class RetryState implements Runnable {
+    /**
+     * Injects the live card on the first frame Spotify's lyrics element is in, from a pre-draw
+     * listener - the page is never drawn with Spotify's card first and ours swapped in later (the
+     * timed retries alone landed 0.7 s to 4.5 s after the page opened). The timed retries stay as
+     * a fallback for a page that does not redraw.
+     */
+    private final class RetryState implements Runnable, ViewTreeObserver.OnPreDrawListener {
+        private static final int PRE_DRAW_FRAMES = 600;
         private final Activity activity;
         private final View decor;
         private int attempt;
+        private int framesLeft = PRE_DRAW_FRAMES;
         private boolean cancelled;
+        private boolean listening;
 
         RetryState(Activity activity, View decor) {
             this.activity = activity;
             this.decor = decor;
+        }
+
+        void start() {
+            // Only the player screen has the element; every other screen keeps the timed tries,
+            // which give up after three.
+            if (ApplePlayerStyler.isPlayerScreen(activity)) {
+                decor.getViewTreeObserver().addOnPreDrawListener(this);
+                listening = true;
+            }
+            postNext();
         }
 
         void postNext() {
@@ -582,18 +614,41 @@ final class NowPlayingInjector {
         void cancel() {
             cancelled = true;
             decor.removeCallbacks(this);
+            stopListening();
+        }
+
+        private void stopListening() {
+            if (!listening) return;
+            listening = false;
+            decor.getViewTreeObserver().removeOnPreDrawListener(this);
+        }
+
+        @Override
+        public boolean onPreDraw() {
+            if (cancelled || --framesLeft <= 0) {
+                stopListening();
+                return true;
+            }
+            if (!injectedNow()) return true;
+            // The tree changed under this draw: lay it out again before anything is drawn.
+            return false;
         }
 
         @Override
         public void run() {
             if (cancelled) return;
-            if (inject(activity)) {
-                synchronized (retries) {
-                    if (retries.get(activity) == this) retries.remove(activity);
-                }
-                return;
-            }
+            if (injectedNow()) return;
             postNext();
+        }
+
+        private boolean injectedNow() {
+            if (!inject(activity)) return false;
+            decor.removeCallbacks(this);
+            stopListening();
+            synchronized (retries) {
+                if (retries.get(activity) == this) retries.remove(activity);
+            }
+            return true;
         }
     }
 

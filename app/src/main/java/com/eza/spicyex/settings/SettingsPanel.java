@@ -1,6 +1,7 @@
 package com.eza.spicyex.settings;
 
 import com.eza.spicyex.BuildStamp;
+import com.eza.spicyex.AppSigningIdentity;
 import com.eza.spicyex.CurrentLyricState;
 import com.eza.spicyex.Diagnostics;
 import com.eza.spicyex.FeatureAvailability;
@@ -33,6 +34,7 @@ import com.eza.spicyex.lyrics.cache.CacheStoragePolicy;
 import com.eza.spicyex.lyrics.language.LanguageModelPack;
 import com.eza.spicyex.lyrics.providers.LyricsFetchDiagnosticsState;
 import com.eza.spicyex.lyrics.providers.SpicyManualTokenStore;
+import com.eza.spicyex.hooks.LocalFilesFolderHook;
 import com.eza.spicyex.settings.PanelDialogs;
 import com.eza.spicyex.settings.PanelPolicy;
 import com.eza.spicyex.settings.PanelSnapshot;
@@ -725,7 +727,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                 Settings.LYRICS_SOURCES, Settings.TRANSLATION, Settings.TRANSLITERATION, Settings.AI);
         appendHubGroup(content, "settings_hub_group_use", "Playback & controls", grouped,
                 Settings.LYRICS, Settings.GESTURES, Settings.PIP, Settings.AD_FREE);
-        appendHubGroup(content, "settings_hub_group_about", "About", grouped, Settings.DEBUG);
+        appendHubGroup(content, "settings_hub_group_about", "About & Labs", grouped,
+                Settings.LABS, Settings.DEBUG);
     }
 
     private void appendHubGroup(LinearLayout content, String captionName, String captionFallback,
@@ -751,7 +754,10 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     /** Whether the section's main feature is switched on (shown as a mark on its hub tile). */
     private boolean sectionOn(Settings.Section section) {
         if (section == Settings.AI) return aiReady();
-        if (section == Settings.PIP) return Boolean.TRUE.equals(store.get(Settings.PIP_ENABLED));
+        if (section == Settings.PIP) {
+            return Boolean.TRUE.equals(store.get(Settings.PIP_ENABLED))
+                    || Boolean.TRUE.equals(store.get(Settings.PIP_ON_CLOSE));
+        }
         if (section == Settings.TRANSLATION) {
             return Boolean.TRUE.equals(store.get(Settings.TRANSLATION_ENABLED));
         }
@@ -860,6 +866,11 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     /** The non-setting rows a page ends with. */
     private void appendPageExtras(LinearLayout card, Settings.Section section) {
         appendEditorActionRows(card, section);
+        if (section == Settings.LYRICS) {
+            rows.actionRow(card, Kind.SEARCH,
+                    uiStrings.get("settings_local_files_action", "Hide Local Files folders"),
+                    v -> LocalFilesFolderHook.showFolderPicker(context));
+        }
         if (section == Settings.LYRICS_SOURCES) {
             // Every stored song: search, filter by provider, sort, delete.
             rows.actionRow(card, Kind.SEARCH, uiStrings.get("settings_cache_browser_title", "Stored lyrics"),
@@ -911,6 +922,22 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         version.setGravity(Gravity.CENTER);
         version.setPadding(0, style.dp(6), 0, 0);
         hero.addView(version);
+        boolean officialBuild = AppSigningIdentity.isOfficial(context);
+        TextView signingStatus = style.text(
+                uiStrings.get(officialBuild ? "settings_about_official" : "settings_about_unofficial",
+                        officialBuild ? "Official" : "Unofficial"),
+                12, officialBuild ? PanelStyle.COL_ACCENT : PanelStyle.COL_TITLE, true);
+        signingStatus.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams signingStatusLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        signingStatusLp.topMargin = style.dp(4);
+        hero.addView(signingStatus, signingStatusLp);
+        TextView releaseChannel = style.text(uiStrings.get("settings_about_checking", "Checking…"),
+                12, PanelStyle.COL_ACCENT, true);
+        LinearLayout.LayoutParams releaseChannelLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        releaseChannelLp.topMargin = style.dp(3);
+        hero.addView(releaseChannel, releaseChannelLp);
         TextView clue = style.text(BuildStamp.CLUE, 12, PanelStyle.COL_ACCENT, false);
         clue.setPadding(style.dp(12), style.dp(4), style.dp(12), style.dp(4));
         android.graphics.drawable.GradientDrawable clueBg = new android.graphics.drawable.GradientDrawable();
@@ -930,12 +957,15 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         personRow(people, uiStrings.get("settings_about_original", "Original developer"), "amarinne");
         rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_source", "Source code on GitHub"),
                 v -> openUrl("https://github.com/" + FORK_REPO));
+        // The three pills below open Telegram channels, but nothing about a plain accent-colored
+        // pill says so on its own - this caption is the only thing that does.
+        people.addView(style.groupCaption(uiStrings.get("settings_about_telegram_caption", "Telegram")));
         communityRow(people);
         TextView latest = rows.infoRow(people, uiStrings.get("settings_about_latest", "Latest on GitHub"),
                 uiStrings.get("settings_about_checking", "Checking…"));
         View latestRow = (View) latest.getParent();
         latestRow.setOnClickListener(v -> openUrl("https://github.com/" + FORK_REPO + "/releases"));
-        checkLatestRelease(latest);
+        checkLatestRelease(latest, releaseChannel);
         style.attachCard(parent, people, -1);
 
         LinearLayout system = style.newCard();
@@ -1070,52 +1100,102 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         }
     }
 
-    /** Newest release of the fork on GitHub (or, with none published, the newest commit). */
-    private void checkLatestRelease(TextView target) {
+    /** Compares the installed build with GitHub releases, including prereleases. */
+    private void checkLatestRelease(TextView target, TextView channelTarget) {
         Thread worker = new Thread(() -> {
             String shown;
+            String channel;
             try {
-                // The newest release, betas included ("releases/latest" leaves pre-releases out).
                 org.json.JSONObject release = null;
                 org.json.JSONArray list = githubJsonArray("https://api.github.com/repos/" + FORK_REPO + "/releases?per_page=10");
                 for (int i = 0; list != null && i < list.length(); i++) {
                     org.json.JSONObject candidate = list.optJSONObject(i);
                     if (candidate == null || candidate.optBoolean("draft")) continue;
-                    // The list is not in date order: keep the most recently published version tag.
-                    if (!candidate.optString("tag_name", "").matches("v?[0-9]+[.][0-9]+[.][0-9]+.*")) continue;
-                    if (release == null || candidate.optString("published_at", "")
-                            .compareTo(release.optString("published_at", "")) > 0) {
+                    String version = candidate.optString("tag_name", "").replaceFirst("^[vV]", "");
+                    if (!version.matches("[0-9]+[.][0-9]+[.][0-9]+.*")) continue;
+                    String selectedVersion = release == null ? ""
+                            : release.optString("tag_name", "").replaceFirst("^[vV]", "");
+                    if (release == null || isNewer(version, selectedVersion)
+                            || (version.equals(selectedVersion)
+                            && candidate.optString("published_at", "")
+                            .compareTo(release.optString("published_at", "")) > 0)) {
                         release = candidate;
                     }
                 }
                 if (release != null) {
                     String tag = release.optString("tag_name", "");
+                    String latestVersion = tag.replaceFirst("^[vV]", "");
                     String date = release.optString("published_at", "");
-                    boolean newer = isNewer(tag.replaceFirst("^[vV]", ""), BuildStamp.VERSION);
-                    shown = tag + (release.optBoolean("prerelease") ? " beta" : "")
+                    boolean githubNewer = isNewer(latestVersion, BuildStamp.VERSION);
+                    boolean currentNewer = isNewer(BuildStamp.VERSION, latestVersion);
+                    boolean sameVersion = sameNumericVersion(latestVersion, BuildStamp.VERSION);
+                    channel = currentNewer ? uiStrings.get("settings_about_channel_unreleased", "unreleased")
+                            : sameVersion && release.optBoolean("prerelease")
+                            ? uiStrings.get("settings_about_channel_nightly", "nightly-released")
+                            : sameVersion ? uiStrings.get("settings_about_channel_released", "released")
+                            : findCurrentReleaseChannel(list);
+                    String status = githubNewer
+                            ? uiStrings.get("settings_about_update", "Update available")
+                            : currentNewer
+                            ? uiStrings.get("settings_about_current_newer", "Current build is newer than GitHub")
+                            : uiStrings.get("settings_about_up_to_date", "Up to date");
+                    shown = tag + (release.optBoolean("prerelease")
+                            ? " · " + uiStrings.get("settings_about_channel_nightly", "nightly-released") : "")
                             + (date.length() >= 10 ? " · " + date.substring(0, 10) : "")
-                            + " · " + (newer ? uiStrings.get("settings_about_update", "Update available")
-                            : uiStrings.get("settings_about_up_to_date", "Up to date"));
+                            + " · " + status;
                 } else {
                     org.json.JSONObject commit = githubJson("https://api.github.com/repos/" + FORK_REPO + "/commits/main");
                     if (commit == null) {
                         shown = uiStrings.get("settings_about_unavailable", "Unavailable");
+                        channel = uiStrings.get("settings_about_unavailable", "Unavailable");
                     } else {
                         String sha = commit.optString("sha", "");
                         String date = commit.optJSONObject("commit") == null ? ""
                                 : commit.optJSONObject("commit").optJSONObject("committer").optString("date", "");
                         shown = sha.substring(0, Math.min(8, sha.length()))
                                 + (date.length() >= 10 ? " · " + date.substring(0, 10) : "");
+                        channel = uiStrings.get("settings_about_channel_unreleased", "unreleased");
                     }
                 }
             } catch (Throwable t) {
                 shown = uiStrings.get("settings_about_unavailable", "Unavailable");
+                channel = uiStrings.get("settings_about_unavailable", "Unavailable");
             }
             final String text = shown;
-            uiHandler.post(() -> target.setText(text));
+            final String channelText = channel;
+            uiHandler.post(() -> {
+                target.setText(text);
+                channelTarget.setText(channelText);
+            });
         }, "SpicyAboutLatest");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    private String findCurrentReleaseChannel(org.json.JSONArray releases) {
+        for (int i = 0; releases != null && i < releases.length(); i++) {
+            org.json.JSONObject candidate = releases.optJSONObject(i);
+            if (candidate == null || candidate.optBoolean("draft")) continue;
+            String version = candidate.optString("tag_name", "").replaceFirst("^[vV]", "");
+            if (sameNumericVersion(version, BuildStamp.VERSION)) {
+                return uiStrings.get(candidate.optBoolean("prerelease")
+                        ? "settings_about_channel_nightly" : "settings_about_channel_released",
+                        candidate.optBoolean("prerelease") ? "nightly-released" : "released");
+            }
+        }
+        return uiStrings.get("settings_about_channel_unreleased", "unreleased");
+    }
+
+    private static boolean sameNumericVersion(String first, String second) {
+        String[] a = first.split("[^0-9]+");
+        String[] b = second.split("[^0-9]+");
+        int length = Math.max(a.length, b.length);
+        for (int i = 0; i < length; i++) {
+            int left = i < a.length && !a[i].isEmpty() ? Integer.parseInt(a[i]) : 0;
+            int right = i < b.length && !b[i].isEmpty() ? Integer.parseInt(b[i]) : 0;
+            if (left != right) return false;
+        }
+        return true;
     }
 
     private static org.json.JSONArray githubJsonArray(String url) throws Exception {

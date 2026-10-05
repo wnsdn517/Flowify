@@ -39,6 +39,10 @@ public final class XpRes {
         if (built != null) cached = built;
     }
 
+    public static String moduleSourceDir() {
+        return moduleSourceDir;
+    }
+
     /** Module resources, or null only when the APK path was never captured. */
     public static synchronized Resources moduleResources(Context hostContext) {
         if (hostContext != null) {

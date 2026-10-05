@@ -156,6 +156,54 @@ public final class LyricsRepository {
         }, 0);
     }
 
+    /**
+     * KuGou (LRC) and Genius (plain text) hand back raw lyric text, not a provider document. Wrap
+     * it in the LRCLIB record shape so the shared LRC/plain parser and finalizer build it, then
+     * store it in the catalog like QQ/NetEase so the picker shows it and Auto can seat it.
+     */
+    private void deliverTextSource(Context context, SpotifyTrack track,
+                                   CatalogSource.SourceId catalogId, String label, String field,
+                                   String text, int adapterRevision, ResultCallback callback) {
+        LyricsDocument document;
+        try {
+            JsonObject envelope = new JsonObject();
+            envelope.addProperty(field, text);
+            document = parser.parseLrclibLyrics(context, track, envelope.toString());
+        } catch (Throwable parseError) {
+            failTextSource(context, track, catalogId, label,
+                    "parse failed: " + safe(parseError.getMessage()), callback);
+            return;
+        }
+        deliverDocument(context, track, catalogId, label, document, text, adapterRevision, callback);
+    }
+
+    /** Stamps a provider's parsed document with its source and stores it in the catalog. */
+    private void deliverDocument(Context context, SpotifyTrack track,
+                                 CatalogSource.SourceId catalogId, String label,
+                                 LyricsDocument document, String raw, int adapterRevision,
+                                 ResultCallback callback) {
+        if (document == null || document.lines.isEmpty()) {
+            failTextSource(context, track, catalogId, label, "empty lyrics", callback);
+            return;
+        }
+        document.fetchSource = catalogId.id;
+        document.provider = label;
+        document.selectedSource = label;
+        document.selectionMode = "strict";
+        document.selectionOverride = label;
+        CatalogAdapters.recordSuccess(context, catalogId, track, document,
+                CatalogSource.MatchMethod.STRONG_SEARCH, "", raw, adapterRevision);
+        callback.onSuccess(document);
+    }
+
+    private void failTextSource(Context context, SpotifyTrack track,
+                                CatalogSource.SourceId catalogId, String label, String error,
+                                ResultCallback callback) {
+        String message = label + " source unavailable: " + safe(error);
+        CatalogAdapters.recordError(context, catalogId, track, message);
+        callback.onError(message);
+    }
+
     private static String labelFor(com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source source) {
         if (source == null) return "Auto";
         switch (source) {
@@ -166,6 +214,11 @@ public final class LyricsRepository {
             case LRCLIB: return "LRCLIB";
             case QQ: return "QQ Music";
             case NETEASE: return "NetEase";
+            case KUGOU: return "KuGou";
+            case GENIUS: return "Genius";
+            case MUSIXMATCH: return "Musixmatch";
+            case BETTERLYRICS: return "BetterLyrics";
+            case BINILYRICS: return "BiniLyrics";
             default: return "Auto";
         }
     }
@@ -309,6 +362,83 @@ public final class LyricsRepository {
 
                         @Override public void onError(String error) {
                             callback.onError("NetEase source unavailable: " + safe(error));
+                        }
+                    });
+            return;
+        }
+        if ("Musixmatch".equals(source)) {
+            new MusixmatchAdapter(http, parser, ioScheduler).fetch(context, track, generation,
+                    karaokeOriginalLyrics, new ResultCallback() {
+                        @Override public void onSuccess(LyricsDocument document) {
+                            callback.onSuccess(document);
+                        }
+
+                        @Override public void onError(String error) {
+                            callback.onError("Musixmatch source unavailable: " + safe(error));
+                        }
+                    });
+            return;
+        }
+        if ("BetterLyrics".equals(source) || "BiniLyrics".equals(source)) {
+            boolean better = "BetterLyrics".equals(source);
+            CatalogSource.SourceId catalogId = better
+                    ? CatalogSource.SourceId.BETTERLYRICS : CatalogSource.SourceId.BINILYRICS;
+            AppleTtmlMirrorAdapter.TtmlCallback ttmlCallback = new AppleTtmlMirrorAdapter.TtmlCallback() {
+                @Override public void onSuccess(String ttml) {
+                    LyricsDocument document;
+                    try {
+                        document = parser.parseAmllTtml(context, track, ttml);
+                    } catch (Throwable parseError) {
+                        failTextSource(context, track, catalogId, source,
+                                "parse failed: " + safe(parseError.getMessage()), callback);
+                        return;
+                    }
+                    deliverDocument(context, track, catalogId, source, document, ttml,
+                            AppleTtmlMirrorAdapter.ADAPTER_REVISION, callback);
+                }
+
+                @Override public void onError(String error) {
+                    failTextSource(context, track, catalogId, source, error, callback);
+                }
+            };
+            AppleTtmlMirrorAdapter mirror = new AppleTtmlMirrorAdapter(http);
+            if (better) {
+                mirror.fetchBetterLyrics(safe(track.title), safe(track.artist), track.album,
+                        Math.max(0, track.duration), ttmlCallback);
+            } else {
+                mirror.fetchBiniLyrics(safe(track.title), safe(track.artist), track.album,
+                        Math.max(0, track.duration), ttmlCallback);
+            }
+            return;
+        }
+        if ("KuGou".equals(source)) {
+            new KuGouAdapter(http).fetch(safe(track.title), safe(track.artist), track.album,
+                    Math.max(0, track.duration), new KuGouAdapter.LrcCallback() {
+                        @Override public void onSuccess(String lrcText) {
+                            deliverTextSource(context, track, CatalogSource.SourceId.KUGOU,
+                                    "KuGou", "syncedLyrics", lrcText,
+                                    KuGouAdapter.ADAPTER_REVISION, callback);
+                        }
+
+                        @Override public void onError(String error) {
+                            failTextSource(context, track, CatalogSource.SourceId.KUGOU,
+                                    "KuGou", error, callback);
+                        }
+                    });
+            return;
+        }
+        if ("Genius".equals(source)) {
+            new GeniusAdapter(http).fetch(safe(track.title), safe(track.artist),
+                    new GeniusAdapter.LinesCallback() {
+                        @Override public void onSuccess(java.util.List<String> lines) {
+                            deliverTextSource(context, track, CatalogSource.SourceId.GENIUS,
+                                    "Genius", "plainLyrics", String.join("\n", lines),
+                                    GeniusAdapter.ADAPTER_REVISION, callback);
+                        }
+
+                        @Override public void onError(String error) {
+                            failTextSource(context, track, CatalogSource.SourceId.GENIUS,
+                                    "Genius", error, callback);
                         }
                     });
             return;
@@ -1303,13 +1433,17 @@ public final class LyricsRepository {
 
     private static List<String> lrclibQueryUrls(SpotifyTrack track) {
         List<String> urls = new ArrayList<>();
-        for (String title : LrclibQueryPlanner.queryTitles(safe(track.title))) {
+        // Credits off the title ("Song (feat. X)" is filed as "Song"), the first credited artist
+        // only, and no album: LRCLIB filters on album_name exactly, so a deluxe or "Encore"
+        // edition name on Spotify returned nothing at all. Duration and artist pick among results.
+        String title = AppleTtmlMirrorAdapter.searchTitle(safe(track.title));
+        String artist = AppleTtmlMirrorAdapter.primaryArtist(safe(track.artist));
+        for (String variant : LrclibQueryPlanner.queryTitles(title)) {
             urls.add("https://lrclib.net/api/search?track_name="
-                    + Uri.encode(title)
-                    + "&artist_name=" + Uri.encode(safe(track.artist))
-                    + "&album_name=" + Uri.encode(safe(track.album)));
+                    + Uri.encode(variant)
+                    + "&artist_name=" + Uri.encode(artist));
         }
-        String freeText = LrclibQueryPlanner.freeTextQuery(safe(track.title), safe(track.artist));
+        String freeText = LrclibQueryPlanner.freeTextQuery(title, artist);
         if (!freeText.isEmpty()) urls.add("https://lrclib.net/api/search?q=" + Uri.encode(freeText));
         return urls;
     }
@@ -1417,6 +1551,10 @@ public final class LyricsRepository {
         List<JsonObject> candidates = new ArrayList<>(merged.size());
         for (JsonElement element : merged) {
             if (element.isJsonObject()) candidates.add(element.getAsJsonObject());
+        }
+        if (track != null) {
+            candidates = LrclibQueryPlanner.matching(candidates, track.title, track.artist,
+                    track.album, track.duration);
         }
         double trackDurationSec = track == null || track.duration <= 0 ? -1d : track.duration / 1000d;
         int pick = LrclibQueryPlanner.pickBest(candidates, trackDurationSec);
@@ -1593,6 +1731,7 @@ public final class LyricsRepository {
         LyricsDocument parseNeteaseWordLyrics(Context context, SpotifyTrack track, String body);
         LyricsDocument parseQqMusicLyrics(Context context, SpotifyTrack track, String body);
         LyricsDocument parseQqWordLyrics(Context context, SpotifyTrack track, String rawResponse);
+        LyricsDocument parseMusixmatchLyrics(Context context, SpotifyTrack track, String body);
     }
 
     public interface NativeLyricsProvider {

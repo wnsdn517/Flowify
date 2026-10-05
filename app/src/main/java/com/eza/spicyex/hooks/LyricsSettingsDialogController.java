@@ -438,6 +438,8 @@ final class LyricsSettingsDialogController {
         final float slop;
         private float startY;
         boolean dragging;
+        /** Set once an upward drag has borrowed the expanded window; see {@link #move}. */
+        private boolean tempExpandedWindow;
 
         void begin(float rawY) {
             startY = rawY;
@@ -492,6 +494,16 @@ final class LyricsSettingsDialogController {
         }
 
         private void move(float dy) {
+            if (halfMode && dy < 0 && !tempExpandedWindow) {
+                // Collapsed, the window is sized to exactly the collapsed sheet height and
+                // anchored to the screen bottom (applyWindowState). Translating the sheet
+                // upward from there moved it past the window's own top edge, which clipped it
+                // mid-drag instead of smoothly growing - the window only got resized in
+                // setCollapsed(), after release(). Borrow the full-size window for the drag;
+                // release() below puts it back if the drag ends up staying collapsed.
+                tempExpandedWindow = true;
+                applyWindowState(dialog, false);
+            }
             sheet.setTranslationY(dy > 0 ? dy : (halfMode ? dy * 0.35f : dy * 0.12f));
         }
 
@@ -504,6 +516,8 @@ final class LyricsSettingsDialogController {
             float shortPull = Math.min(sheet.getHeight() * 0.12f, 90 * density);
             float longPull = halfMode ? Math.min(sheet.getHeight() * 0.25f, 160 * density)
                     : Math.max(sheet.getHeight() - sheetHeight(true) + 80 * density, sheet.getHeight() * 0.62f);
+            boolean hadTempWindow = tempExpandedWindow;
+            tempExpandedWindow = false;
             if (dy > longPull) {
                 surface.exit(null);
             } else if (!halfMode && dy > shortPull) {
@@ -512,7 +526,9 @@ final class LyricsSettingsDialogController {
                 setCollapsed(dialog, surface, sheet, false);
             } else {
                 sheet.animate().translationY(0f).setDuration(Motion.dur(Motion.BASE))
-                        .setInterpolator(Motion.decel()).start();
+                        .setInterpolator(Motion.decel())
+                        .withEndAction(hadTempWindow ? () -> applyWindowState(dialog, true) : null)
+                        .start();
             }
         }
     }

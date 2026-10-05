@@ -81,6 +81,16 @@ public final class CatalogPolicy {
                 return SourceId.QQ;
             case NETEASE:
                 return SourceId.NETEASE;
+            case KUGOU:
+                return SourceId.KUGOU;
+            case GENIUS:
+                return SourceId.GENIUS;
+            case MUSIXMATCH:
+                return SourceId.MUSIXMATCH;
+            case BETTERLYRICS:
+                return SourceId.BETTERLYRICS;
+            case BINILYRICS:
+                return SourceId.BINILYRICS;
             default:
                 return null;
         }
@@ -102,6 +112,16 @@ public final class CatalogPolicy {
                 return LyricsSourcePreferences.Source.QQ;
             case NETEASE:
                 return LyricsSourcePreferences.Source.NETEASE;
+            case KUGOU:
+                return LyricsSourcePreferences.Source.KUGOU;
+            case GENIUS:
+                return LyricsSourcePreferences.Source.GENIUS;
+            case MUSIXMATCH:
+                return LyricsSourcePreferences.Source.MUSIXMATCH;
+            case BETTERLYRICS:
+                return LyricsSourcePreferences.Source.BETTERLYRICS;
+            case BINILYRICS:
+                return LyricsSourcePreferences.Source.BINILYRICS;
             default:
                 return null;
         }

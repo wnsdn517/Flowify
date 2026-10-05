@@ -2,6 +2,7 @@ package com.eza.spicyex.hooks;
 
 import com.eza.spicyex.SpotifyTrack;
 import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.eza.spicyex.lyrics.catalog.CatalogPolicy;
 import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source;
 import org.junit.Test;
 
@@ -149,6 +150,12 @@ public class LyricsFetchCoordinatorIdentityTest {
         assertEquals(Source.QQ, LyricsFetchCoordinator.repositorySource(SourceId.QQ));
         assertEquals(Source.NETEASE,
                 LyricsFetchCoordinator.repositorySource(SourceId.NETEASE));
+        assertEquals(Source.KUGOU, LyricsFetchCoordinator.repositorySource(SourceId.KUGOU));
+        assertEquals(Source.GENIUS, LyricsFetchCoordinator.repositorySource(SourceId.GENIUS));
+        // Every catalog provider must be fetchable, or the picker row is a dead end.
+        for (SourceId source : SourceId.values()) {
+            assertEquals(source, CatalogPolicy.sourceId(LyricsFetchCoordinator.repositorySource(source)));
+        }
         assertNull(LyricsFetchCoordinator.repositorySource(null));
     }
 

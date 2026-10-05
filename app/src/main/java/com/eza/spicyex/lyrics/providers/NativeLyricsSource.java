@@ -44,6 +44,14 @@ public final class NativeLyricsSource implements LyricsRepository.NativeLyricsPr
     private final LinkedHashMap<String, LyricsDocument> byTrack = new LinkedHashMap<>();
     private final LinkedHashMap<String, Long> dbMisses = new LinkedHashMap<>();
     private final java.util.Set<NativeListener> listeners = new java.util.HashSet<>();
+    /**
+     * Objects already read, by identity. Spotify calls several hooked accessors on one parsed
+     * response while showing it, and each call re-parsed every line and notified the session
+     * again - 13 times for one track on 9.1.88.
+     */
+    private final java.util.ArrayDeque<java.lang.ref.WeakReference<Object>> recentCandidates =
+            new java.util.ArrayDeque<>();
+    private static final int RECENT_CANDIDATES = 16;
     private final java.util.Map<String, java.util.List<LyricsRepository.NativeLyricsProvider.RequestCallback>>
             nativeRequests = new java.util.HashMap<>();
     private final ContextProvider contextProvider;
@@ -125,13 +133,16 @@ public final class NativeLyricsSource implements LyricsRepository.NativeLyricsPr
     public void captureCandidate(SpotifyTrack track, Object candidate, Object[] ctorArgs, String sourceTag) {
         // Bare lists omit the owning message's language and provider metadata.
         if (candidate instanceof java.util.Collection) return;
+        if (alreadySeen(candidate) || neverLyrics(candidate)) return;
         dbg("captureCandidate", "source=" + safe(sourceTag) + " class=" + (candidate == null ? "null" : candidate.getClass().getName()) + " args=" + (ctorArgs == null ? 0 : ctorArgs.length));
         try {
             LyricsDocument doc = buildNativeLyricsDocument(track, candidate, ctorArgs, sourceTag);
             if (doc == null || doc.lines.isEmpty()) {
                 noteUnparsed(candidate, sourceTag);
+                noteClassMiss(candidate);
                 return;
             }
+            noteClassHit(candidate);
             store(doc);
         } catch (Throwable t) {
             Diagnostics.warn(TAG, "native lyrics capture failed source=" + sourceTag, t);
@@ -258,6 +269,67 @@ public final class NativeLyricsSource implements LyricsRepository.NativeLyricsPr
         return null;
     }
 
+    /**
+     * Per class: misses so far, or -1 once it has yielded lyrics. The probes resolve classes R8
+     * merged with unrelated code (a Room DAO, accessors returning strings and other models), and
+     * every call through them paid a full parse attempt that could never succeed.
+     */
+    private static final java.util.Map<Class<?>, Integer> CLASS_MISSES = new java.util.WeakHashMap<>();
+    /** Misses after which a class that has never yielded lyrics is no longer parsed. */
+    static final int CLASS_MISS_LIMIT = 24;
+
+    static boolean neverLyrics(Object candidate) {
+        if (candidate == null) return false;
+        synchronized (CLASS_MISSES) {
+            Integer misses = CLASS_MISSES.get(candidate.getClass());
+            return misses != null && misses >= CLASS_MISS_LIMIT;
+        }
+    }
+
+    static void noteClassMiss(Object candidate) {
+        // Never written off: text (the JSON fallback) and Spotify's named lyrics models, which
+        // miss for every track that has no lyrics - an instrumental run must not switch them off.
+        if (candidate == null || candidate instanceof CharSequence
+                || candidate.getClass().getName().toLowerCase(java.util.Locale.ROOT).contains("lyric")) return;
+        synchronized (CLASS_MISSES) {
+            Integer misses = CLASS_MISSES.get(candidate.getClass());
+            if (misses != null && misses < 0) return;
+            CLASS_MISSES.put(candidate.getClass(), misses == null ? 1 : misses + 1);
+        }
+    }
+
+    static void noteClassHit(Object candidate) {
+        if (candidate == null) return;
+        synchronized (CLASS_MISSES) {
+            CLASS_MISSES.put(candidate.getClass(), -1);
+        }
+    }
+
+    private boolean alreadySeen(Object candidate) {
+        if (candidate == null) return false;
+        synchronized (recentCandidates) {
+            for (java.lang.ref.WeakReference<Object> ref : recentCandidates) {
+                if (ref.get() == candidate) return true;
+            }
+            recentCandidates.addFirst(new java.lang.ref.WeakReference<>(candidate));
+            while (recentCandidates.size() > RECENT_CANDIDATES) recentCandidates.removeLast();
+        }
+        return false;
+    }
+
+    /** Same track, kind, source and lines: a re-read of the response already stored. */
+    static boolean sameCapture(LyricsDocument a, LyricsDocument b) {
+        if (a == null || b == null || a.lines.size() != b.lines.size()) return false;
+        if (!safe(a.type).equals(safe(b.type)) || !safe(a.fetchSource).equals(safe(b.fetchSource))
+                || !safe(a.provider).equals(safe(b.provider))) return false;
+        for (int i = 0; i < a.lines.size(); i++) {
+            LyricsLine x = a.lines.get(i);
+            LyricsLine y = b.lines.get(i);
+            if (x.startMs != y.startMs || !safe(x.text).equals(safe(y.text))) return false;
+        }
+        return true;
+    }
+
     private void store(LyricsDocument doc) {
         dbg("store", "doc=" + (doc == null ? "null" : doc.trackId + "/" + doc.type + "/" + doc.lines.size()));
         if (doc == null || doc.lines.isEmpty()) return;
@@ -267,6 +339,7 @@ public final class NativeLyricsSource implements LyricsRepository.NativeLyricsPr
             dbMisses.remove(trackId);
             LyricsDocument existing = byTrack.get(trackId);
             if (existing != null && nativeLyricsScore(existing) > nativeLyricsScore(doc)) return;
+            if (sameCapture(existing, doc)) return;
             byTrack.put(trackId, LyricsDocument.copyOf(doc));
             while (byTrack.size() > CACHE_LIMIT) {
                 String eldest = byTrack.keySet().iterator().next();
@@ -470,7 +543,7 @@ public final class NativeLyricsSource implements LyricsRepository.NativeLyricsPr
         doc.provider = "Spotify (through Musixmatch)";
         doc.language = "unknown";
         parseJsonLineElements(arr, doc);
-        if (doc.lines.isEmpty()) return null;
+        if (doc.lines.isEmpty() || mostlyIdentifiers(doc.lines)) return null;
         finalizeParsedDocument(doc);
         return doc;
     }
@@ -742,9 +815,34 @@ public final class NativeLyricsSource implements LyricsRepository.NativeLyricsPr
         );
         doc.language = firstNonBlank(readLanguageCandidate(candidate, ctorArgs), "unknown");
         parseNativeLineList(rawLines, doc);
-        if (doc.lines.isEmpty()) return null;
+        if (doc.lines.isEmpty() || mostlyIdentifiers(doc.lines)) return null;
         finalizeParsedDocument(doc);
         return doc;
+    }
+
+    /**
+     * Capture is by shape, so any object with a list of things carrying a String can pass for a
+     * lyrics model - and one did: a UI object whose "lines" were comma-joined view ids
+     * ("ime_window_insets_space,fragment_container_bottom_overlap_touch_event_consumer"),
+     * shown as the song's lyrics. A real lyric line has words; resource ids have none.
+     */
+    static boolean looksLikeIdentifier(String text) {
+        if (text == null) return false;
+        String t = text.trim();
+        if (t.length() < 8 || t.indexOf(' ') >= 0) return false;
+        if (!t.matches("[A-Za-z0-9_.,:/$-]+")) return false;
+        return t.indexOf('_') >= 0 || t.indexOf('/') >= 0 || t.indexOf('$') >= 0;
+    }
+
+    static boolean mostlyIdentifiers(List<LyricsLine> lines) {
+        int words = 0;
+        int identifiers = 0;
+        for (LyricsLine line : lines) {
+            if (line == null || line.interlude || isBlank(line.text)) continue;
+            words++;
+            if (looksLikeIdentifier(line.text)) identifiers++;
+        }
+        return words > 0 && identifiers * 2 >= words;
     }
 
     private void finalizeParsedDocument(LyricsDocument doc) {

@@ -36,4 +36,13 @@ public class LyricsActivityTakeoverBackPolicyTest {
         assertFalse(LyricsActivityTakeoverHook.shouldSuppressLyricsFinish(false, true, true, false));
         assertFalse(LyricsActivityTakeoverHook.shouldSuppressLyricsFinish(true, false, true, false));
     }
+
+    @Test
+    public void adReturnOnlyReopensAnActiveSessionOnNowPlayingAfterAdEnds() {
+        assertTrue(LyricsActivityTakeoverHook.shouldReopenAfterAd(true, true, true, false));
+        assertFalse(LyricsActivityTakeoverHook.shouldReopenAfterAd(false, true, true, false));
+        assertFalse(LyricsActivityTakeoverHook.shouldReopenAfterAd(true, false, true, false));
+        assertFalse(LyricsActivityTakeoverHook.shouldReopenAfterAd(true, true, false, false));
+        assertFalse(LyricsActivityTakeoverHook.shouldReopenAfterAd(true, true, true, true));
+    }
 }

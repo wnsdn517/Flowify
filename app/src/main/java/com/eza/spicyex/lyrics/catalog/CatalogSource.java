@@ -8,9 +8,9 @@ import java.util.Locale;
  * Catalog vocabulary: source identities, timing levels, match methods, provider states, and
  * selection modes shared by acquisition, selection, and rendering.
  *
- * <p>Direct Musixmatch is deliberately absent: there is no Musixmatch source ID, adapter, setting,
- * or rank. Spotify native stays {@code spotify_native}; its credit text may still name Musixmatch
- * because that is information inside Spotify's payload, not a second route.
+ * <p>Direct Musixmatch is an opt-in search source like QQ and NetEase (this fork adds it back).
+ * Spotify native stays {@code spotify_native}; its credit text may still name Musixmatch because
+ * that is information inside Spotify's payload, not a second route.
  */
 public final class CatalogSource {
     private CatalogSource() {
@@ -18,7 +18,8 @@ public final class CatalogSource {
 
     /**
      * Provider identity. Declaration order is the automatic tie-break order: Apple, Spotify
-     * native, AMLL, LRCLIB, QQ, NetEase.
+     * native, AMLL, LRCLIB, QQ, NetEase, KuGou, Genius, Musixmatch, BetterLyrics,
+     * BiniLyrics.
      */
     public enum SourceId {
         APPLE("apple"),
@@ -26,7 +27,12 @@ public final class CatalogSource {
         AMLL("amll"),
         LRCLIB("lrclib"),
         QQ("qq"),
-        NETEASE("netease");
+        NETEASE("netease"),
+        KUGOU("kugou"),
+        GENIUS("genius"),
+        MUSIXMATCH("musixmatch"),
+        BETTERLYRICS("betterlyrics"),
+        BINILYRICS("binilyrics");
 
         public final String id;
 
@@ -167,6 +173,11 @@ public final class CatalogSource {
         if (v.startsWith("lrclib")) return SourceId.LRCLIB;
         if (v.startsWith("qq")) return SourceId.QQ;
         if (v.startsWith("netease")) return SourceId.NETEASE;
+        if (v.startsWith("kugou")) return SourceId.KUGOU;
+        if (v.startsWith("genius")) return SourceId.GENIUS;
+        if (v.startsWith("musixmatch")) return SourceId.MUSIXMATCH;
+        if (v.startsWith("betterlyrics")) return SourceId.BETTERLYRICS;
+        if (v.startsWith("binilyrics")) return SourceId.BINILYRICS;
         return null;
     }
 }

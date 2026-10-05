@@ -33,7 +33,9 @@ public final class Settings {
     public static final Section AI = new Section("AI", "ai");
     public static final Section PIP = new Section("Picture-in-picture", "pip");
     /** Ad handling and the Spotify Connect web player: both are ways to listen without ads. */
-    public static final Section AD_FREE = new Section("Ad-free listening", "ad_free");
+    public static final Section AD_FREE = new Section("Seamless Listening", "ad_free");
+    /** Experimental features: off by default, may change or go away. */
+    public static final Section LABS = new Section("Labs", "labs");
     public static final Section DEBUG = new Section("About & Diagnostics", "debug");
     public static final Section DISPLAY = TEXT;
     public static final Section INTERNAL = new Section("Internal", "internal");
@@ -149,6 +151,33 @@ public final class Settings {
             "mini_player_lyrics_icon", LYRICS, "Show lyrics icon on mini player", false
     );
 
+    // Lyrics opened from the player screen come up over that screen itself instead of opening
+    // a separate lyrics page: no page launch, and back shows the player again. Picture-in-picture
+    // on leaving works from there too - see LyricsPipController.
+    public static final Setting<Boolean> LYRICS_IN_PLAYER = boolSetting(
+            "lyrics_open_in_player", LYRICS, "Open lyrics over the player screen", true
+    );
+
+    // Spotify's own lyrics card under the player is never composed - see SpotifyLyricsCardHider.
+    // Applies from the next player screen.
+    public static final Setting<Boolean> HIDE_SPOTIFY_LYRICS_CARD = boolSetting(
+            "hide_spotify_lyrics_card", LYRICS, "Hide Spotify's lyrics card under the player", false
+    );
+
+    // Spotify's player screen restyled after Apple Music's - see ApplePlayerStyler. Applies from
+    // the next time the player screen opens.
+    public static final Setting<Boolean> PLAYER_APPLE_STYLE = boolSetting(
+            "player_apple_style", LYRICS, "Apple Music-style player screen", true
+    );
+    // The player's times as elapsed / -remaining, with digits that roll as they change.
+    public static final Setting<Boolean> PLAYER_APPLE_TIME = boolSetting(
+            "player_apple_time", LYRICS, "Apple-style time: remaining time, rolling digits", true
+    );
+    // Uses the existing animated artwork shader instead of the static cover on Android 13+.
+    public static final Setting<Boolean> PLAYER_ANIMATED_ARTWORK = boolSetting(
+            "player_animated_artwork", LYRICS, "Use animated artwork on the player screen", false
+    );
+
     // Which orientations keep the status bar hidden on the lyrics screen. A swipe from the
     // edge still shows it for a moment. Migrated from the portrait/landscape bool pair, so
     // existing choices carry over.
@@ -211,11 +240,6 @@ public final class Settings {
             "lyrics_source_order", LYRICS_SOURCES, "Lyrics source order", "managed"
     );
 
-    /** Search the original song title for karaoke/off-vocal releases on search-based sources. */
-    public static final Setting<Boolean> KARAOKE_ORIGINAL_LYRICS = boolSetting(
-            "lyrics_karaoke_original_lyrics", LYRICS_SOURCES,
-            "Show original lyrics for karaoke versions", false
-    );
 
     /** Bounded JSON map of spotify track URI to source id; auto is represented by omission. */
     public static final Setting<String> LYRICS_SOURCE_OVERRIDES = internalSetting(
@@ -901,6 +925,24 @@ public final class Settings {
     // select it again if music was playing.
     public static final Setting<Boolean> CONNECT_NETWORK_RECOVERY = boolSetting(
             "connect_network_recovery", AD_FREE, "Reconnect after network changes", true
+    );
+
+    // --- Labs ---
+    /** Search the original song title for karaoke/off-vocal releases on search-based sources. */
+    public static final Setting<Boolean> KARAOKE_ORIGINAL_LYRICS = boolSetting(
+            "lyrics_karaoke_original_lyrics", LABS,
+            "Show original lyrics for karaoke versions", false
+    );
+
+    /** Keyless song context (Wikipedia, DuckDuckGo) steadies Google's lyric translation (beta). */
+    public static final Setting<Boolean> CONTEXT_TRANSLATION = boolSetting(
+            "translation_context_aware", LABS, "Context-aware translation (beta)", false
+    );
+
+    /** Covers framed by a flat border: crop to the picture, round its corners, or shrink (beta). */
+    public static final Setting<String> ARTWORK_FRAME_FIT = enumSetting(
+            "artwork_frame_fit", LABS, "Artwork frame fit (beta)", "Off",
+            "Off", "Zoom", "Round corners", "Shrink"
     );
 
     // ===================== INTERNAL (fixed defaults, not shown) =====================

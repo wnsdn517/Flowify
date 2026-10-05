@@ -48,11 +48,17 @@ final class LyricsPipController {
     private static final String PIP_HOST_ACTIVITY =
             "com.spotify.nowplaying.musicinstallation.NowPlayingActivity";
     private static final String EXTRA_PIP = "com.eza.spicyex.LYRICS_PIP";
+    /** With EXTRA_PIP: open the host full screen ("docked"), PiP armed to auto-enter on leave. */
+    private static final String EXTRA_DOCK = "com.eza.spicyex.LYRICS_PIP_DOCK";
+    private static final int TAG_DOCK_ROOT = 0x53504C44; // SPLD
+    private static final String LYRICS_PAGE_ACTIVITY =
+            "com.spotify.lyrics.fullscreenview.page.LyricsFullscreenPageActivity";
     private static final String ACTION_CONTROL = "com.eza.spicyex.LYRICS_PIP_CONTROL";
     private static final String EXTRA_CONTROL = "control";
     private static final int CONTROL_PREVIOUS = 1;
     private static final int CONTROL_TOGGLE = 2;
     private static final int CONTROL_NEXT = 3;
+    private static final int CONTROL_LIKE = 4;
     private static final int TAG_PIP_ROOT = 0x53504C50; // SPLP
     private static final long ENTER_TIMEOUT_MS = 4000L;
     /** Width : height of the PiP window, and of the screen the shell is laid out for
@@ -77,6 +83,21 @@ final class LyricsPipController {
      *  mini player. The window then opens Spotify's now-playing page, not the lyrics screen. */
     private final WeakHashMap<Activity, Intent> foreignLaunches = new WeakHashMap<>();
     private boolean applyingOwnParams;
+    /**
+     * Hosts showing the lyrics full screen with auto-enter armed (Android 12+). Spotify's own
+     * lyrics page cannot be put into PiP - only NowPlayingActivity declares support - so with
+     * "PiP on close" the lyrics are shown here instead: then leaving (Home, recents, another
+     * app) is the system's own instant transition, like YouTube's, instead of a second activity
+     * launched only after the home animation has finished (seconds late, or never).
+     */
+    private final WeakHashMap<Activity, Boolean> docked = new WeakHashMap<>();
+    private final WeakHashMap<Activity, Object> dockBackCallbacks = new WeakHashMap<>();
+    /**
+     * Docks opened over the player screen the user was already on (Settings.LYRICS_IN_PLAYER):
+     * the lyrics come up over it without a page launch, and back shows that page again instead
+     * of closing it.
+     */
+    private final WeakHashMap<Activity, Boolean> inPlace = new WeakHashMap<>();
     private final WeakHashMap<android.widget.TextView, android.graphics.Typeface> keptTypefaces = new WeakHashMap<>();
     private boolean receiverRegistered;
     private boolean lastPlaying;
@@ -98,28 +119,81 @@ final class LyricsPipController {
         if (Build.VERSION.SDK_INT < 26) return;
         XpHooks.findAfter(Activity.class, "onCreate", "pip:Activity#onCreate", param -> {
             Activity activity = (Activity) param.thisObject;
-            if (isPipIntent(activity, activity.getIntent())) adopt(activity);
+            if (isDockIntent(activity, activity.getIntent())) dock(activity);
+            else if (isPipIntent(activity, activity.getIntent())) adopt(activity);
         }, android.os.Bundle.class);
         // launchMode singleTask: an instance already running gets the intent here instead.
         XpHooks.findAfter(Activity.class, "onNewIntent", "pip:Activity#onNewIntent", param -> {
             Activity activity = (Activity) param.thisObject;
             Intent intent = (Intent) param.args[0];
-            if (isPipIntent(activity, intent)) {
+            if (isDockIntent(activity, intent)) {
+                activity.setIntent(intent);
+                dock(activity);
+            } else if (isPipIntent(activity, intent)) {
                 activity.setIntent(intent);
                 adopt(activity);
-            } else if (hosts.containsKey(activity)) {
+            } else if (hosts.containsKey(activity) || docked.containsKey(activity)) {
                 foreignLaunches.put(activity, intent);
             }
         }, Intent.class);
         XpHooks.findAfter(Activity.class, "onResume", "pip:Activity#onResume", param -> {
             Activity activity = (Activity) param.thisObject;
+            if (docked.containsKey(activity) && !hosts.containsKey(activity)) {
+                mountDock(activity);
+                if (dockWanted(activity)) armAutoEnter(activity);
+                return;
+            }
             if (!hosts.containsKey(activity)) {
-                if (LyricsActivityTakeoverHook.isLyricsFullscreenActivity(activity)) closeForLyrics(activity);
+                if (LyricsActivityTakeoverHook.isLyricsFullscreenActivity(activity)) {
+                    closeForLyrics(activity);
+                    main.post(() -> redirectToDock(activity, 0));
+                }
                 return;
             }
             mount(activity); // back on top if anything was added over it
             if (Boolean.FALSE.equals(hosts.get(activity))) main.post(() -> enter(activity));
         });
+        // Straight into the dock: a lyrics page launched while our takeover owns lyrics opens as
+        // the dock instead. Moving it there after it had appeared showed the lyrics opening twice
+        // (the page, then the dock loading over it).
+        XpHooks.findBefore(Activity.class, "startActivityForResult", "pip:Activity#startActivityForResult",
+                param -> {
+                    Intent intent = (Intent) param.args[0];
+                    Activity caller = (Activity) param.thisObject;
+                    if (intent == null || intent.getComponent() == null) return;
+                    if (!LYRICS_PAGE_ACTIVITY.equals(intent.getComponent().getClassName())) return;
+                    if (docked.containsKey(caller) && !hosts.containsKey(caller)) {
+                        // Already showing our lyrics here.
+                        param.setResult(null);
+                        host.disarmLyricsTakeover();
+                        return;
+                    }
+                    if (isPlayerScreen(caller) && hosts.isEmpty() && inPlayerWanted(caller)
+                            && host.lyricsTakeoverWouldApply()) {
+                        param.setResult(null);
+                        host.disarmLyricsTakeover();
+                        main.post(() -> dockInPlace(caller));
+                        return;
+                    }
+                    if (!dockWanted(caller) || !host.lyricsTakeoverWouldApply() || !hosts.isEmpty()) return;
+                    Intent dock = new Intent();
+                    dock.setClassName(caller.getPackageName(), PIP_HOST_ACTIVITY);
+                    dock.putExtra(EXTRA_PIP, true);
+                    dock.putExtra(EXTRA_DOCK, true);
+                    param.args[0] = dock;
+                    host.disarmLyricsTakeover();
+                    XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: lyrics launch opens the dock from "
+                            + caller.getClass().getSimpleName());
+                }, Intent.class, int.class, android.os.Bundle.class);
+        // Back in a dock before Android 13 (no OnBackInvokedDispatcher): the key, both halves.
+        XpHooks.findBefore(Activity.class, "dispatchKeyEvent", "pip:Activity#dispatchKeyEvent", param -> {
+            Activity activity = (Activity) param.thisObject;
+            if (Build.VERSION.SDK_INT >= 33 || !docked.containsKey(activity)) return;
+            android.view.KeyEvent event = (android.view.KeyEvent) param.args[0];
+            if (event.getKeyCode() != android.view.KeyEvent.KEYCODE_BACK) return;
+            if (event.getAction() == android.view.KeyEvent.ACTION_UP) dockBack(activity);
+            param.setResult(true);
+        }, android.view.KeyEvent.class);
         XpHooks.findAfter(Activity.class, "onStart", "pip:Activity#onStart", param -> {
             if (hosts.containsKey(param.thisObject)) stopped.remove(param.thisObject);
         });
@@ -135,7 +209,7 @@ final class LyricsPipController {
             XpHooks.findBefore(PIP_HOST_ACTIVITY, loader, "onPictureInPictureModeChanged",
                     "pip:NowPlayingActivity#onPictureInPictureModeChanged", param -> {
                         Activity activity = (Activity) param.thisObject;
-                        if (!hosts.containsKey(activity)) return;
+                        if (!hosts.containsKey(activity) && !docked.containsKey(activity)) return;
                         param.setResult(null);
                         onModeChanged(activity, (boolean) param.args[0]);
                     }, boolean.class, Configuration.class);
@@ -162,17 +236,26 @@ final class LyricsPipController {
                 });
         XpHooks.findBefore(Activity.class, "setPictureInPictureParams", "pip:Activity#setPictureInPictureParams",
                 param -> {
-                    if (hosts.containsKey(param.thisObject) && !applyingOwnParams) param.setResult(null);
+                    if ((hosts.containsKey(param.thisObject) || docked.containsKey(param.thisObject))
+                            && !applyingOwnParams) {
+                        param.setResult(null);
+                    }
                 }, PictureInPictureParams.class);
         XpHooks.findBefore(Activity.class, "onDestroy", "pip:Activity#onDestroy", param -> {
             Activity activity = (Activity) param.thisObject;
             foreignLaunches.remove(activity);
             if (hosts.remove(activity) != null) unmount(activity);
+            inPlace.remove(activity);
+            if (docked.remove(activity) != null) {
+                unmountDock(activity);
+                unregisterDockBack(activity);
+            }
         });
     }
 
     /** An explicit button opens PiP; a normal close or back press keeps its old behavior. */
     boolean openFromLyrics(Activity from) {
+        if (from != null && docked.containsKey(from)) return enterFromDock(from);
         if (from == null || !isSupported(from) || !hosts.isEmpty() || opener != null) return false;
         if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(from)
                 .get(com.eza.spicyex.Settings.PIP_ENABLED))) return false;
@@ -347,11 +430,34 @@ final class LyricsPipController {
         if (inPip) {
             hosts.put(activity, Boolean.TRUE);
             mount(activity);
+            if (docked.containsKey(activity)) {
+                XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: auto-entered from dock");
+                // The full-screen lyrics stay underneath until the PiP layout has its lines, then
+                // cross-fade: no black window while it loads.
+                ViewGroup decor = decor(activity);
+                View frame = decor == null ? null : decor.findViewWithTag(TAG_PIP_ROOT);
+                if (frame != null) frame.setAlpha(0f);
+                swapInPip(activity, android.os.SystemClock.uptimeMillis());
+            }
             return;
         }
         if (!Boolean.TRUE.equals(hosts.get(activity))) return;
         hosts.remove(activity);
         boolean dismissed = stopped.remove(activity) != null;
+        if (docked.containsKey(activity)) {
+            unmount(activity);
+            if (dismissed || activity.isFinishing()) {
+                docked.remove(activity);
+                inPlace.remove(activity);
+                unregisterDockBack(activity);
+                if (!activity.isFinishing()) activity.finish();
+                return;
+            }
+            // Expanded: back to the full-screen lyrics in the same window, auto-enter re-armed.
+            mountDock(activity);
+            if (dockWanted(activity)) armAutoEnter(activity);
+            return;
+        }
         Intent foreign = foreignLaunches.remove(activity);
         unmount(activity);
         if (activity.isFinishing()) return;
@@ -372,6 +478,310 @@ final class LyricsPipController {
         if (!dismissed) host.launchNativeLyricsFullscreen(activity);
         activity.finish();
         activity.overridePendingTransition(0, 0);
+    }
+
+    /**
+     * Whether {@code activity} is showing our lyrics (a PiP host or a dock) rather than Spotify's
+     * own now-playing page - the now-playing lyrics card must not run inside it: hidden under the
+     * dock it was a second, invisible lyrics pipeline re-applying layers and rendering.
+     */
+    boolean isLyricsHost(Activity activity) {
+        if (activity == null) return false;
+        if (hosts.containsKey(activity) || docked.containsKey(activity)) return true;
+        return isPipIntent(activity, activity.getIntent());
+    }
+
+    // --- Dock (full screen with auto-enter) ------------------------------------------------------
+
+    private static boolean isDockIntent(Activity activity, Intent intent) {
+        if (!isPipIntent(activity, intent)) return false;
+        try {
+            return intent.getBooleanExtra(EXTRA_DOCK, false);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** Whether the lyrics should live in a dock: "PiP on close" on, and auto-enter available. */
+    private static boolean dockWanted(Activity activity) {
+        if (Build.VERSION.SDK_INT < 31 || !isSupported(activity)) return false;
+        return Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(activity)
+                .get(com.eza.spicyex.Settings.PIP_ON_CLOSE));
+    }
+
+    /** The takeover lyrics page reopens as a dock; the page itself goes without an animation. */
+    private void redirectToDock(Activity lyrics, int attempt) {
+        if (lyrics == null || lyrics.isFinishing() || !dockWanted(lyrics)) return;
+        if (!docked.isEmpty() || !hosts.isEmpty() || opener != null) return;
+        if (!host.hasNativeLyricsShell(lyrics)) {
+            // The takeover mounts its shell just after the page resumes; a Spotify lyrics page
+            // that never gets one is not ours to move.
+            if (attempt < 15) main.postDelayed(() -> redirectToDock(lyrics, attempt + 1), 100L);
+            return;
+        }
+        try {
+            Intent intent = new Intent();
+            intent.setClassName(lyrics.getPackageName(), PIP_HOST_ACTIVITY);
+            intent.putExtra(EXTRA_PIP, true);
+            intent.putExtra(EXTRA_DOCK, true);
+            lyrics.startActivity(intent,
+                    android.app.ActivityOptions.makeCustomAnimation(lyrics, 0, 0).toBundle());
+            host.markExplicitLyricsExit(lyrics);
+            lyrics.finish();
+            lyrics.overridePendingTransition(0, 0);
+            XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: docking lyrics for auto-enter");
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: dock launch failed " + t);
+        }
+    }
+
+    private void dock(Activity activity) {
+        docked.put(activity, Boolean.TRUE);
+        hosts.remove(activity);
+        mountDock(activity);
+        armAutoEnter(activity);
+        registerDockBack(activity);
+    }
+
+    private static boolean isPlayerScreen(Activity activity) {
+        return activity != null && PIP_HOST_ACTIVITY.equals(activity.getClass().getName());
+    }
+
+    private static boolean inPlayerWanted(Activity activity) {
+        return Build.VERSION.SDK_INT >= 26 && Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig
+                .from(activity).get(com.eza.spicyex.Settings.LYRICS_IN_PLAYER));
+    }
+
+    private static final long IN_PLACE_ENTER_MS = 280L;
+    private static final long IN_PLACE_EXIT_MS = 220L;
+
+    /**
+     * Lyrics over the player screen the user is on: the dock's lyrics, mounted into this
+     * activity instead of a new one. They rise over the page, which is hidden (not drawn, not
+     * laid out) only once they cover it.
+     */
+    private void dockInPlace(Activity activity) {
+        if (activity == null || activity.isFinishing() || docked.containsKey(activity)) return;
+        inPlace.put(activity, Boolean.TRUE);
+        docked.put(activity, Boolean.TRUE);
+        mountDock(activity, true);
+        ViewGroup decor = decor(activity);
+        View frame = decor == null ? null : decor.findViewWithTag(TAG_DOCK_ROOT);
+        View content = activity.findViewById(android.R.id.content);
+        if (frame != null) {
+            float rise = 28f * activity.getResources().getDisplayMetrics().density;
+            frame.setAlpha(0f);
+            frame.setTranslationY(rise);
+            frame.animate().alpha(1f).translationY(0f).setDuration(IN_PLACE_ENTER_MS)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(2f))
+                    .withEndAction(() -> {
+                        if (content != null && docked.containsKey(activity)) content.setVisibility(View.GONE);
+                    })
+                    .start();
+        }
+        if (dockWanted(activity)) armAutoEnter(activity);
+        registerDockBack(activity);
+        XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: lyrics opened over the player screen");
+    }
+
+    /** Back from lyrics opened over the player screen: the page shows again, nothing closes. */
+    private void closeInPlace(Activity activity) {
+        inPlace.remove(activity);
+        docked.remove(activity);
+        unregisterDockBack(activity);
+        if (Build.VERSION.SDK_INT >= 31) {
+            applyingOwnParams = true;
+            try {
+                activity.setPictureInPictureParams(new PictureInPictureParams.Builder()
+                        .setAutoEnterEnabled(false).build());
+            } catch (Throwable ignored) {
+            } finally {
+                applyingOwnParams = false;
+            }
+        }
+        View content = activity.findViewById(android.R.id.content);
+        if (content != null) content.setVisibility(View.VISIBLE);
+        ViewGroup decor = decor(activity);
+        View frame = decor == null ? null : decor.findViewWithTag(TAG_DOCK_ROOT);
+        if (frame == null) {
+            unmountDock(activity);
+        } else {
+            float drop = 28f * activity.getResources().getDisplayMetrics().density;
+            // Untagged first: lyrics reopened while this one is still leaving get a new frame,
+            // and this one's removal can't take that one with it.
+            frame.setTag(null);
+            frame.setClickable(false);
+            frame.animate().alpha(0f).translationY(drop).setDuration(IN_PLACE_EXIT_MS)
+                    .setInterpolator(new android.view.animation.AccelerateInterpolator(1.5f))
+                    .withEndAction(() -> removeDockFrame(decor, frame))
+                    .start();
+        }
+        // The page's own lyrics card was quieted while ours were up.
+        host.resumePlayerScreen(activity);
+        XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: lyrics over the player screen closed");
+    }
+
+    private static void removeDockFrame(ViewGroup decor, View frame) {
+        try {
+            if (frame instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) frame;
+                for (int i = 0; i < group.getChildCount(); i++) {
+                    View child = group.getChildAt(i);
+                    if (child instanceof NativeSpicyShellView) ((NativeSpicyShellView) child).stop();
+                }
+            }
+            decor.removeView(frame);
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: dock frame removal failed " + t);
+        }
+    }
+
+    /** PiP params with auto-enter: the system enters PiP itself the moment the user leaves. */
+    private void armAutoEnter(Activity activity) {
+        if (Build.VERSION.SDK_INT < 31 || activity.isFinishing()) return;
+        aspect = aspectSetting(activity);
+        applyingOwnParams = true;
+        try {
+            PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder()
+                    .setAspectRatio(aspect)
+                    .setActions(actions(activity))
+                    .setAutoEnterEnabled(true)
+                    .setSeamlessResizeEnabled(false);
+            activity.setPictureInPictureParams(builder.build());
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: auto-enter arm failed " + t);
+        } finally {
+            applyingOwnParams = false;
+        }
+    }
+
+    private boolean enterFromDock(Activity activity) {
+        try {
+            hosts.put(activity, Boolean.FALSE);
+            boolean entered = activity.enterPictureInPictureMode(params(activity));
+            if (!entered) hosts.remove(activity);
+            return entered;
+        } catch (Throwable t) {
+            hosts.remove(activity);
+            return false;
+        }
+    }
+
+    private void swapInPip(Activity activity, long since) {
+        if (activity.isFinishing() || !Boolean.TRUE.equals(hosts.get(activity))) return;
+        ViewGroup decor = decor(activity);
+        View frame = decor == null ? null : decor.findViewWithTag(TAG_PIP_ROOT);
+        if (frame == null) return;
+        NativeSpicyShellView shell = shellOf(decor);
+        boolean ready = shell != null && shell.hasLyricsDocument();
+        if (!ready && SystemClock.uptimeMillis() - since < REVEAL_MAX_WAIT_MS) {
+            main.postDelayed(() -> swapInPip(activity, since), REVEAL_POLL_MS);
+            return;
+        }
+        frame.animate().alpha(1f).setDuration(180L)
+                .withEndAction(() -> unmountDock(activity)).start();
+    }
+
+    private void mountDock(Activity activity) {
+        mountDock(activity, false);
+    }
+
+    /** {@code keepPage}: leave the page underneath shown for now (it is hidden once covered). */
+    private void mountDock(Activity activity, boolean keepPage) {
+        try {
+            ViewGroup decor = decor(activity);
+            if (decor == null) return;
+            View existing = decor.findViewWithTag(TAG_DOCK_ROOT);
+            if (existing != null) {
+                existing.bringToFront();
+                return;
+            }
+            FrameLayout frame = new FrameLayout(activity);
+            frame.setTag(TAG_DOCK_ROOT);
+            frame.setBackgroundColor(Color.BLACK);
+            frame.setClickable(true); // nothing reaches Spotify's page underneath
+            NativeSpicyShellView shell = new NativeSpicyShellView(host, activity,
+                    NativeSpicyShellViewImpl.PIP_LAYOUT_NONE);
+            frame.addView(shell, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            decor.addView(frame, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            shell.start();
+            ensureReceiver(activity);
+            // Spotify's own now-playing page is still built underneath (artwork, Canvas video,
+            // controls) and kept measuring, laying out and drawing behind an opaque cover - about
+            // 110 extra skipped frames opening the lyrics (measured cold, 3 runs each). GONE, not
+            // INVISIBLE: invisible views are still measured and laid out on every update.
+            // Nothing of it is seen in a dock.
+            View content = activity.findViewById(android.R.id.content);
+            if (content != null && !keepPage) content.setVisibility(View.GONE);
+            XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: dock mounted");
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: dock mount failed " + t);
+        }
+    }
+
+    private void unmountDock(Activity activity) {
+        try {
+            ViewGroup decor = decor(activity);
+            View frame = decor == null ? null : decor.findViewWithTag(TAG_DOCK_ROOT);
+            if (!(frame instanceof ViewGroup)) return;
+            ViewGroup group = (ViewGroup) frame;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View child = group.getChildAt(i);
+                if (child instanceof NativeSpicyShellView) ((NativeSpicyShellView) child).stop();
+            }
+            decor.removeView(frame);
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " lyrics PiP: dock unmount failed " + t);
+        }
+    }
+
+    private static NativeSpicyShellView dockShell(Activity activity) {
+        ViewGroup decor = decor(activity);
+        View frame = decor == null ? null : decor.findViewWithTag(TAG_DOCK_ROOT);
+        if (!(frame instanceof ViewGroup)) return null;
+        ViewGroup group = (ViewGroup) frame;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            if (group.getChildAt(i) instanceof NativeSpicyShellView) return (NativeSpicyShellView) group.getChildAt(i);
+        }
+        return null;
+    }
+
+    /** Back in a dock: the shell's own layers first (sheet, editor), then the dock closes. */
+    private boolean dockBack(Activity activity) {
+        if (!docked.containsKey(activity) || hosts.containsKey(activity)) return false;
+        NativeSpicyShellView shell = dockShell(activity);
+        if (shell != null && shell.consumeBack()) return true;
+        if (inPlace.containsKey(activity)) {
+            closeInPlace(activity);
+            return true;
+        }
+        docked.remove(activity);
+        unregisterDockBack(activity);
+        unmountDock(activity);
+        activity.finish();
+        return true;
+    }
+
+    private void registerDockBack(Activity activity) {
+        if (Build.VERSION.SDK_INT < 33 || dockBackCallbacks.containsKey(activity)) return;
+        android.window.OnBackInvokedCallback callback = () -> dockBack(activity);
+        activity.getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY, callback);
+        dockBackCallbacks.put(activity, callback);
+    }
+
+    private void unregisterDockBack(Activity activity) {
+        if (Build.VERSION.SDK_INT < 33) return;
+        Object callback = dockBackCallbacks.remove(activity);
+        if (callback instanceof android.window.OnBackInvokedCallback) {
+            try {
+                activity.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(
+                        (android.window.OnBackInvokedCallback) callback);
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     // --- Shell ---------------------------------------------------------------------------------
@@ -490,7 +900,7 @@ final class LyricsPipController {
 
     private List<RemoteAction> actions(Activity activity) {
         lastPlaying = host.isPlayerActuallyPlaying();
-        List<RemoteAction> list = new ArrayList<>(3);
+        List<RemoteAction> list = new ArrayList<>(4);
         if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(activity)
                 .get(com.eza.spicyex.Settings.PIP_CONTROLS))) return list;
         list.add(action(activity, CONTROL_PREVIOUS, android.R.drawable.ic_media_previous, "Previous"));
@@ -498,6 +908,24 @@ final class LyricsPipController {
                 ? action(activity, CONTROL_TOGGLE, android.R.drawable.ic_media_pause, "Pause")
                 : action(activity, CONTROL_TOGGLE, android.R.drawable.ic_media_play, "Play"));
         list.add(action(activity, CONTROL_NEXT, android.R.drawable.ic_media_next, "Next"));
+        // The only way to like a track from inside a PiP window: the shell's own gestures/buttons
+        // are regular views, and nothing in a PiP window can be touched - only the system's own
+        // remote actions are. Hidden for anything a like cannot apply to (not a song, no session).
+        com.eza.spicyex.SpotifyTrack track = host.getCurrentTrackSafely();
+        if (SpotifyCollectionAction.isSong(track)) {
+            RemoteAction like = track.saved
+                    ? action(activity, CONTROL_LIKE, android.R.drawable.btn_star_big_on, "Unlike")
+                    : action(activity, CONTROL_LIKE, android.R.drawable.btn_star_big_off, "Like");
+            // Most devices show only three PiP actions and silently drop the rest, which dropped
+            // this one, the fourth. Then it takes Previous' place: Like, Play/Pause, Next.
+            int max = 3;
+            try {
+                max = activity.getMaxNumPictureInPictureActions();
+            } catch (Throwable ignored) {
+            }
+            if (list.size() >= max) list.remove(0);
+            list.add(0, like);
+        }
         return list;
     }
 
@@ -520,7 +948,16 @@ final class LyricsPipController {
                 if (control == CONTROL_PREVIOUS) host.skipToPreviousTrack();
                 else if (control == CONTROL_TOGGLE) host.togglePlayPause();
                 else if (control == CONTROL_NEXT) host.skipToNextTrack();
-                // The play/pause icon follows once the player has actually changed state.
+                else if (control == CONTROL_LIKE) {
+                    com.eza.spicyex.SpotifyTrack track = host.getCurrentTrackSafely();
+                    if (SpotifyCollectionAction.isSong(track)) {
+                        // Any mode but the setting's "Off" default just has to pass enabled();
+                        // this toggle has nothing to do with the mini player's own like button.
+                        host.toggleSpotifySaved("Heart", track);
+                    }
+                }
+                // The play/pause icon (and, after a like, the star) follows once the player has
+                // actually changed state.
                 main.postDelayed(LyricsPipController.this::refreshActions, 400L);
                 main.postDelayed(LyricsPipController.this::refreshActions, 1200L);
             }

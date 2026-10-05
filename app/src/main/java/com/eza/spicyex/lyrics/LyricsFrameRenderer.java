@@ -177,7 +177,7 @@ public final class LyricsFrameRenderer {
                 // Keep applying the frame while the blur spring settles. Stepping the spring but
                 // returning here left the View's RenderEffect at its old value, so the next
                 // active-line refresh appeared to "undo" the gradual blur in one frame.
-                float blurTarget = mobileLineBlurPx(line, i, activeIndex, lineState.active, userScrollHeld, config);
+                float blurTarget = mobileLineBlurPx(line, i, activeIndex, lineState.active, userScrollHeld, config, positionMs);
                 float blur = LyricsLineViewState.stepLineBlur(line, blurTarget, deltaSeconds);
                 float opacity = LyricsAnimationApplier.stepLineOpacity(line, lineState.active,
                         lineState.sung, deltaSeconds, config.appleDimPassed);
@@ -189,7 +189,7 @@ public final class LyricsFrameRenderer {
             LyricsLineViewState.invalidateSettled(line);
             float opacity = LyricsAnimationApplier.stepLineOpacity(line, lineState.active, lineState.sung,
                     deltaSeconds, config.appleDimPassed);
-            float blurTarget = mobileLineBlurPx(line, i, activeIndex, lineState.active, userScrollHeld, config);
+            float blurTarget = mobileLineBlurPx(line, i, activeIndex, lineState.active, userScrollHeld, config, positionMs);
             float blur = LyricsLineViewState.stepLineBlur(line, blurTarget, deltaSeconds);
             // Always drain blur for rows outside the visible hold window, but skip
             // expensive rendering since they're not visible during the scroll hold.
@@ -560,20 +560,55 @@ public final class LyricsFrameRenderer {
         return LyricAnimations.gradientPosition(progress01(positionMs, line.startMs, fillEnd));
     }
 
+    /**
+     * Settles a row that just (re)entered the mounted window at the opacity and blur the current
+     * frame wants, and applies them before it is drawn - see
+     * {@link LyricsLineViewState#snapRowSprings}.
+     */
+    public void settleMountedRow(LyricsDocument document, AppliedLine line, int index, int activeIndex,
+                                 long positionMs, LyricsRenderConfig config, boolean userScrollHeld) {
+        if (line == null || config == null || document == null) return;
+        LyricsLineAnimationState lineState = LyricsLineAnimationState.forLine(
+                line, positionMs, config.spotlight, config.lineGradientEnabled,
+                config.appleDimPassed, config.appleStyle);
+        float opacity = LyricsAnimationApplier.lineOpacityTarget(line, lineState.active,
+                lineState.sung, config.appleDimPassed);
+        float blur = mobileLineBlurPx(line, index, activeIndex, lineState.active,
+                userScrollHeld, config, positionMs);
+        LyricsLineViewState.snapRowSprings(line, opacity, blur);
+        LyricsLineViewState.ensureScalePivots(line);
+        LyricsLineViewState.applyRowFrame(line, styleBatcher, opacity, blur, config.appleStyle);
+    }
+
     private float mobileLineBlurPx(AppliedLine line, int index, int active, boolean lineActive,
-                                   boolean userScrollHeld, LyricsRenderConfig config) {
+                                   boolean userScrollHeld, LyricsRenderConfig config, long positionMs) {
         if (line == null || Build.VERSION.SDK_INT < 31) return 0f;
         if (!config.lineBlurEnabled) return 0f;
         if (userScrollHeld) return 0f;
         // Apple only: the active row (and an extended-window active row past the focus index)
         // must always remain sharp. Other styles keep their pre-PR distance-based curve.
         if (config.appleStyle && lineActive) return 0f;
+        // A background-vocal row is its own applied-row-list entry, one slot after the main line
+        // it is sung with - so once it falls quiet (its own, usually shorter, sungUntil passes)
+        // "distance" below reads it as the next (inactive) LINE and starts blurring it, even
+        // though the main line it belongs to, right behind it, is still being sung. Judge it by
+        // that main line's own window instead, not the applied-row list position.
+        if (line.bgLine && line.sourceLine != null
+                && positionMs >= line.sourceLine.startMs && positionMs < line.sourceLine.endMs) {
+            return 0f;
+        }
         float quality = config.blurQuality;
         if (quality <= 0f) return 0f;
         if (active < 0) return 0f;
         int distance = Math.abs(index - active);
         if (distance == 0) return 0f;
         boolean emphasized = line.dotLine || line.isShortText(SHORT_LINE_CODE_POINTS);
+        // A short/accent row already gets a lower ceiling below, but at distance 1 the curve
+        // still put a few px on it immediately - on a couple of glyphs that reads as the row
+        // dissolving the moment it stops being active, not as a gradual recede. Giving it one
+        // extra row of distance before the curve starts keeps its immediate neighbour sharp.
+        int curveDistance = emphasized ? Math.max(0, distance - 1) : distance;
+        if (curveDistance == 0) return 0f;
         if (config.appleStyle) {
             // Let nearby rows dissolve into the ambient blur as focus advances. The active row
             // remains sharp; the first neighbour gets a restrained veil and the curve grows
@@ -581,12 +616,12 @@ public final class LyricsFrameRenderer {
             float max = config.lineBlurHeavy
                     ? (emphasized ? 7.0f : 10.0f)
                     : (emphasized ? 3.2f : 4.8f);
-            float curved = (float) Math.pow(Math.min(1f, distance / 3.2f), 0.72);
+            float curved = (float) Math.pow(Math.min(1f, curveDistance / 3.2f), 0.72);
             return max * curved * quality;
         }
         if (config.lineBlurHeavy) {
             float max = emphasized ? 5.0f : 8.0f;
-            float curved = (float) Math.pow(Math.min(1f, distance / 4f), 0.75);
+            float curved = (float) Math.pow(Math.min(1f, curveDistance / 4f), 0.75);
             return max * curved * quality;
         }
         if (distance <= 1) return 0f;

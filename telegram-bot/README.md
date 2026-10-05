@@ -1,7 +1,12 @@
 # Spicy EX Telegram bot
 
 `worker.js` is a Cloudflare Worker that answers `/release`, `/beta`, `/ci` in the discussion group.
-CI APK uploads to the CI channel are done by `.github/workflows/android.yml` (no hosting needed).
+Push to `main` with at least one pushed commit subject ending in `nightly` (for example,
+`Fix lyrics sync nightly`) to build the final pushed tree once and send the release and debug APKs
+directly to the Telegram CI channel. A batch push is built once if any commit in it has the marker;
+other pushes skip the build. Nightly APKs are not uploaded as GitHub Actions artifacts or GitHub
+Releases. Retries and repeat builds of an already successful commit are skipped; publish an
+intentional GitHub release separately using `.github/workflows/release.yml`.
 
 ## Setup
 1. Bot (@BotFather): disable Group Privacy so it sees commands; add it to the discussion group, and as admin to the CI channel.

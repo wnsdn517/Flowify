@@ -106,6 +106,16 @@ final class TrackInfoReadoutController {
     private static final java.util.Set<String> ART_NETWORK_FETCH_IN_FLIGHT =
             java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
+    /**
+     * Bumped each time a network download lands. A cover still missing is retried at once when
+     * it moves, instead of on the next ART_RETRY_GAP_MS tick: on remote playback every track's
+     * cover comes from the CDN, and waiting out the gap after it had already arrived showed the
+     * new title next to the old cover for up to another second.
+     */
+    static final java.util.concurrent.atomic.AtomicInteger ART_NETWORK_VERSION =
+            new java.util.concurrent.atomic.AtomicInteger();
+    private int artAttemptNetworkVersion = -1;
+
     // Active listeners to notify whenever a network artwork download arrives successfully.
     static final java.util.List<Runnable> ART_NETWORK_LISTENERS =
             new java.util.ArrayList<>();
@@ -208,6 +218,8 @@ final class TrackInfoReadoutController {
     private final Activity activity;
     private final LyricsHost host;
     private final SpotifyPlusConfig config;
+    /** Frame fit the loaded cover was prepared with (Labs); a change re-prepares it. */
+    private String artFrameFit = com.eza.spicyex.ui.ArtworkFrameFit.MODE_OFF;
     private final LyricsJumpToCurrentController jumpController;
     private LyricsSkipGapController skipGapController;
     /** Room to keep free beside the top controls; null keeps the rail default. */
@@ -1051,11 +1063,22 @@ final class TrackInfoReadoutController {
     void onPreferenceChanged() {
         applyBackgroundStyle();
         applyArtRadius();
+        // A changed frame fit re-prepares the loaded cover now rather than on the next track.
+        if (!readArtFrameFit().equals(artFrameFit) && lastTrack != null) attemptArtwork(lastTrack);
         applyTextAlign();
         applyFieldVisibility();
         panelMediaMode = readPanelMediaMode(config);
         if (!PanelMediaMode.gesturesEnabled(panelMediaMode)) hideOverlays();
         setMode(currentMode());
+    }
+
+    private String readArtFrameFit() {
+        try {
+            String mode = config.get(Settings.ARTWORK_FRAME_FIT);
+            return mode == null ? com.eza.spicyex.ui.ArtworkFrameFit.MODE_OFF : mode;
+        } catch (Throwable ignored) {
+            return com.eza.spicyex.ui.ArtworkFrameFit.MODE_OFF;
+        }
     }
 
     private static String readPanelMediaMode(SpotifyPlusConfig config) {
@@ -1485,7 +1508,8 @@ final class TrackInfoReadoutController {
                 }
             }
         } else if (artworkEnabled && artMissing && now - trackChangeMs < ART_RETRY_WINDOW_MS
-                && now - lastArtAttemptMs > ART_RETRY_GAP_MS) {
+                && (now - lastArtAttemptMs > ART_RETRY_GAP_MS
+                        || ART_NETWORK_VERSION.get() != artAttemptNetworkVersion)) {
             attemptArtwork(track);
         } else if (artworkEnabled && artMissing && now - trackChangeMs >= ART_RETRY_WINDOW_MS) {
             // The previous cover stays while the new one loads; once retries give up it would
@@ -1676,6 +1700,7 @@ final class TrackInfoReadoutController {
     private void attemptArtwork(SpotifyTrack track) {
         if (artworkPending) return;
         lastArtAttemptMs = android.os.SystemClock.elapsedRealtime();
+        artAttemptNetworkVersion = ART_NETWORK_VERSION.get();
         boolean needSmall = topBox.getVisibility() == View.VISIBLE
                 || bottomBox.getVisibility() == View.VISIBLE;
         boolean needSide = sideBox.getVisibility() == View.VISIBLE;
@@ -1689,13 +1714,14 @@ final class TrackInfoReadoutController {
         // snapshotted large so the cached bitmap is not upscaled into a visible blur.
         int columnSize = dp(columnArtDpF);
         float radiusPx = dp(artRadiusDp);
+        String frameFit = artFrameFit = readArtFrameFit();
         int generation = ++artworkGeneration;
         artworkPending = true;
         artMissing = true;
         artworkTask = ART_WORKER.submit(() -> {
-            Bitmap small = prepareArtwork(imageId, uri, smallSize, false, needSmall, radiusPx);
-            Bitmap side = prepareArtwork(imageId, uri, sideSize, true, needSide, radiusPx);
-            Bitmap column = prepareArtwork(imageId, uri, columnSize, true, needColumn, radiusPx);
+            Bitmap small = prepareArtwork(imageId, uri, smallSize, false, needSmall, radiusPx, frameFit);
+            Bitmap side = prepareArtwork(imageId, uri, sideSize, true, needSide, radiusPx, frameFit);
+            Bitmap column = prepareArtwork(imageId, uri, columnSize, true, needColumn, radiusPx, frameFit);
             artHandler.post(() -> {
                 if (generation != artworkGeneration || !uri.equals(lastUri) || !artworkEnabled) {
                     if (small != null) small.recycle();
@@ -1735,7 +1761,7 @@ final class TrackInfoReadoutController {
     }
 
     private static Bitmap prepareArtwork(String imageId, String uri, int size, boolean large,
-                                         boolean needed, float radiusPx) {
+                                         boolean needed, float radiusPx, String frameFit) {
         if (!needed) return null;
         Bitmap raw = null;
         boolean fromNetworkCache = false;
@@ -1749,7 +1775,12 @@ final class TrackInfoReadoutController {
             }
             if (raw == null) return null;
             int targetPx = large ? (fromNetworkCache ? size : raw.getWidth()) : size;
-            return roundBitmap(raw, targetPx, 0f);
+            Bitmap scaled = roundBitmap(raw, targetPx, 0f);
+            // The clip's radius is in view pixels; the fit works in the view's proportions.
+            Bitmap fitted = com.eza.spicyex.ui.ArtworkFrameFit.apply(scaled, frameFit,
+                    size <= 0 ? 0f : radiusPx / size);
+            if (fitted != scaled) scaled.recycle();
+            return fitted;
         } catch (RuntimeException unavailable) {
             return null;
         } finally {
@@ -1810,6 +1841,7 @@ final class TrackInfoReadoutController {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                         if (bitmap != null) {
                             ART_NETWORK_CACHE.put(imageId, bitmap);
+                            ART_NETWORK_VERSION.incrementAndGet();
 
                             // Notify all registered listening components on the Main/UI thread
                             // to immediately fetch the updated bitmap and refresh their canvas.

@@ -18,8 +18,13 @@ public final class PanelPolicy {
     public static boolean shouldRender(Settings.Setting<?> setting, PanelSnapshot snapshot) {
         // Ad music style only matters when ads are replaced with music; Connect's options only
         // while the receiver is on.
-        if (setting == Settings.DOUBLE_TAP_LIKE_MARK) {
+        if (setting == Settings.DOUBLE_TAP_LIKE_MARK || setting == Settings.DOUBLE_TAP_LIKE_EFFECT) {
             return Boolean.TRUE.equals(snapshot.get(Settings.DOUBLE_TAP_LIKE));
+        }
+        // Mirrors the double-tap case above: the hint is about a gesture that does not exist
+        // while long-press-to-share is off.
+        if (setting == Settings.SHARE_GESTURE_HINT) {
+            return Boolean.TRUE.equals(snapshot.get(Settings.LONG_PRESS_SHARE));
         }
         if (setting == Settings.AD_MUSIC_THEME) {
             return Settings.AD_MODE_MUSIC.equals(snapshot.get(Settings.AD_MODE));
@@ -35,8 +40,12 @@ public final class PanelPolicy {
                     || Boolean.TRUE.equals(snapshot.get(Settings.PIP_ON_CLOSE));
         }
         if (setting == Settings.DOWNLOAD_LANGUAGE_MODELS) return !snapshot.languageModelReady();
-        if ((setting.section == Settings.TRANSLITERATION || setting.section == Settings.TRANSLATION)
-                && !snapshot.languageModelReady()) return false;
+        // Translation (Google/AI) never needed the offline CharSoup model - only transliteration
+        // (readings) and script-ambiguous language detection do, per unavailable()/
+        // optionUnavailableReason() below. Hiding TRANSLATION here too made deleting the
+        // language model pack (languageModelReady() -> false) take the whole Translation
+        // section out of the panel, even though translation kept working underneath.
+        if (setting.section == Settings.TRANSLITERATION && !snapshot.languageModelReady()) return false;
         if (setting == Settings.FORCE_DARK_BACKGROUND) {
             return snapshot.animatedBackgroundAvailable()
                     && LyricsBackgroundStyle.usesTexture(snapshot.get(Settings.BACKGROUND_STYLE));

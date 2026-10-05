@@ -26,7 +26,11 @@ public final class AdMusicPlayer {
     /** Longest the ending may take before the player fades regardless. */
     // Short: the song is already playing under the ending, and a long cadence over it clashed.
     private static final float OUTRO_MAX_SEC = 2f;
-    private static final float MASTER = 1.3f;
+    // 1.3 pushed typical (not just peak) mixes past the 0.8 knee in toPcm almost constantly -
+    // full-band bars (chord + bass + kick + snare together) sat in heavy soft-limiting, which
+    // reads as harsh/squashed rather than "soft instrumental". This keeps normal passages under
+    // the knee and only the loudest hits touch it.
+    private static final float MASTER = 0.85f;
 
     private static final Object OWN_LOCK = new Object();
     /** Every track a player of ours is writing - the ad player and a settings preview can overlap. */

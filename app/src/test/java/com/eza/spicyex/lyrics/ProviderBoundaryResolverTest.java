@@ -56,6 +56,26 @@ public class ProviderBoundaryResolverTest {
         }
     }
 
+    private static String joined(String... parts) {
+        List<SourceSpan> spans = new ArrayList<>();
+        for (int i = 0; i < parts.length; i++) {
+            spans.add(new SourceSpan("s" + i, parts[i], parts[i], i * 500L, i * 500L + 400L, null, null));
+        }
+        ParsedLine line = new ParsedLine("apostrophe-" + String.join("|", parts), null, spans, null,
+                ParagraphProvenance.UNAVAILABLE, Collections.emptyMap());
+        return new ProviderBoundaryResolver().resolve(line).canonical.text;
+    }
+
+    @Test
+    public void wordFinalApostropheEndsTheWord() {
+        // Spans with no spacing information: "doin'" is the dropped g, a word of its own.
+        assertEquals("doin' it", joined("doin'", "it"));
+        assertEquals("nothin’ else", joined("nothin’", "else"));
+        // Inside one word, the apostrophe still joins.
+        assertEquals("y'all", joined("y'", "all"));
+        assertEquals("don't", joined("don", "'t"));
+    }
+
     @Test
     public void sharedProviderBoundaryCorpusMatches() {
         InputStream stream = getClass().getClassLoader().getResourceAsStream(

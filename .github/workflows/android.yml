@@ -1,34 +1,60 @@
-name: CI (debug + release APK)
+name: Nightly (Telegram only)
 
-# CI builds both debug and signed release APKs and posts them to the Telegram CI channel.
-# Publishing a release is done by release.yml (release APK only).
+# Build a main push containing a commit with a "nightly" subject, and send its APKs only to Telegram.
+# Tagged, intentional GitHub releases are handled separately by release.yml.
 on:
   push:
     branches: [main]
-    # Skip the build (and the Telegram post) when nothing that affects the APK changed - e.g. the
-    # telegram-bot/ worker or docs. The job won't even queue; a path outside this list won't trigger it.
-    paths:
-      - 'app/**'
-      - 'gradle/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - 'gradle.properties'
-      - 'gradlew'
-      - 'gradlew.bat'
-      - '.github/workflows/android.yml'
-  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Skip unless pushed commits include a nightly subject and this SHA is new
+        id: duplicate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUSH_COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+        run: |
+          nightly_commits=$(printf '%s' "$PUSH_COMMITS_JSON" \
+            | jq '[.[] | (.message // "") | split("\n")[0] | select(test("(^|[[:space:]])nightly$"))] | length')
+          if [ "$nightly_commits" -eq 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "No pushed commit subject ends in 'nightly'; skipping build."
+            exit 0
+          fi
+          if [ "$GITHUB_RUN_ATTEMPT" -gt 1 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "This run is a retry; nightly builds require a new commit."
+            exit 0
+          fi
+          successful=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/android.yml/runs?head_sha=${GITHUB_SHA}&branch=main&per_page=100" \
+            --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID} and .conclusion == \"success\")] | length")
+          if [ "$successful" -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Commit ${GITHUB_SHA} already has a successful nightly build."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
+        if: steps.duplicate.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # versionCode = git commit count; a shallow clone would reset it
 
       - name: Set up JDK 21
+        if: steps.duplicate.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -37,16 +63,20 @@ jobs:
 
 
       - name: Decode keystore
+        if: steps.duplicate.outputs.skip != 'true'
         run: |
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/spicyex-release.jks
 
       - name: Make gradlew executable
+        if: steps.duplicate.outputs.skip != 'true'
         run: chmod +x gradlew
 
-      - name: Run debug gates before release packaging
+      - name: Run tests and build nightly debug APK
+        if: steps.duplicate.outputs.skip != 'true'
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug
 
-      - name: Build signed Release APKs
+      - name: Build signed nightly release APK
+        if: steps.duplicate.outputs.skip != 'true'
         env:
           SIGNING_KEYSTORE_FILE: ${{ github.workspace }}/spicyex-release.jks
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
@@ -55,6 +85,7 @@ jobs:
         run: ./gradlew :app:assembleRelease
 
       - name: Verify release APK signatures
+        if: steps.duplicate.outputs.skip != 'true'
         env:
           SIGNING_KEYSTORE_FILE: ${{ github.workspace }}/spicyex-release.jks
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
@@ -79,16 +110,8 @@ jobs:
             test "$actual" = "$expected"
           done
 
-      - name: Upload release APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: spicy-ex-release-apks
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
-
-      - name: Send APKs to Telegram CI channel
-        if: success()
+      - name: Send nightly APKs only to Telegram
+        if: success() && steps.duplicate.outputs.skip != 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CI_CHAT_ID: ${{ secrets.TELEGRAM_CI_CHAT_ID }}

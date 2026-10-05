@@ -359,6 +359,20 @@ public final class LyricsLineViewState {
         }
     }
 
+    /**
+     * A row entering the mounted window starts at its targets, not where its cached springs were
+     * left when it scrolled away (often sharp and bright, from near the active line): stepping
+     * from there flashed a white, unblurred row in at the edge before it eased back down.
+     */
+    public static void snapRowSprings(AppliedLine line, float opacity, float blurPx) {
+        if (line == null) return;
+        AppliedLineRenderState st = state(line);
+        if (st.opacitySpring == null) st.opacitySpring = new Spring(opacity, 1.85f, 1.0f);
+        else st.opacitySpring.snap(opacity);
+        if (st.lineBlurSpring == null) st.lineBlurSpring = new Spring(blurPx, 2.8f, 0.92f);
+        else st.lineBlurSpring.snap(blurPx);
+    }
+
     public static float stepOpacity(AppliedLine line, float target, float deltaSeconds) {
         if (line == null) return target;
         if (state(line).opacitySpring == null) {

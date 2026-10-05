@@ -37,6 +37,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -358,6 +359,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return document != null;
     }
 
+    boolean matchesCurrentLayoutConfiguration() {
+        if (pipLayout != PIP_LAYOUT_NONE || pipPresentation) return true;
+        android.content.res.Configuration current = activity.getResources().getConfiguration();
+        boolean currentTwoColumn = twoColumnEngaged(current.screenWidthDp,
+                current.screenHeightDp, Boolean.TRUE.equals(
+                        config.get(Settings.ADAPTIVE_LANDSCAPE_LAYOUT)));
+        return current.orientation == initialOrientation && currentTwoColumn == twoColumn;
+    }
+
     void setPipPresentation(int screenHeightPx, int cropTopPx) {
         boolean first = !pipPresentation;
         pipPresentation = true;
@@ -374,6 +384,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
         if (skipGapController != null) skipGapController.hide();
         if (jumpToCurrentController != null) jumpToCurrentController.update(false);
+        if (deviceChangeBanner != null) deviceChangeBanner.setSuppressed(true);
         fitPipArtColumn();
     }
 
@@ -390,6 +401,28 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         lp.topMargin = top;
         lp.bottomMargin = bottom;
         landscapeLeftColumn.setLayoutParams(lp);
+    }
+
+    /**
+     * The lyrics background deepens toward the bottom, as BitChord's does (its backdrop scrim runs
+     * from 34% black at the top to 64% at the foot): about 30 points of black over the height,
+     * sampled finely so the ramp does not band.
+     */
+    private View lyricsBottomShade() {
+        int steps = 9;
+        int[] colors = new int[steps];
+        for (int i = 0; i < steps; i++) {
+            float t = i / (steps - 1f);
+            float alpha = t <= 0.55f ? 0.14f * (t / 0.55f) : 0.14f + 0.16f * ((t - 0.55f) / 0.45f);
+            colors[i] = Color.argb(Math.round(255f * alpha), 0, 0, 0);
+        }
+        View shade = new View(activity);
+        shade.setBackground(new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, colors));
+        shade.setClickable(false);
+        shade.setFocusable(false);
+        shade.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return shade;
     }
 
     private TopEdgeFade lyricsTopFade;
@@ -940,7 +973,19 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                         .put(Settings.SYNC_OFFSET_MS, 0);
                 resyncLyricsTiming();
                 return true;
-            default: return false;
+            default:
+                // "seek-line-12": the tap-to-seek path for line 12, no coordinate needed.
+                if (action.startsWith("seek-line-") && document != null) {
+                    try {
+                        int index = Integer.parseInt(action.substring("seek-line-".length()));
+                        if (index < 0 || index >= document.appliedLines.size()) return false;
+                        seekToLine(document.appliedLines.get(index), index);
+                        return true;
+                    } catch (NumberFormatException ignored) {
+                        return false;
+                    }
+                }
+                return false;
         }
     }
 
@@ -1123,6 +1168,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      */
     private boolean statusBarHiddenByUs;
 
+    /** Re-hide throttle: every bar change dispatches insets, so this runs often. */
+    private static final long STATUS_BAR_REASSERT_MS = 700L;
+    private long lastStatusBarReassertMs;
+
     /**
      * Hides or shows the system status bar for the lyrics screen, per the "Hide status bar"
      * selector. A swipe from the edge still shows it for a moment
@@ -1147,6 +1196,26 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             // Showing or hiding moves where the window's content starts; the layout listener
             // re-pins everything once that relayout lands (see trackContentScreenTop).
             reapplyTopClearance();
+        }
+    }
+
+    /** The resume path: nothing remounts here, but Spotify rebuilds its window state. */
+    void refreshStatusBar() {
+        applyStatusBarPreference();
+    }
+
+    /** When the bar was hidden by us, re-hide it after anything brought it back. */
+    private void reassertStatusBarHide() {
+        if (!statusBarHiddenByUs || !running) return;
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastStatusBarReassertMs < STATUS_BAR_REASSERT_MS) return;
+        lastStatusBarReassertMs = now;
+        try {
+            // Re-read rather than trusting the flag: the preference can change while the
+            // bar is showing, and a swipe that showed the bar must be allowed to stick.
+            if (NativeLyricsUtils.statusBarHidden(activity)) hideStatusBar();
+        } catch (Throwable t) {
+            XpLog.log(TAG + " reassert status bar failed: " + t);
         }
     }
 
@@ -1366,7 +1435,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private void applyLandscapeChromeClearance() {
         if (lyricsScroll == null || (!isLandscape() && !twoColumn)) return;
         if (pipPresentation) {
-            lyricsScroll.setPadding(0, lyricsScroll.getPaddingTop(), 0,
+            // No control rail to clear in PiP, but the lines still need a reading margin: at 0
+            // the landscape window's lyrics ran into its edges. 6% of the laid-out width per side
+            // scales with the window (the shell is laid out full-size, then scaled down).
+            int side = Math.max(dp(16), Math.round(getWidth() * 0.06f));
+            lyricsScroll.setPadding(side, lyricsScroll.getPaddingTop(), side,
                     lyricsScroll.getPaddingBottom());
             return;
         }
@@ -1499,6 +1572,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  scaled down - a portrait layout stretched to a wide window made every line tiny. */
     static final int PIP_LAYOUT_LANDSCAPE = 2;
     private final int pipLayout;
+    private final int initialOrientation;
 
     NativeSpicyShellViewImpl(LyricsHost host, Activity activity) {
         this(host, activity, PIP_LAYOUT_NONE);
@@ -1514,10 +1588,18 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         this.translationSpinner = new ChipSpinnerDrawable(activity);
         this.toggleSpinnerController = new LyricsToggleSpinnerController(romanSpinner, translationSpinner);
         this.playbackClock = new LyricsPlaybackClock(host::readBestMeasuredProgressMs);
+        // Seeks on a remote player (Spicy Connect, a Connect speaker) restart the audio late;
+        // the clock models that gap only there.
+        this.playbackClock.setRemotePlayback(() -> {
+            PlaybackBridge bridge = PlaybackBridge.current;
+            return SpotifyConnectHook.webPlayerCarrying()
+                    || (bridge != null && bridge.playbackIsRemote());
+        });
         this.config = SpotifyPlusConfig.from(activity);
         // Construction-time layout decision: rotation remounts the shell, and the adaptive
         // toggle takes effect on the next open (same contract as PR9's landscape layout).
         android.content.res.Configuration screen = activity.getResources().getConfiguration();
+        this.initialOrientation = screen.orientation;
         // A PiP host is still full screen (usually portrait) when the shell is built, so the
         // window's shape decides there instead of the host's configuration.
         this.twoColumn = pipLayout == PIP_LAYOUT_LANDSCAPE
@@ -1579,6 +1661,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         setFocusable(true);
         ambientController.attachAnimatedLayer(this, renderConfig.backgroundStyle,
                 renderConfig.forceDarkBackground, renderConfig.extraDarkBackground);
+        addView(lyricsBottomShade(), new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         contentColumn = new LinearLayout(activity);
         contentColumn.setOrientation(twoColumn ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
@@ -1770,6 +1854,38 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         sourceFooter.setClickable(true);
         sourceFooter.setFocusable(true);
         sourceFooter.setOnClickListener(v -> openSourcePicker());
+        // The footer is a clickable child, so its taps never reach the scroll view's tap handler:
+        // a double tap on it (the last thing on screen, where a thumb naturally lands) opened the
+        // picker on the first tap instead of liking. With double-tap like on, wait for the
+        // double-tap window before treating it as the picker tap; the click listener above stays
+        // for accessibility actions.
+        GestureDetector footerGestures = new GestureDetector(activity,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override public boolean onDown(MotionEvent e) {
+                        return true;
+                    }
+
+                    @Override public boolean onSingleTapUp(MotionEvent e) {
+                        if (tapSeekHandler.doubleTapLikeActive()) return false;
+                        openSourcePicker();
+                        return true;
+                    }
+
+                    @Override public boolean onSingleTapConfirmed(MotionEvent e) {
+                        if (tapSeekHandler.doubleTapLikeActive()) openSourcePicker();
+                        return true;
+                    }
+
+                    @Override public boolean onDoubleTap(MotionEvent e) {
+                        if (!tapSeekHandler.doubleTapLikeActive()) return false;
+                        likeFromDoubleTap(sourceFooter, e.getX(), e.getY());
+                        return true;
+                    }
+                });
+        sourceFooter.setOnTouchListener((v, event) -> {
+            footerGestures.onTouchEvent(event);
+            return true;
+        });
         rowMountController = new LyricsRowMountController(
                 mountedRowsHost,
                 topVirtualSpacer,
@@ -1879,6 +1995,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // Refine the lyric top/side insets from real window insets (status bar + cutout) once
         // they dispatch on attach. Returned unconsumed so nothing else is starved of insets.
         setOnApplyWindowInsetsListener((v, insets) -> {
+            // A bar that came back after we hid it (Spotify's page re-applies its own
+            // window state, and every system bar change re-dispatches insets) is put back
+            // here, so the hide survives the whole time the screen is open.
+            reassertStatusBarHide();
             // The bar's place, not the visible insets: those lose the bar while it is hidden, and
             // the lyrics used to follow them up. Only a cutout deeper than the bar adds to it.
             int cutout = 0;
@@ -2707,7 +2827,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 if (anchorActive >= 0) initialAnchor = anchorActive;
             }
         }
+        // The rows below the first few are built over the next frames instead of all at once.
+        rowMountController.beginWarmup(warmupRowsToFill(initialAnchor));
         renderWindowForActive(initialAnchor);
+        continueRowWarmup();
         loadEntranceAnchor = initialAnchor;
         boolean shouldEnter = pendingLoadEntrance && hasRenderedDocument && songChangeHadSkeleton;
         boolean appleEntranceStarted = false;
@@ -2817,22 +2940,28 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             if (line == null) continue;
             View row = rowMountController.attachedRowView(line);
             if (row == null || row.getHeight() <= 0) continue;
-            // Proportional to the row within a tight band: every row travels a similar, clearly
-            // visible distance regardless of whether it wraps to two lines.
-            float travel = Math.max(dp(18), Math.min(dp(30), row.getHeight() * 0.4f));
-            float distance = focus < 0 ? i : cascadeDistance(line, i, focus);
-            // Outward from the focused row with a shrinking gap, like the line slide's stagger.
-            float delay = Math.min(LOAD_REVEAL_MAX_DELAY_SEC, LOAD_REVEAL_STAGGER_SEC
-                    * (1f - (float) Math.pow(0.88f, distance)) / (1f - 0.88f)) * timeScale;
-            loadEntrances.put(line, new LoadEntrance(travel, delay, timeScale));
-            LyricsLineViewState.setEntranceProgress(line, 0f, dp(LOAD_REVEAL_BLUR_DP));
-            applyLoadEntranceFrame(row, 0f, travel);
-            row.setHasTransientState(true);
+            registerLoadEntrance(line, i, row, focus, timeScale);
         }
         if (!loadEntrances.isEmpty()) {
             frameScheduler.setContinuous(true);
             frameScheduler.requestFrame();
         }
+    }
+
+    private void registerLoadEntrance(AppliedLine line, int index, View row, int focus, float timeScale) {
+        // Proportional to the row within a tight band: every row travels a similar, clearly
+        // visible distance regardless of whether it wraps to two lines. A row not laid out yet
+        // takes the middle of the band.
+        float travel = row.getHeight() > 0
+                ? Math.max(dp(18), Math.min(dp(30), row.getHeight() * 0.4f)) : dp(24);
+        float distance = focus < 0 ? Math.max(0, index) : cascadeDistance(line, index, focus);
+        // Outward from the focused row with a shrinking gap, like the line slide's stagger.
+        float delay = Math.min(LOAD_REVEAL_MAX_DELAY_SEC, LOAD_REVEAL_STAGGER_SEC
+                * (1f - (float) Math.pow(0.88f, distance)) / (1f - 0.88f)) * timeScale;
+        loadEntrances.put(line, new LoadEntrance(travel, delay, timeScale));
+        LyricsLineViewState.setEntranceProgress(line, 0f, dp(LOAD_REVEAL_BLUR_DP));
+        applyLoadEntranceFrame(row, 0f, travel);
+        row.setHasTransientState(true);
     }
 
     /** Drops every mounted row to fully transparent ahead of a reveal that hasn't been able to
@@ -2988,6 +3117,60 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
     }
 
+    /**
+     * Rows mounted with a fresh document before the rest of its window: every row that can be on
+     * screen (all of them above the line in focus, and below it as many as can fill the screen),
+     * the ones off screen following over the next frames. Building the whole window (21 rows) in
+     * one frame was ~230 ms in a freshly started Spotify, where none of the row code has been
+     * compiled yet - the stall when the lyrics screen opened. A fixed handful below the focus left
+     * the bottom of a tall screen empty until later frames: the load reveal covered only part of
+     * the screen, and a quick scroll ran into rows that were not there yet.
+     */
+    private int warmupRowsToFill(int anchor) {
+        if (document == null || document.appliedLines == null) return 0;
+        int viewport = lyricsScroll == null ? 0 : lyricsScroll.getHeight();
+        if (viewport <= 0) viewport = activity.getResources().getDisplayMetrics().heightPixels;
+        float below = viewport * (1f - resolveFocusAnchorFraction());
+        int count = document.appliedLines.size();
+        int rows = 0;
+        float covered = 0f;
+        for (int i = Math.max(0, anchor) + 1; i < count && covered < below; i++) {
+            // Estimates run tall for a short line: counting each at 60% always fills the screen.
+            covered += rowHeightForIndex(i) * 0.6f;
+            rows++;
+        }
+        return rows + 1;
+    }
+    /** Rows added below on each following frame until the window is complete. */
+    private static final int WARMUP_ROWS_PER_FRAME = 2;
+    private Runnable rowWarmupStep;
+
+    private void continueRowWarmup() {
+        if (rowWarmupStep != null) lyricsFrame.removeCallbacks(rowWarmupStep);
+        rowWarmupStep = null;
+        if (!rowMountController.warmingUp()) return;
+        LyricsDocument expected = document;
+        rowWarmupStep = new Runnable() {
+            @Override
+            public void run() {
+                if (!running || document != expected || !rowMountController.warmingUp()) {
+                    rowMountController.endWarmup();
+                    rowWarmupStep = null;
+                    return;
+                }
+                rowMountController.growWarmup(WARMUP_ROWS_PER_FRAME);
+                int active = followState.activeIndex();
+                renderWindowForActive(active >= 0 ? active : loadEntranceAnchor);
+                if (rowMountController.warmingUp()) {
+                    lyricsFrame.postOnAnimation(this);
+                } else {
+                    rowWarmupStep = null;
+                }
+            }
+        };
+        lyricsFrame.postOnAnimation(rowWarmupStep);
+    }
+
     private View ensureRowView(AppliedLine line) {
         return rowMountController.rowViewOrBuild(line, this::buildLyricRow);
     }
@@ -3004,12 +3187,36 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             applyLoadEntranceFrame(row, 0f, load.travelPx);
             return;
         }
+        if (pendingEntranceStart != null) {
+            // Built while the reveal waits for its first layout: hidden like the rows already
+            // there, and picked up with them when it starts.
+            LyricsLineViewState.setEntranceProgress(line, 0f);
+            row.setAlpha(0f);
+            return;
+        }
+        if (!loadEntrances.isEmpty() && document != null) {
+            // Built a frame or two into the reveal (the window fills in after the first rows):
+            // joins it in its place in the stagger instead of appearing at full brightness.
+            int index = document.appliedLines.indexOf(line);
+            int focus = followState.activeIndex() >= 0 ? followState.activeIndex() : loadEntranceAnchor;
+            registerLoadEntrance(line, index, row, focus, 1f / cascadeSpeedMultiplier());
+            return;
+        }
 
         // A scroll can remount rows mid-cascade: join in place from the cascade's current
         // offset instead of snapping to zero. Anything without a live cascade must land flat -
         // a row that was unmounted while displaced would otherwise reappear still offset.
         RowCascade cascade = rowCascades.get(line);
         row.setTranslationY(cascade == null ? 0f : cascade.spring.position());
+        // Enter at this frame's opacity and blur, not where the row's cached springs were left
+        // when it scrolled away: those flashed a white, sharp row in at the window's edge.
+        // Also before the first position is known (a document shown while paused, or a scroll in
+        // its first frames): a row left on its unset springs showed white and sharp, then blurred.
+        if (!staticDoc && document != null && renderConfig != null) {
+            frameRenderer.settleMountedRow(document, line, document.appliedLines.indexOf(line),
+                    followState.activeIndex(), Math.max(0L, lastLyricPositionMs), renderConfig,
+                    followState.isHoldingNow());
+        }
     }
 
     private int currentWindowAnchor() {
@@ -3232,7 +3439,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         for (int i : rowMountController.mountedIndices()) {
             if (i < 0 || i >= document.appliedLines.size()) continue;
             AppliedLine line = document.appliedLines.get(i);
-            View row = line == null ? null : rowMountController.attachedRowView(line);
+            if (line == null || line.dotLine) continue;
+            View row = rowMountController.attachedRowView(line);
             if (row == null || row.getHeight() <= 0) continue;
             origins.put(i, contentTop(row));
             java.util.Set<String> signatures = new java.util.HashSet<>();
@@ -3838,7 +4046,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void seekNearestLineAt(float yInScroll) {
         if (staticDoc) return; // unsynced lyrics have no real per-line timing → tapping must not seek
-        int bestIndex = nearestAppliedLineIndexAt(yInScroll);
+        int bestIndex = appliedLineIndexUnder(yInScroll);
         if (bestIndex >= 0) seekToLine(document.appliedLines.get(bestIndex), bestIndex);
     }
 
@@ -3872,18 +4080,20 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     /** Long-press-to-share: quotes the nearest lyric row, or falls back to a plain track card
      *  when there's no usable line under the touch (no document, or an empty/dot row). */
-    /** The mounted lyric row actually under a scroll-view touch Y (with a little slack), or -1. */
+    /** The mounted lyric row actually under a scroll-view touch Y, or -1 for the gaps. */
     private int appliedLineIndexUnder(float yInScroll) {
         if (document == null || document.appliedLines == null || scrollController == null) return -1;
         int contentY = scrollController.contentYForTouch(yInScroll);
-        int slack = dp(8);
         for (int i : rowMountController.mountedIndices()) {
             if (i < 0 || i >= document.appliedLines.size()) continue;
             AppliedLine line = document.appliedLines.get(i);
-            View row = line == null ? null : rowMountController.attachedRowView(line);
+            if (line == null || line.dotLine || line.text == null || line.text.trim().isEmpty()) {
+                continue;
+            }
+            View row = rowMountController.attachedRowView(line);
             if (row == null || row.getHeight() <= 0) continue;
             int center = scrollController.rowCenterInContent(row);
-            int half = row.getHeight() / 2 + slack;
+            int half = row.getHeight() / 2;
             if (contentY >= center - half && contentY <= center + half) return i;
         }
         return -1;
@@ -4274,6 +4484,18 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // scroll; they carry on under the glide rather than snapping.
         clearRowCascadeExceptReflow();
         if (scrollSpring != null) {
+            // Retargeting an in-flight glide keeps its velocity - but a far new target used to be
+            // flown the whole way, fast (a burst of advances, a seek mid-glide): the "suddenly
+            // shoots far" scroll. The same travel cap as a fresh glide: jump the excess, keep the
+            // motion for the last stretch only.
+            float position = scrollSpring.position();
+            float cap = springTravelCapPx();
+            if (Math.abs(target - position) > cap) {
+                float jumpTo = target + Math.signum(position - target) * cap;
+                scrollSpring.nudgePosition(jumpTo - position);
+                scrollSpring.setVelocity(Math.signum(target - jumpTo)
+                        * Math.min(Math.abs(scrollSpring.velocity()), cap * 4f));
+            }
             scrollSpring.setGoal(target);
             return;
         }

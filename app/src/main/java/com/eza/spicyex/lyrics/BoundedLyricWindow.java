@@ -55,5 +55,11 @@ public final class BoundedLyricWindow {
         public boolean contains(int index) {
             return index >= start && index <= end;
         }
+
+        /** This range with its end pulled in to {@code maxEnd} (never above its start). */
+        public Range cappedAt(int maxEnd) {
+            if (maxEnd >= end) return this;
+            return new Range(start, Math.max(start, maxEnd), false);
+        }
     }
 }

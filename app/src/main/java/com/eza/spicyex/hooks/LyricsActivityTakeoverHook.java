@@ -8,10 +8,13 @@ import static com.eza.spicyex.hooks.NativeLyricsUtils.trackIdFromUri;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.os.Build;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
@@ -27,6 +30,7 @@ import com.eza.spicyex.Settings;
 import com.eza.spicyex.SpotifyPlusConfig;
 import com.eza.spicyex.SpotifyTrack;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashSet;
@@ -66,6 +70,8 @@ final class LyricsActivityTakeoverHook {
     // the key and finished directly). Consumed-without-finish presses expire.
     private static final WeakHashMap<Activity, Long> BACK_PRESS_UNTIL_MS = new WeakHashMap<>();
     private static final long BACK_PRESS_EXIT_WINDOW_MS = 2500L;
+    private static final String NOW_PLAYING_ACTIVITY =
+            "com.spotify.nowplaying.musicinstallation.NowPlayingActivity";
     // Armed by our own entry button right before launching the lyrics activity; consumed when we mount.
     // Spotify's native lyric card launches the same activity without arming this, so it stays native.
     private static volatile boolean takeoverArmed = false;
@@ -73,11 +79,21 @@ final class LyricsActivityTakeoverHook {
     // (rotation/config change) so we re-mount instead of falling back to Spotify's native screen;
     // cleared on an explicit exit or a real (non-config-change) destroy.
     private static volatile boolean nativeLyricsSessionActive = false;
+    // Spotify's own requested orientation for the lyrics activity, read before we override it, so
+    // an explicit exit hands the screen back exactly as Spotify left it.
+    private static volatile int spotifyLyricsOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED;
+    private static volatile boolean spotifyLyricsOrientationKnown;
 
     private final NativeSpicyLyricsHook host;
     private final NowPlayingInjector nowPlayingInjector;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final WeakHashMap<Activity, ExtraInjectionRetry> extraInjectionRetries = new WeakHashMap<>();
     private final WeakHashMap<Activity, OnBackInvokedCallback> backCallbacks = new WeakHashMap<>();
+    private WeakReference<Activity> resumedNowPlayingActivity = new WeakReference<>(null);
+    private volatile boolean adInterruptedLyricsSession;
+    private long lastAdStateCheckAtMs;
+    private boolean adReturnCheckScheduled;
+    private final Runnable adReturnCheck = this::reopenLyricsAfterAdIfNeeded;
 
     LyricsActivityTakeoverHook(NativeSpicyLyricsHook host, NowPlayingInjector nowPlayingInjector) {
         this.host = host;
@@ -109,9 +125,15 @@ final class LyricsActivityTakeoverHook {
                 if (activateNativeTakeover(activity)) {
                     ensureSystemBackCallback(activity);
                     ensureLegacyBackCoverage(activity);
+                    // A resume does not remount the shell, but Spotify rebuilds its window
+                    // state here - including the status bar the shell hid. Re-apply so the
+                    // hide survives coming back from another app or a notification shade.
+                    refreshShellStatusBar(activity);
+                    remountShellIfConfigurationChanged(activity);
                 }
                 // else: native lyric card opened Spotify's own screen - do not take over.
             } else {
+                rememberResumedActivity(activity);
                 scheduleExtraLyricsButtonInjection(activity);
             }
         });
@@ -148,8 +170,19 @@ final class LyricsActivityTakeoverHook {
 
         XpHooks.findAfter(Activity.class, "onPause", "takeover:Activity#onPause", param -> {
             Activity activity = (Activity) param.thisObject;
+            forgetResumedActivity(activity);
             cancelExtraLyricsButtonInjection(activity);
             nowPlayingInjector.stop(activity); // quiet the now-playing card ticker
+        });
+
+        // Fires only when the user actually leaves (Home, recents, another app) - never for a
+        // back press or our own finish(), so this is PIP_ON_CLOSE's real trigger. Back closing
+        // the screen into a floating window instead was surprising, not a convenience.
+        XpHooks.findAfter(Activity.class, "onUserLeaveHint", "takeover:Activity#onUserLeaveHint", param -> {
+            Activity activity = (Activity) param.thisObject;
+            if (!isLyricsFullscreenActivity(activity) || isExplicitLyricsExit(activity)) return;
+            if (!shouldInterceptLyricsBack(nativeLyricsSessionActive, hasNativeSpicyRoot(activity))) return;
+            host.openLyricsPipOnClose(activity);
         });
 
         XpHooks.findBefore(Activity.class, "onBackPressed", "takeover:Activity#onBackPressed", param -> {
@@ -176,6 +209,20 @@ final class LyricsActivityTakeoverHook {
                     + " suppressed non-explicit lyrics activity finish to keep native renderer open");
             param.setResult(null);
         });
+
+        // Spotify locks every screen to portrait at runtime - its manifest leaves all
+        // activities orientation-unspecified, so the lock is a setRequestedOrientation()
+        // call, and it is why the lyrics screen never rotated. While our shell owns the
+        // screen the user's rotation setting is the only thing that should decide, so any
+        // such call from Spotify's own code is replaced with the user's setting.
+        XpHooks.findBefore(Activity.class, "setRequestedOrientation",
+                "takeover:Activity#setRequestedOrientation", param -> {
+                    Activity activity = (Activity) param.thisObject;
+                    if (!nativeLyricsSessionActive || !isLyricsFullscreenActivity(activity)) return;
+                    if (param.args == null || param.args.length == 0
+                            || !(param.args[0] instanceof Integer)) return;
+                    param.args[0] = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_USER;
+                }, int.class);
     }
 
     boolean isNativeSpicyEnabled(Activity activity) {
@@ -189,6 +236,8 @@ final class LyricsActivityTakeoverHook {
     void markExplicitLyricsExit(Activity activity) {
         if (activity == null) return;
         nativeLyricsSessionActive = false; // user is leaving - end the session (next open stays native)
+        adInterruptedLyricsSession = false;
+        restoreLyricsOrientation(activity);
         synchronized (EXPLICIT_LYRICS_EXIT_UNTIL_MS) {
             EXPLICIT_LYRICS_EXIT_UNTIL_MS.put(activity, SystemClock.elapsedRealtime() + 1200);
         }
@@ -225,8 +274,9 @@ final class LyricsActivityTakeoverHook {
         if (!shouldInterceptLyricsBack(nativeLyricsSessionActive, hasNativeSpicyRoot(activity))) return;
         param.setResult(null);
         // The lyrics screen closes its own layers first (share sheet, line picker, editor).
+        // PIP_ON_CLOSE triggers from onUserLeaveHint (Home/recents), not from here: back is
+        // the user asking to close the screen, not to float it.
         if (shellConsumesBack(activity)) return;
-        if (host.openLyricsPipOnClose(activity)) return;
         markExplicitLyricsExit(activity);
         activity.finish();
     }
@@ -324,7 +374,6 @@ final class LyricsActivityTakeoverHook {
                 // never saw a back press and back closed the whole lyrics screen mid-edit. Ask
                 // the shell first: the editor's sheet closes, then the editor, then the screen.
                 if (shellConsumesBack(activity)) return;
-                if (host.openLyricsPipOnClose(activity)) return;
                 markExplicitLyricsExit(activity);
                 activity.finish();
             };
@@ -353,6 +402,69 @@ final class LyricsActivityTakeoverHook {
         }
     }
 
+    /** Our lyrics left the player screen they were over: its own card and buttons come back. */
+    void resumePlayerScreen(Activity activity) {
+        scheduleExtraLyricsButtonInjection(activity);
+    }
+
+    private void rememberResumedActivity(Activity activity) {
+        if (activity == null) return;
+        if (NOW_PLAYING_ACTIVITY.equals(activity.getClass().getName())) {
+            resumedNowPlayingActivity = new WeakReference<>(activity);
+            scheduleAdReturnCheck();
+        } else {
+            resumedNowPlayingActivity = new WeakReference<>(null);
+        }
+    }
+
+    private void forgetResumedActivity(Activity activity) {
+        if (activity != null && resumedNowPlayingActivity.get() == activity) {
+            resumedNowPlayingActivity = new WeakReference<>(null);
+        }
+    }
+
+    /** Watches for an ad ending after Spotify has moved our active lyrics session away. */
+    void onPlayerStateUpdate() {
+        if (!nativeLyricsSessionActive) return;
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastAdStateCheckAtMs < 250L) return;
+        lastAdStateCheckAtMs = now;
+        SpotifyTrack track = host.getCurrentTrackSafely();
+        if (track == null || track.uri == null || track.uri.isEmpty()) return;
+        if (track.uri.startsWith("spotify:ad:")) {
+            adInterruptedLyricsSession = true;
+            return;
+        }
+        if (adInterruptedLyricsSession) scheduleAdReturnCheck();
+    }
+
+    private void scheduleAdReturnCheck() {
+        if (!adInterruptedLyricsSession || adReturnCheckScheduled) return;
+        adReturnCheckScheduled = true;
+        mainHandler.postDelayed(adReturnCheck, 250L);
+    }
+
+    private void reopenLyricsAfterAdIfNeeded() {
+        adReturnCheckScheduled = false;
+        Activity activity = resumedNowPlayingActivity.get();
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        SpotifyTrack track = host.getCurrentTrackSafely();
+        if (track == null || track.uri == null || track.uri.isEmpty()) return;
+        boolean adPlaying = track.uri.startsWith("spotify:ad:");
+        if (!shouldReopenAfterAd(nativeLyricsSessionActive, adInterruptedLyricsSession,
+                NOW_PLAYING_ACTIVITY.equals(activity.getClass().getName()), adPlaying)) return;
+        if (launchNativeLyricsFullscreen(activity, false)) {
+            adInterruptedLyricsSession = false;
+            XpLog.log(NativeSpicyLyricsHook.TAG
+                    + " restored native lyrics after Spotify returned from an ad to Now Playing");
+        }
+    }
+
+    static boolean shouldReopenAfterAd(boolean sessionActive, boolean adInterrupted,
+                                       boolean nowPlayingVisible, boolean adPlaying) {
+        return sessionActive && adInterrupted && nowPlayingVisible && !adPlaying;
+    }
+
     private void scheduleExtraLyricsButtonInjection(Activity activity) {
         if (activity == null) return;
         try {
@@ -364,7 +476,7 @@ final class LyricsActivityTakeoverHook {
             synchronized (extraInjectionRetries) {
                 extraInjectionRetries.put(activity, retry);
             }
-            retry.postNext();
+            retry.start();
             nowPlayingInjector.schedule(activity);
         } catch (Throwable t) {
             XpLog.log(NativeSpicyLyricsHook.TAG + " schedule extra lyrics injection failed: " + t);
@@ -413,17 +525,30 @@ final class LyricsActivityTakeoverHook {
         if (retry != null) retry.cancel();
     }
 
-    private final class ExtraInjectionRetry implements Runnable {
+    private final class ExtraInjectionRetry
+            implements Runnable, ViewTreeObserver.OnPreDrawListener {
         private final Activity activity;
         private final View decor;
         private int attempt;
+        private int preDrawFrames;
         private long steadyElapsedMs;
         private boolean cancelled;
         private boolean extraDoneOnce;
+        private boolean listening;
+        private View extraButton;
+        private View miniPlayerButton;
 
         ExtraInjectionRetry(Activity activity, View decor) {
             this.activity = activity;
             this.decor = decor;
+        }
+
+        void start() {
+            if (ApplePlayerStyler.isPlayerScreen(activity)) {
+                decor.getViewTreeObserver().addOnPreDrawListener(this);
+                listening = true;
+            }
+            postNext();
         }
 
         void postNext() {
@@ -446,40 +571,95 @@ final class LyricsActivityTakeoverHook {
         void cancel() {
             cancelled = true;
             decor.removeCallbacks(this);
+            stopListening();
+        }
+
+        private void stopListening() {
+            if (!listening) return;
+            listening = false;
+            ViewTreeObserver observer = decor.getViewTreeObserver();
+            if (observer.isAlive()) observer.removeOnPreDrawListener(this);
+        }
+
+        @Override
+        public boolean onPreDraw() {
+            if (cancelled || ++preDrawFrames % 4 != 1) return true;
+            FrameLayout content = activity.findViewById(android.R.id.content);
+            if (content == null) return true;
+            boolean changed = false;
+            if (!isDescendant(content, extraButton)) {
+                injectExtraLyricsButton(activity);
+                View current = content.findViewWithTag(TAG_EXTRA_LYRICS_BUTTON);
+                changed |= current != null && current != extraButton;
+                extraButton = current;
+            }
+            if (!isDescendant(content, miniPlayerButton)) {
+                injectMiniPlayerLyricsButton(activity);
+                View current = content.findViewWithTag(TAG_MINI_PLAYER_LYRICS_BUTTON);
+                changed |= current != null && current != miniPlayerButton;
+                miniPlayerButton = current;
+            }
+            return !changed;
         }
 
         @Override
         public void run() {
             if (cancelled) return;
-            // Once the footer button lands it's done for good; no need to keep re-scanning for
-            // it every steady-retry tick alongside the mini-player poll.
+            // Timer polling handles late initial inflation; the pre-draw monitor below keeps
+            // the injected controls present if Spotify replaces the player hierarchy later.
             boolean extraDone = extraDoneOnce || injectExtraLyricsButton(activity);
             extraDoneOnce = extraDone;
             boolean miniPlayerDone = injectMiniPlayerLyricsButton(activity);
+            FrameLayout content = activity.findViewById(android.R.id.content);
+            if (content != null) {
+                extraButton = content.findViewWithTag(TAG_EXTRA_LYRICS_BUTTON);
+                miniPlayerButton = content.findViewWithTag(TAG_MINI_PLAYER_LYRICS_BUTTON);
+            }
             if (extraDone && miniPlayerDone) {
-                synchronized (extraInjectionRetries) {
-                    if (extraInjectionRetries.get(activity) == this) extraInjectionRetries.remove(activity);
+                if (!listening) {
+                    synchronized (extraInjectionRetries) {
+                        if (extraInjectionRetries.get(activity) == this) {
+                            extraInjectionRetries.remove(activity);
+                        }
+                    }
                 }
                 return;
             }
             postNext();
         }
+
+        private boolean isDescendant(ViewGroup root, View view) {
+            if (root == null || view == null) return false;
+            View current = view;
+            while (current != null) {
+                if (current == root) return true;
+                android.view.ViewParent parent = current.getParent();
+                current = parent instanceof View ? (View) parent : null;
+            }
+            return false;
+        }
     }
 
     /**
      * Adds a button to the persistent mini player that jumps straight to Spicy's fullscreen
-     * lyrics. Runs on every non-lyrics activity since the mini player bar is a global overlay,
-     * not tied to one screen. Returns true once handled (or once determined not applicable) so
-     * the retry loop can stop; false to keep retrying while the bar is not laid out yet.
+     * lyrics, as a real child of Spotify's own layout - not a floating view positioned over it.
+     * Returns true once handled (or once determined not applicable) so the retry loop can stop;
+     * false to keep retrying while the player is not laid out yet.
+     *
+     * <p>Portrait bar ({@code now_playing_bar}, a MotionLayout): its MotionScene already reserves
+     * a slot in the button chain, between the device icon and +, for {@code skippable_ad_view_stub}
+     * - a stub that stays GONE except while a skippable ad plays. The button takes that slot's id,
+     * so both ConstraintSets (default and large) place it there and the track title gives it room
+     * on its own. A child the scene doesn't know would be zero-sized by MotionLayout instead.
+     *
+     * <p>Landscape side panel ({@code nowplayingmini_*}, a plain ConstraintLayout): the button
+     * takes the + button's own constraints (end of the panel, centred on the title) one button
+     * further in, and the title's end margin grows by its width.
+     *
+     * <p>Both read their layout params from Spotify's own layout XML through the container's
+     * {@code generateLayoutParams(AttributeSet)}, so nothing depends on R8-renamed members. When a
+     * Spotify update drops one of these ids or layouts, the button is simply not added there.
      */
-    // now_playing_bar.xml constants (decompiled from the host APK): play_pause_button is a
-    // direct child of now_playing_bar_layout, 40dp square, end-aligned to the bar's right edge
-    // with an 8dp margin. It renders through Spotify's own lazy Encore view-stub component,
-    // which can report getWidth()==0 indefinitely even once visibly on screen — so position
-    // relative to the BAR's own (always-reliable) measured width instead of the button's.
-    private static final int PLAY_PAUSE_BUTTON_DP = 40;
-    private static final int PLAY_PAUSE_MARGIN_END_DP = 8;
-
     private boolean injectMiniPlayerLyricsButton(Activity activity) {
         try {
             if (activity == null || activity.isFinishing() || isLyricsFullscreenActivity(activity)
@@ -488,109 +668,45 @@ final class LyricsActivityTakeoverHook {
             if (content == null) return false;
             View existingButton = content.findViewWithTag(TAG_MINI_PLAYER_LYRICS_BUTTON);
             if (!SpotifyPlusConfig.from(activity).get(Settings.MINI_PLAYER_LYRICS_ICON)) {
-                if (existingButton != null) content.removeView(existingButton); // toggled off live
+                if (existingButton != null) removeMiniPlayerButton(existingButton); // toggled off live
                 return true;
             }
             View bar = findViewByResourceEntryName(content, "now_playing_bar_layout");
-            boolean barLaidOut = bar != null && bar.isShown() && bar.getWidth() > 0;
-            // Landscape case: wide screens replace the bottom bar with a persistent left-rail
-            // side panel (now_playing_mini_container). Same button, toggle, and fullscreen
-            // launch — only the anchor changes: left of the player header's + button
-            // (animated_heart_button) instead of left of the bar's device icon. Gated on
-            // landscape so the portrait path below pays no extra tree walk.
-            View sidebar = null;
+            boolean barReady = bar instanceof ViewGroup && bar.isShown() && bar.getWidth() > 0
+                    && findViewByResourceEntryName(bar, "play_pause_button") != null;
             View heart = null;
-            if (!barLaidOut && isLandscape(activity)) {
-                sidebar = findViewByResourceEntryName(content, "now_playing_mini_container");
+            ViewGroup panel = null;
+            if (!barReady) {
+                View sidebar = findViewByResourceEntryName(content, "now_playing_mini_container");
                 if (sidebar != null && sidebar.isShown() && sidebar.getWidth() > 0) {
                     heart = findViewByResourceEntryName(sidebar, "animated_heart_button");
+                    if (heart != null && heart.getParent() instanceof ViewGroup) {
+                        panel = (ViewGroup) heart.getParent();
+                    }
                 }
             }
-            boolean sidebarLaidOut = heart != null && heart.isShown() && heart.getWidth() > 0;
             if (existingButton != null) {
-                // Safety-net re-sync at the steady poll's cadence (seconds, not frames): the bar's
-                // own OnLayoutChangeListener below does not fire for every reason the button can
-                // end up stale relative to the bar (e.g. screen off/on with unchanged bar bounds).
-                if (barLaidOut) {
-                    repositionMiniPlayerButton(existingButton, bar, content, dp(PLAY_PAUSE_BUTTON_DP),
-                            findViewByResourceEntryName(bar, "connect_destination_button"),
-                            findViewByResourceEntryName(bar, "tracks_carousel_view"));
-                } else if (sidebarLaidOut) {
-                    repositionMiniPlayerSidebarButton(existingButton, content,
-                            dp(PLAY_PAUSE_BUTTON_DP), heart);
-                }
-                return true;
+                // Still in the player on screen: done. In one that was replaced (rotation, a
+                // rebuilt bar), it goes and a new one is added below.
+                android.view.ViewParent parent = existingButton.getParent();
+                if ((barReady && parent == bar) || (panel != null && parent == panel)) return true;
+                removeMiniPlayerButton(existingButton);
             }
-            if (!barLaidOut && !sidebarLaidOut) {
-                // Retried on a timer until the bar lays out: say so once per screen, not per try.
+            if (!barReady && panel == null) {
+                // Retried on a timer until the player lays out: say so once per screen, not per try.
                 if (miniPlayerWaitLogged.put(activity, Boolean.TRUE) == null) {
                     XpLog.log(NativeSpicyLyricsHook.TAG
-                            + " mini player: now_playing_bar_layout not laid out yet in "
-                            + activity.getClass().getName());
+                            + " mini player: not laid out yet in " + activity.getClass().getName());
                 }
                 return false;
             }
-            if (sidebarLaidOut) {
-                int side = dp(PLAY_PAUSE_BUTTON_DP);
-                View button = createMiniPlayerLyricsButton(activity);
-                content.addView(button, new FrameLayout.LayoutParams(side, side));
-                button.bringToFront();
-                View[] heartRef = {heart};
-                View sidebarRef = sidebar;
-                Runnable reposition = () -> repositionMiniPlayerSidebarButton(
-                        button, content, side, heartRef[0]);
-                reposition.run();
-                sidebarRef.addOnLayoutChangeListener((v, l, t, r, b2, ol, ot, or_, ob) -> {
-                    heartRef[0] = findViewByResourceEntryName(sidebarRef, "animated_heart_button");
-                    startMiniPlayerFollowBurst(activity, button, reposition);
-                });
-                XpLog.log(NativeSpicyLyricsHook.TAG
-                        + " inserted mini player lyrics button (sidebar) in "
-                        + activity.getClass().getName());
-                return true;
-            }
-            // Presence (not shown/width) confirms the bar's content actually finished inflating,
-            // without depending on this view-stub's own unreliable measured size.
-            if (findViewByResourceEntryName(bar, "play_pause_button") == null) {
-                XpLog.log(NativeSpicyLyricsHook.TAG
-                        + " mini player: play_pause_button not present yet in "
-                        + activity.getClass().getName());
-                return false;
-            }
-
-            // now_playing_bar_layout is a MotionLayout: a child added directly to it that isn't
-            // referenced in its MotionScene's ConstraintSets gets silently zero-sized/dropped by
-            // MotionLayout's own layout pass on the next transition. Adding it to the activity's
-            // plain content FrameLayout instead, positioned in screen coordinates derived from
-            // the bar's live location, sidesteps MotionLayout's constraint system entirely.
-            int side = dp(PLAY_PAUSE_BUTTON_DP);
-            View button = createMiniPlayerLyricsButton(activity);
-            content.addView(button, new FrameLayout.LayoutParams(side, side));
-            button.bringToFront();
-            // Resolved once (an O(view count) tree walk) and cached, not re-resolved on every
-            // reposition. Re-resolved only when a real bar layout change is observed, since the
-            // device icon can legitimately appear/disappear later.
-            View[] connectButtonRef = {findViewByResourceEntryName(bar, "connect_destination_button")};
-            View[] carouselRef = {findViewByResourceEntryName(bar, "tracks_carousel_view")};
-            Runnable reposition = () -> repositionMiniPlayerButton(
-                    button, bar, content, side, connectButtonRef[0], carouselRef[0]);
-            reposition.run();
-            // now_playing_bar_scene.xml's default_size <-> large_size transition is a continuous,
-            // drag-driven MotionLayout animation, not a series of discrete layout passes - a plain
-            // OnLayoutChangeListener only fires once a transition actually settles, so during the
-            // transition itself this floating button would visibly lag behind the real bar content.
-            // The frame-driven follow loop below only runs for a bounded burst right after such a
-            // change instead of indefinitely (a permanent per-frame tree walk on Spotify's main
-            // thread is exactly the kind of never-ending stutter this codebase already fixed once).
-            bar.addOnLayoutChangeListener((v, l, t, r, b2, ol, ot, or_, ob) -> {
-                connectButtonRef[0] = findViewByResourceEntryName(bar, "connect_destination_button");
-                carouselRef[0] = findViewByResourceEntryName(bar, "tracks_carousel_view");
-                startMiniPlayerFollowBurst(activity, button, reposition);
-            });
-
-            XpLog.log(NativeSpicyLyricsHook.TAG
-                    + " inserted mini player lyrics button in " + activity.getClass().getName()
-                    + " anchoredToConnect=" + (connectButtonRef[0] != null && connectButtonRef[0].isShown()));
+            boolean added = barReady
+                    ? addToBarSlot(activity, (ViewGroup) bar)
+                    : addToSidePanel(activity, panel, heart);
+            XpLog.log(NativeSpicyLyricsHook.TAG + " mini player lyrics button "
+                    + (added ? "added to " : "has no slot in ")
+                    + (barReady ? "now_playing_bar" : "side panel") + " in "
+                    + activity.getClass().getName());
             return true;
         } catch (Throwable t) {
             XpLog.log(NativeSpicyLyricsHook.TAG + " inject mini player lyrics button failed: " + t);
@@ -598,98 +714,137 @@ final class LyricsActivityTakeoverHook {
         }
     }
 
-    private static final long MINI_PLAYER_FOLLOW_BURST_MS = 500L;
+    private static final String BAR_SLOT_ID = "skippable_ad_view_stub";
 
-    /** Re-runs reposition on every display frame for a bounded burst instead of indefinitely, so
-     *  a MotionLayout transition (drag-driven, not a single discrete layout pass) is tracked
-     *  smoothly without turning into a permanent per-frame cost for the rest of the app session. */
-    private void startMiniPlayerFollowBurst(Activity activity, View button, Runnable reposition) {
-        long deadlineNanos = System.nanoTime() + MINI_PLAYER_FOLLOW_BURST_MS * 1_000_000L;
-        android.view.Choreographer.getInstance().postFrameCallback(new android.view.Choreographer.FrameCallback() {
-            @Override
-            public void doFrame(long frameTimeNanos) {
-                if (activity.isFinishing() || !button.isAttachedToWindow()) return;
-                reposition.run();
-                if (System.nanoTime() < deadlineNanos) {
-                    android.view.Choreographer.getInstance().postFrameCallback(this);
-                }
-            }
-        });
+    private boolean addToBarSlot(Activity activity, ViewGroup bar) {
+        int slotId = spotifyId(activity, BAR_SLOT_ID);
+        if (slotId == 0) return false;
+        ViewGroup.LayoutParams params = layoutParamsFromSpotifyLayout(activity, bar,
+                new String[]{"now_playing_bar"}, slotId);
+        if (params == null) return false;
+        View button = createMiniPlayerLyricsButton(activity);
+        button.setId(slotId);
+        // Last child: Spotify's own findViewById still reaches its stub first, while the
+        // MotionLayout's id lookup (which the chain's neighbours resolve through) gets the button.
+        bar.addView(button, params);
+        bar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or_, ob) ->
+                yieldBarSlotToAd(bar, button, slotId));
+        return true;
     }
 
     /**
-     * now_playing_bar.xml + its MotionScene (decompiled): left-to-right the bar reads carousel,
-     * connect_destination_button (device icon), skippable_ad_view_stub (usually gone but its slot
-     * in the chain still isn't free), add_to_button, play_pause_button - every one of those four
-     * slots is a real, always-occupied control per the scene's ConstraintSet, so there is no empty
-     * gap anywhere inside that cluster to drop a button into. The only actually free space is the
-     * carousel's own flexible zone immediately left of the device icon - encroaching there just
-     * trims the track-title marquee a bit, it doesn't sit on top of a real control.
+     * While a skippable ad shows its own view in the slot, the button steps out of it; once the
+     * ad's view is gone it comes back, re-added so the slot's id resolves to it again.
      */
-    // Smallest height each mini player bar has had: its normal, ad-free control-row height.
-    private static final java.util.Map<View, Integer> NORMAL_BAR_HEIGHT = new java.util.WeakHashMap<>();
-
-    private void repositionMiniPlayerButton(View button, View bar, View content, int side,
-                                             View connectButton, View carousel) {
-        try {
-            int[] barLoc = new int[2];
-            int[] contentLoc = new int[2];
-            bar.getLocationOnScreen(barLoc);
-            content.getLocationOnScreen(contentLoc);
-            float barLeftInContent = barLoc[0] - contentLoc[0];
-            float barTopInContent = barLoc[1] - contentLoc[1];
-            float x;
-            if (connectButton != null && connectButton.isShown() && connectButton.getWidth() > 0) {
-                int[] connLoc = new int[2];
-                connectButton.getLocationOnScreen(connLoc);
-                x = (connLoc[0] - contentLoc[0]) - dp(4) - side;
-            } else {
-                // Device icon not laid out: still stay left of the whole 3-button cluster
-                // (connect + add + play), not just play_pause_button alone.
-                x = barLeftInContent + bar.getWidth() - dp(PLAY_PAUSE_MARGIN_END_DP) - side * 3 - dp(8);
+    private static void yieldBarSlotToAd(ViewGroup bar, View button, int slotId) {
+        if (button.getParent() != bar) return;
+        boolean adShowing = false;
+        for (int i = 0; i < bar.getChildCount(); i++) {
+            View child = bar.getChildAt(i);
+            if (child != button && child.getId() == slotId && child.getVisibility() == View.VISIBLE
+                    && !(child instanceof android.view.ViewStub)) {
+                adShowing = true;
+                break;
             }
-            button.setX(x);
-            // Vertically: the bar's control row, not the whole bar. During an ad Spotify grows the
-            // bar (the ad video/label above the controls), and centring on that pushed the button
-            // up into the middle of it while the real controls stayed at the bottom.
-            int barHeight = bar.getHeight();
-            Integer normal = NORMAL_BAR_HEIGHT.get(bar);
-            if (barHeight > 0 && (normal == null || barHeight < normal)) {
-                NORMAL_BAR_HEIGHT.put(bar, barHeight);
-                normal = barHeight;
-            }
-            float centreY;
-            if (connectButton != null && connectButton.isShown() && connectButton.getHeight() > 0) {
-                int[] connLoc = new int[2];
-                connectButton.getLocationOnScreen(connLoc);
-                centreY = (connLoc[1] - contentLoc[1]) + connectButton.getHeight() / 2f;
-            } else {
-                int row = normal == null ? barHeight : normal;
-                centreY = controlRowCenterY(barTopInContent, barHeight, row);
-            }
-            button.setY(centreY - side / 2f);
-            // This button is a floating overlay, not a real MotionLayout participant, so the
-            // marquee track title still scrolls straight into our button's space rather than
-            // making room for it on its own. Push the carousel's own end margin out to actually
-            // free that space, reapplied every time (MotionLayout's own transitions reassert the
-            // ConstraintSet's original margin otherwise).
-            if (carousel != null && carousel.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
-                ViewGroup.MarginLayoutParams carouselLp =
-                        (ViewGroup.MarginLayoutParams) carousel.getLayoutParams();
-                int wantedEndMargin = side + dp(8);
-                if (carouselLp.getMarginEnd() < wantedEndMargin) {
-                    carouselLp.setMarginEnd(wantedEndMargin);
-                    carousel.setLayoutParams(carouselLp);
-                }
-            }
-        } catch (Throwable t) {
-            XpLog.log(NativeSpicyLyricsHook.TAG + " reposition mini player button failed: " + t);
+        }
+        if (adShowing) {
+            if (button.getVisibility() != View.GONE) button.setVisibility(View.GONE);
+        } else if (button.getVisibility() == View.GONE) {
+            bar.post(() -> {
+                if (button.getParent() != bar) return;
+                ViewGroup.LayoutParams params = button.getLayoutParams();
+                bar.removeView(button);
+                button.setVisibility(View.VISIBLE);
+                bar.addView(button, params);
+            });
         }
     }
 
-    static float controlRowCenterY(float barTop, int barHeight, int normalRowHeight) {
-        return barTop + barHeight - normalRowHeight / 2f;
+    private static final String[] SIDE_PANEL_LAYOUTS = {
+            "nowplayingmini_default", "nowplayingmini_endlessfeed",
+            "nowplayingmini_reinventfree", "nowplayingmini_ads"};
+
+    private boolean addToSidePanel(Activity activity, ViewGroup panel, View heart) {
+        int heartId = heart.getId();
+        ViewGroup.LayoutParams params = layoutParamsFromSpotifyLayout(activity, panel,
+                SIDE_PANEL_LAYOUTS, heartId);
+        if (!(params instanceof ViewGroup.MarginLayoutParams)) return false;
+        View title = findViewByResourceEntryName(panel, "track_info_view");
+        ViewGroup.MarginLayoutParams margins = (ViewGroup.MarginLayoutParams) params;
+        // One + button further in from the panel's end, the same size as it.
+        int heartWidth = heart.getWidth() > 0 ? heart.getWidth() : params.width;
+        int side = params.width > 0 ? params.width : dp(40);
+        margins.setMarginEnd(margins.getMarginEnd() + heartWidth);
+        View button = createMiniPlayerLyricsButton(activity);
+        // The panel's touch targets are larger than the bar's; the glyph matches the + inside them.
+        int inset = Math.max(dp(9), Math.round(side * 0.28f));
+        button.setPadding(inset, inset, inset, inset);
+        button.setId(View.generateViewId());
+        panel.addView(button, params);
+        if (title != null && title.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams titleParams =
+                    (ViewGroup.MarginLayoutParams) title.getLayoutParams();
+            TITLE_MARGIN_BEFORE.put(button, titleParams.getMarginEnd());
+            titleParams.setMarginEnd(titleParams.getMarginEnd() + side);
+            title.setLayoutParams(titleParams);
+        }
+        return true;
     }
+
+    private void removeMiniPlayerButton(View button) {
+        android.view.ViewParent parent = button.getParent();
+        if (!(parent instanceof ViewGroup)) return;
+        Object titleMargin = TITLE_MARGIN_BEFORE.remove(button);
+        if (titleMargin instanceof Integer) {
+            View title = findViewByResourceEntryName((View) parent, "track_info_view");
+            if (title != null && title.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+                ViewGroup.MarginLayoutParams titleParams =
+                        (ViewGroup.MarginLayoutParams) title.getLayoutParams();
+                titleParams.setMarginEnd((Integer) titleMargin);
+                title.setLayoutParams(titleParams);
+            }
+        }
+        ((ViewGroup) parent).removeView(button);
+    }
+
+    private static int spotifyId(Activity activity, String name) {
+        try {
+            return activity.getResources().getIdentifier(name, "id", activity.getPackageName());
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
+     * Layout params for a child of {@code parent}, read from the element with {@code elementId}
+     * in the first of Spotify's {@code layouts} that has it - parsed by the container itself, so
+     * ConstraintLayout's own constraint attributes come out as Spotify built them.
+     */
+    private static ViewGroup.LayoutParams layoutParamsFromSpotifyLayout(Activity activity,
+            ViewGroup parent, String[] layouts, int elementId) {
+        android.content.res.Resources res = activity.getResources();
+        for (String name : layouts) {
+            int layoutId = res.getIdentifier(name, "layout", activity.getPackageName());
+            if (layoutId == 0) continue;
+            try (android.content.res.XmlResourceParser parser = res.getLayout(layoutId)) {
+                int event;
+                while ((event = parser.next()) != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                    if (event != org.xmlpull.v1.XmlPullParser.START_TAG) continue;
+                    if (parser.getAttributeResourceValue(ANDROID_NS, "id", 0) != elementId) continue;
+                    return parent.generateLayoutParams(android.util.Xml.asAttributeSet(parser));
+                }
+            } catch (Throwable t) {
+                XpLog.log(NativeSpicyLyricsHook.TAG + " mini player params from " + name
+                        + " failed: " + t);
+            }
+        }
+        return null;
+    }
+
+    /** The side panel title's end margin before the button made room, to put back. */
+    private static final java.util.Map<View, Integer> TITLE_MARGIN_BEFORE = new java.util.WeakHashMap<>();
+
+    private static final String ANDROID_NS = "http://schemas.android.com/apk/res/android";
 
     private View createMiniPlayerLyricsButton(Activity activity) {
         ImageButton button = new ImageButton(activity);
@@ -705,37 +860,6 @@ final class LyricsActivityTakeoverHook {
         button.setFocusable(true);
         button.setOnClickListener(v -> launchNativeLyricsFullscreen(activity));
         return button;
-    }
-
-    private static boolean isLandscape(Activity activity) {
-        try {
-            return activity.getResources().getConfiguration().orientation
-                    == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-        } catch (Throwable ignored) {
-            return false;
-        }
-    }
-
-    /**
-     * Landscape anchor for the same mini-player button: pins it left of the side panel's +
-     * button in screen coordinates derived from +'s live location (the panel is a plain
-     * container, so the floating-overlay trick applies here exactly as on the portrait
-     * bar). Observed Fold 3 landscape geometry: side panel 552px at 480dpi, header + at
-     * [384,1140][552,1308]. Pure overlay — long titles may slide under the mic's space
-     * rather than mutating the panel's unproven layout params.
-     */
-    private void repositionMiniPlayerSidebarButton(View button, View content, int side, View heart) {
-        try {
-            if (heart == null || !heart.isShown() || heart.getWidth() == 0) return;
-            int[] heartLoc = new int[2];
-            int[] contentLoc = new int[2];
-            heart.getLocationOnScreen(heartLoc);
-            content.getLocationOnScreen(contentLoc);
-            button.setX((heartLoc[0] - contentLoc[0]) - dp(4) - side);
-            button.setY((heartLoc[1] - contentLoc[1]) + (heart.getHeight() - side) / 2f);
-        } catch (Throwable t) {
-            XpLog.log(NativeSpicyLyricsHook.TAG + " reposition sidebar button failed: " + t);
-        }
     }
 
     private View createExtraLyricsRowButton(Activity activity) {
@@ -822,18 +946,24 @@ final class LyricsActivityTakeoverHook {
     }
 
     boolean launchNativeLyricsFullscreen(Activity activity) {
+        return launchNativeLyricsFullscreen(activity, true);
+    }
+
+    private boolean launchNativeLyricsFullscreen(Activity activity, boolean armTakeover) {
         try {
             if (activity == null || activity.isFinishing() || activity.isDestroyed()) return false;
-            takeoverArmed = true;
+            if (armTakeover) takeoverArmed = true;
             Intent intent = new Intent();
             intent.setClassName(activity.getPackageName(), LYRICS_FULLSCREEN_ACTIVITY);
             intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
             activity.startActivity(intent);
             XpLog.log(NativeSpicyLyricsHook.TAG
-                    + " launched native lyrics fullscreen (takeover armed) from Extra lyrics button");
+                    + (armTakeover
+                    ? " launched native lyrics fullscreen (takeover armed) from Extra lyrics button"
+                    : " reopened native lyrics fullscreen after ad"));
             return true;
         } catch (Throwable t) {
-            takeoverArmed = false;
+            if (armTakeover) takeoverArmed = false;
             XpLog.log(NativeSpicyLyricsHook.TAG + " launch native lyrics fullscreen failed: " + t);
             return false;
         }
@@ -856,7 +986,44 @@ final class LyricsActivityTakeoverHook {
         // Promote the one-shot entry signal before waiting for a mount-ready window. This is the
         // durable lifecycle signal carried across rotation and Spotify activity relaunches.
         nativeLyricsSessionActive = true;
+        unlockLyricsOrientation(activity);
         return true;
+    }
+
+    /**
+     * Lets the lyrics screen rotate. Spotify asks the activity for portrait the moment it
+     * is created, which keeps the screen portrait whatever the phone does; the shell's own
+     * landscape layout never gets a chance to engage. The user's rotation setting decides
+     * instead (FULL_USER also honours a system-wide rotation lock). Spotify's own request is
+     * remembered so an explicit exit can put the screen back the way Spotify left it, and the
+     * {@code setRequestedOrientation} hook above keeps Spotify from re-locking it mid-session
+     * (notably on the recreate a rotation triggers, which would otherwise ping-pong).
+     */
+    private void unlockLyricsOrientation(Activity activity) {
+        if (activity == null) return;
+        try {
+            if (!spotifyLyricsOrientationKnown) {
+                spotifyLyricsOrientation = activity.getRequestedOrientation();
+                spotifyLyricsOrientationKnown = true;
+            }
+            activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " unlock lyrics orientation failed: " + t);
+        }
+    }
+
+    /** Hands the orientation back to Spotify, once, when the user leaves our lyrics screen. */
+    private void restoreLyricsOrientation(Activity activity) {
+        if (!spotifyLyricsOrientationKnown) return;
+        spotifyLyricsOrientationKnown = false;
+        try {
+            if (activity != null && !activity.isFinishing()
+                    && !(Build.VERSION.SDK_INT >= 17 && activity.isDestroyed())) {
+                activity.setRequestedOrientation(spotifyLyricsOrientation);
+            }
+        } catch (Throwable t) {
+            XpLog.log(NativeSpicyLyricsHook.TAG + " restore lyrics orientation failed: " + t);
+        }
     }
 
     private boolean isStayInLyricsEnabled(Activity activity) {
@@ -932,10 +1099,16 @@ final class LyricsActivityTakeoverHook {
 
             View existing = content.findViewWithTag(TAG_NATIVE_SPICY_ROOT);
             if (existing instanceof NativeSpicyShellView) {
-                ((NativeSpicyShellView) existing).start();
-                if (existing.getAlpha() >= 1f) hideCoveredSiblings(content, existing);
-                ensureSystemBackCallback(activity);
-                return;
+                NativeSpicyShellView shell = (NativeSpicyShellView) existing;
+                if (shell.matchesCurrentLayoutConfiguration()) {
+                    shell.start();
+                    if (existing.getAlpha() >= 1f) hideCoveredSiblings(content, existing);
+                    ensureSystemBackCallback(activity);
+                    return;
+                }
+                restoreCoveredSiblings(shell);
+                shell.stop();
+                content.removeView(existing);
             }
 
             NativeSpicyShellView root = new NativeSpicyShellView(host, activity);
@@ -968,6 +1141,15 @@ final class LyricsActivityTakeoverHook {
             XpLog.log(NativeSpicyLyricsHook.TAG + " mount failed: " + t);
             Diagnostics.event("renderer", "mount_state", t,
                     Diagnostics.context("surface", "fullscreen", "mounted", "false"));
+        }
+    }
+
+    private void remountShellIfConfigurationChanged(Activity activity) {
+        FrameLayout content = activity.findViewById(android.R.id.content);
+        View root = content == null ? null : content.findViewWithTag(TAG_NATIVE_SPICY_ROOT);
+        if (root instanceof NativeSpicyShellView
+                && !((NativeSpicyShellView) root).matchesCurrentLayoutConfiguration()) {
+            mountNativeSpicyRoot(activity);
         }
     }
 
@@ -1059,6 +1241,20 @@ final class LyricsActivityTakeoverHook {
         }
     }
 
+    /** Whether a lyrics page opened now would become our takeover screen. */
+    boolean takeoverWouldApply() {
+        return takeoverArmed || nativeLyricsSessionActive;
+    }
+
+    /** The armed launch went elsewhere (the PiP dock); the next lyrics page stays Spotify's. */
+    void disarmTakeover() {
+        takeoverArmed = false;
+    }
+
+    boolean hasNativeShell(Activity activity) {
+        return hasNativeSpicyRoot(activity);
+    }
+
     private boolean hasNativeSpicyRoot(Activity activity) {
         try {
             if (activity == null) return false;
@@ -1066,6 +1262,17 @@ final class LyricsActivityTakeoverHook {
             return content != null && content.findViewWithTag(TAG_NATIVE_SPICY_ROOT) instanceof NativeSpicyShellView;
         } catch (Throwable ignored) {
             return false;
+        }
+    }
+
+    /** Re-applies the shell's status-bar preference without remounting the screen. */
+    private void refreshShellStatusBar(Activity activity) {
+        try {
+            if (activity == null) return;
+            FrameLayout content = activity.findViewById(android.R.id.content);
+            View root = content == null ? null : content.findViewWithTag(TAG_NATIVE_SPICY_ROOT);
+            if (root instanceof NativeSpicyShellView) ((NativeSpicyShellView) root).refreshStatusBar();
+        } catch (Throwable ignored) {
         }
     }
 }

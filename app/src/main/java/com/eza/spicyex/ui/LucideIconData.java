@@ -50,6 +50,11 @@ public final class LucideIconData {
         PATHS.put("EXTERNAL_LINK", "M 15 3 L 21 3 L 21 9 M 10 14 L 21 3 M 18 13 L 18 19 C 18 20.1 17.1 21 16 21 L 5 21 C 3.9 21 3 20.1 3 19 L 3 8 C 3 6.9 3.9 6 5 6 L 11 6");
         PATHS.put("VOLUME_OFF", "M 3 9 L 7 9 L 12 5 L 12 19 L 7 15 L 3 15 Z M 16 10 L 21 15 M 21 10 L 16 15");
         PATHS.put("SPEAKER", "M 6 2 L 18 2 C 19.1 2 20 2.9 20 4 L 20 20 C 20 21.1 19.1 22 18 22 L 6 22 C 4.9 22 4 21.1 4 20 L 4 4 C 4 2.9 4.9 2 6 2 M 12 6 L 12.01 6 M 16 14 C 16 16.21 14.21 18 12 18 C 9.79 18 8 16.21 8 14 C 8 11.79 9.79 10 12 10 C 14.21 10 16 11.79 16 14");
+        // lucide "test-tube", added by hand (the generator script is not in this repo).
+        PATHS.put("TEST_TUBE", "M 14.5 2 L 14.5 19.5 C 14.5 20.9 13.4 22 12 22 C 10.6 22 9.5 20.9 9.5 19.5 L 9.5 2 M 8.5 2 L 15.5 2 M 14.5 16 L 9.5 16");
+        // lucide "headphones" (its arc as two cubics) and "bluetooth", added by hand.
+        PATHS.put("HEADPHONES", "M 3 14 L 6 14 C 7.1 14 8 14.9 8 16 L 8 19 C 8 20.1 7.1 21 6 21 L 5 21 C 3.9 21 3 20.1 3 19 L 3 12 C 3 7.03 7.03 3 12 3 C 16.97 3 21 7.03 21 12 L 21 19 C 21 20.1 20.1 21 19 21 L 18 21 C 16.9 21 16 20.1 16 19 L 16 16 C 16 14.9 16.9 14 18 14 L 21 14");
+        PATHS.put("BLUETOOTH", "M 7 7 L 17 17 L 12 22 L 12 2 L 17 7 L 7 17");
         PATHS.put("SMARTPHONE", "M 7 2 L 17 2 C 18.1 2 19 2.9 19 4 L 19 20 C 19 21.1 18.1 22 17 22 L 7 22 C 5.9 22 5 21.1 5 20 L 5 4 C 5 2.9 5.9 2 7 2 M 12 18 L 12.01 18");
         PATHS.put("SEARCH", "M 19 11 C 19 15.42 15.42 19 11 19 C 6.58 19 3 15.42 3 11 C 3 6.58 6.58 3 11 3 C 15.42 3 19 6.58 19 11 M 21 21 L 16.7 16.7");
         PATHS.put("GLOBE", "M 22 12 C 22 17.52 17.52 22 12 22 C 6.48 22 2 17.52 2 12 C 2 6.48 6.48 2 12 2 C 17.52 2 22 6.48 22 12 M 12 2 C 6.67 7.6 6.67 16.4 12 22 C 17.33 16.4 17.33 7.6 12 2 M 2 12 L 22 12");
@@ -80,6 +85,7 @@ public final class LucideIconData {
         // cubic constant plus the upstream lucide circle-check-big check stroke.
         PATHS.put("PICTURE_IN_PICTURE", "M 21 9 L 21 6 C 21 4.9 20.1 4 19 4 L 4 4 C 2.9 4 2 4.9 2 6 L 2 16 C 2 17.1 2.9 18 4 18 L 8 18 M 14 13 L 20 13 C 21.1 13 22 13.9 22 15 L 22 18 C 22 19.1 21.1 20 20 20 L 14 20 C 12.9 20 12 19.1 12 18 L 12 15 C 12 13.9 12.9 13 14 13 Z");
         PATHS.put("CIRCLE_CHECK", "M 22 12 C 22 17.52 17.52 22 12 22 C 6.48 22 2 17.52 2 12 C 2 6.48 6.48 2 12 2 C 17.52 2 22 6.48 22 12 M 9 12 L 11 14 L 15 10");
+        PATHS.put("DOWNLOAD", "M 21 15 L 12 15 L 12 21 M 12 21 L 7 16 M 12 21 L 17 16 M 21 3 L 21 9");
     }
 
     /** Path data for a Kind name, or null when the kind has no entry. */

@@ -96,6 +96,95 @@ public final class PanelDialog {
     /** A filtered list keeps one height while its rows come and go, instead of jumping. */
     private boolean fixedHeight;
 
+    /** Bottom sheet instead of a centred card: see {@link #sheet()}. */
+    private boolean sheet;
+    private float dragStartY;
+    private boolean dragging;
+
+    /**
+     * Presents as the settings panel's bottom sheet: full width, flush with the bottom edge (its
+     * content kept clear of the navigation bar), rounded top corners, a grab handle, sliding up in
+     * and down out, and pulled down to close.
+     */
+    public PanelDialog sheet() {
+        sheet = true;
+        surface.setSheet(true);
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{com.eza.spicyex.settings.PanelStyle.COL_CARD_TOP | 0xFF000000,
+                        com.eza.spicyex.settings.PanelStyle.COL_CARD | 0xFF000000});
+        float r = dp(30);
+        bg.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
+        bg.setStroke(Math.max(1, dp(1)), com.eza.spicyex.settings.PanelStyle.COL_CARD_BORDER);
+        root.setBackground(bg);
+        root.setClipToOutline(true);
+        root.setPadding(dp(20), 0, dp(20), dp(16));
+        FrameLayout handle = new FrameLayout(context);
+        View pill = new View(context);
+        GradientDrawable pillBg = new GradientDrawable();
+        pillBg.setColor(0x59FFFFFF);
+        pillBg.setCornerRadius(dp(3));
+        pill.setBackground(pillBg);
+        handle.addView(pill, new FrameLayout.LayoutParams(dp(40), dp(5), Gravity.CENTER));
+        root.addView(handle, 0, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(26)));
+        // Pulled down from the handle or the title, or from the list when it is at its top.
+        View.OnTouchListener pull = (v, event) -> pull(event);
+        handle.setOnTouchListener(pull);
+        header.setOnTouchListener(pull);
+        scroll.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                dragStartY = event.getRawY();
+                dragging = false;
+                return false;
+            }
+            if (!dragging && event.getActionMasked() == android.view.MotionEvent.ACTION_MOVE
+                    && event.getRawY() - dragStartY > dp(12) && !scroll.canScrollVertically(-1)) {
+                dragging = true;
+            }
+            return dragging && pull(event);
+        });
+        surface.setOnApplyWindowInsetsListener((v, insets) -> {
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
+                v.setPadding(bars.left, bars.top, bars.right, 0);
+                root.setPadding(dp(20), 0, dp(20), dp(16) + bars.bottom);
+            } else {
+                v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                        insets.getSystemWindowInsetRight(), 0);
+                root.setPadding(dp(20), 0, dp(20), dp(16) + insets.getSystemWindowInsetBottom());
+            }
+            return insets;
+        });
+        return this;
+    }
+
+    private boolean pull(android.view.MotionEvent event) {
+        switch (event.getActionMasked()) {
+            case android.view.MotionEvent.ACTION_DOWN:
+                dragStartY = event.getRawY();
+                dragging = true;
+                root.animate().cancel();
+                return true;
+            case android.view.MotionEvent.ACTION_MOVE:
+                if (!dragging) return false;
+                root.setTranslationY(Math.max(0f, event.getRawY() - dragStartY));
+                return true;
+            case android.view.MotionEvent.ACTION_UP:
+            case android.view.MotionEvent.ACTION_CANCEL:
+                if (!dragging) return false;
+                dragging = false;
+                if (root.getTranslationY() > root.getHeight() * 0.25f) {
+                    dismiss();
+                } else {
+                    root.animate().translationY(0f).setDuration(220)
+                            .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+                }
+                return true;
+            default:
+                return dragging;
+        }
+    }
+
     /** Keeps one height (90% of the screen) whatever the content, for lists that change size. */
     public PanelDialog tall() {
         fixedHeight = true;
@@ -604,8 +693,8 @@ public final class PanelDialog {
      * would push its own end off the bottom of a window sized for the folded card.
      */
     private void applyCardSize() {
-        int width = (int) (context.getResources().getDisplayMetrics().widthPixels * 0.92f);
-        int maxHeight = (int) (context.getResources().getDisplayMetrics().heightPixels * 0.90f);
+        int width = (int) (context.getResources().getDisplayMetrics().widthPixels * (sheet ? 1f : 0.92f));
+        int maxHeight = (int) (context.getResources().getDisplayMetrics().heightPixels * (sheet ? 0.85f : 0.90f));
         if (surface.availableWidth() > 0) width = Math.min(width, surface.availableWidth());
         if (surface.availableHeight() > 0) maxHeight = Math.min(maxHeight, surface.availableHeight());
         LinearLayout.LayoutParams scrollParams = (LinearLayout.LayoutParams) scroll.getLayoutParams();
@@ -622,12 +711,13 @@ public final class PanelDialog {
 
         int cardHeight = constrained ? maxHeight : ViewGroup.LayoutParams.WRAP_CONTENT;
         FrameLayout.LayoutParams cardParams = (FrameLayout.LayoutParams) root.getLayoutParams();
+        int gravity = sheet ? Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL : Gravity.CENTER;
         if (cardParams == null) {
-            cardParams = new FrameLayout.LayoutParams(width, cardHeight, Gravity.CENTER);
+            cardParams = new FrameLayout.LayoutParams(width, cardHeight, gravity);
         } else {
             cardParams.width = width;
             cardParams.height = cardHeight;
-            cardParams.gravity = Gravity.CENTER;
+            cardParams.gravity = gravity;
         }
         root.setLayoutParams(cardParams);
     }

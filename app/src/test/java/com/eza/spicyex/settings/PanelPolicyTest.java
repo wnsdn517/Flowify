@@ -38,6 +38,30 @@ public class PanelPolicyTest {
     }
 
     @Test
+    public void doubleTapLikeSubRowsFollowTheMasterSwitch() {
+        PanelSnapshot off = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.DOUBLE_TAP_LIKE, false).build();
+        assertFalse(PanelPolicy.shouldRender(Settings.DOUBLE_TAP_LIKE_MARK, off));
+        assertFalse(PanelPolicy.shouldRender(Settings.DOUBLE_TAP_LIKE_EFFECT, off));
+
+        PanelSnapshot on = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.DOUBLE_TAP_LIKE, true).build();
+        assertTrue(PanelPolicy.shouldRender(Settings.DOUBLE_TAP_LIKE_MARK, on));
+        assertTrue(PanelPolicy.shouldRender(Settings.DOUBLE_TAP_LIKE_EFFECT, on));
+    }
+
+    @Test
+    public void shareGestureHintFollowsLongPressShare() {
+        PanelSnapshot off = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.LONG_PRESS_SHARE, false).build();
+        assertFalse(PanelPolicy.shouldRender(Settings.SHARE_GESTURE_HINT, off));
+
+        PanelSnapshot on = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.LONG_PRESS_SHARE, true).build();
+        assertTrue(PanelPolicy.shouldRender(Settings.SHARE_GESTURE_HINT, on));
+    }
+
+    @Test
     public void pipOptionsFollowMasterSwitch() {
         PanelSnapshot off = PanelSnapshot.builder().build();
         assertTrue(PanelPolicy.shouldRender(Settings.PIP_ENABLED, off));
@@ -119,7 +143,9 @@ public class PanelPolicyTest {
                 .languageModelReady(false).build();
         assertTrue(PanelPolicy.shouldRender(Settings.DOWNLOAD_LANGUAGE_MODELS, missing));
         assertFalse(PanelPolicy.shouldRender(Settings.TRANSLITERATION_ENABLED, missing));
-        assertFalse(PanelPolicy.shouldRender(Settings.TRANSLATION_ENABLED, missing));
+        // Translation (Google/AI) never needed the offline model - deleting it must not take the
+        // Translation section out of the panel too.
+        assertTrue(PanelPolicy.shouldRender(Settings.TRANSLATION_ENABLED, missing));
 
         PanelSnapshot ready = PanelSnapshot.builder().allCapabilities()
                 .languageModelReady(true).build();

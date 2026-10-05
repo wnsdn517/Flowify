@@ -231,6 +231,9 @@ dependencies {
     // interceptor chain on the JVM. Production stays compileOnly (no API in APK).
     testImplementation 'io.github.libxposed:api:102.0.0'
     compileOnly 'io.github.libxposed:api:102.0.0'
+    // Motion artwork (Apple's clips are HLS, which the platform MediaPlayer cannot decode).
+    implementation 'androidx.media3:media3-exoplayer:1.8.0'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.8.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation 'com.google.code.gson:gson:2.13.1'
     implementation 'org.luckypray:dexkit:2.0.0'
@@ -239,11 +242,19 @@ dependencies {
     // where 4.x burned the full connect timeout per new connection. See
     // docs/backlog/HAPPY_EYEBALLS_TRANSPORT_REQUIREMENTS.md.
     implementation 'com.squareup.okhttp3:okhttp:5.0.0'
+    // Genius fallback source: parses the lyrics page's HTML (see GeniusAdapter).
+    implementation 'org.jsoup:jsoup:1.18.3'
     // WebViewCompat/WebViewFeature - document-start JS injection for the Connect web player.
     implementation 'androidx.webkit:webkit:1.13.0'
     implementation 'org.apache.tika:tika-langdetect-charsoup-core:4.0.0'
     implementation 'com.atilika.kuromoji:kuromoji-unidic:0.9.0'
     implementation 'com.belerweb:pinyin4j:2.5.1'
+    // NewPipe Extractor for YouTube Music stream resolution (stripped of Utils.class conflict).
+    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.3'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+    implementation 'com.google.protobuf:protobuf-javalite:4.35.0'
+    implementation 'org.mozilla:rhino:1.8.1'
+    implementation 'org.mozilla:rhino-engine:1.8.1'
 }
 
 // Creates the ZIP consumed by LanguageModelPack. Publish it from a trusted HTTPS

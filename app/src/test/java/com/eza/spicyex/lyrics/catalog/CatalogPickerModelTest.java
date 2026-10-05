@@ -179,15 +179,25 @@ public class CatalogPickerModelTest {
         List<Row> rows = CatalogPickerModel.build(Collections.<CatalogCandidate>emptyList(),
                 Collections.<SourceId, ProviderStatus>emptyMap(), null, null);
 
-        assertEquals(1 + 6 + 2, rows.size());
+        assertEquals(1 + 11 + 1, rows.size());
         assertEquals("Auto · nothing stored yet", rows.get(0).title);
         // The Auto row carries its state in the title and the selected-green colour only. No
         // subtitle in any state, so no state text can be parked in this menu again.
         assertEquals("", rows.get(0).subtitle);
-        assertEquals(RowKind.ACTION_CHECK_ALL, rows.get(7).kind);
-        assertEquals("Check all sources in order", rows.get(7).title);
-        assertEquals(RowKind.ACTION_DELETE_TRACK, rows.get(8).kind);
-        assertEquals("Clear saved lyrics", rows.get(8).title);
+        assertEquals(RowKind.ACTION_CHECK_ALL, rows.get(12).kind);
+        assertEquals("Check all sources in order", rows.get(12).title);
+        for (Row row : rows) assertTrue(row.kind != RowKind.ACTION_DELETE_TRACK);
+    }
+
+    @Test
+    public void defaultOnSourcesComeBeforeOptInOnes() {
+        List<Row> rows = CatalogPickerModel.build(Collections.<CatalogCandidate>emptyList(),
+                Collections.<SourceId, ProviderStatus>emptyMap(), null, null);
+        List<SourceId> order = new java.util.ArrayList<>();
+        for (Row row : rows) if (row.kind == RowKind.SOURCE) order.add(row.sourceId);
+        assertEquals(java.util.Arrays.asList(SourceId.APPLE, SourceId.SPOTIFY_NATIVE, SourceId.AMLL,
+                SourceId.LRCLIB, SourceId.BETTERLYRICS, SourceId.QQ, SourceId.NETEASE,
+                SourceId.KUGOU, SourceId.GENIUS, SourceId.MUSIXMATCH, SourceId.BINILYRICS), order);
     }
 
     @Test
@@ -216,7 +226,7 @@ public class CatalogPickerModelTest {
         Row spotify = sourceRow(rows, SourceId.SPOTIFY_NATIVE);
         assertEquals("Failed · tap to retry", spotify.subtitle);
         assertEquals(CatalogPickerModel.DataMark.EMPTY, spotify.mark);
-        assertEquals("Check all: Spotify, LRCLIB", rows.get(7).subtitle);
+        assertEquals("Check all: Spotify, LRCLIB", rows.get(12).subtitle);
     }
 
     @Test

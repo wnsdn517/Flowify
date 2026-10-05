@@ -30,6 +30,11 @@ final class NativeSpicyShellView extends FrameLayout {
         delegate.stop();
     }
 
+    /** Re-applies the status-bar preference (resume/focus paths that do not remount). */
+    void refreshStatusBar() {
+        delegate.refreshStatusBar();
+    }
+
     /** Controls-free presentation for a picture-in-picture window, laid out for a full screen
      *  {@code screenHeightPx} tall whose top {@code cropTopPx} rows are not shown. */
     void setPipPresentation(int screenHeightPx, int cropTopPx) {
@@ -52,6 +57,10 @@ final class NativeSpicyShellView extends FrameLayout {
     /** Lyrics (or a no-lyrics state) are on screen, not just the empty shell. */
     boolean hasLyricsDocument() {
         return delegate.hasLyricsDocument();
+    }
+
+    boolean matchesCurrentLayoutConfiguration() {
+        return delegate.matchesCurrentLayoutConfiguration();
     }
 
     /** Lets the layout editor take a back press first (close its sheet, then itself). */

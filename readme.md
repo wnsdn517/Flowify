@@ -17,7 +17,7 @@ Xiaomi HyperOS 3 lockscreen/AOD integration: [HyperGlow](https://github.com/amar
 
 Have an idea, found a bug, or just want to talk? Pick a channel.
 
-<a href="https://t.me/spicy_ex"><img src="https://img.shields.io/badge/Announcements-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Announcements"></a> <a href="https://t.me/spicy_ex_discussion"><img src="https://img.shields.io/badge/Discussion-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Discussion"></a> <a href="https://t.me/spicy_ex_ci"><img src="https://img.shields.io/badge/CI_builds-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="CI_builds"></a> <a href="https://github.com/wnsdn517/spicy-ex/discussions"><img src="https://img.shields.io/badge/GitHub_Discussions-181818?style=for-the-badge&logo=github&logoColor=white" alt="GitHub_Discussions"></a>
+<a href="https://t.me/spicy_ex"><img src="https://img.shields.io/badge/Announcements-229ED9?style=flat&logo=telegram&logoColor=white" alt="Announcements"></a> <a href="https://t.me/spicy_ex_discussion"><img src="https://img.shields.io/badge/Discussion-7B61FF?style=flat&logo=telegram&logoColor=white" alt="Discussion"></a> <a href="https://t.me/spicy_ex_ci"><img src="https://img.shields.io/badge/CI_builds-2EA44F?style=flat&logo=telegram&logoColor=white" alt="CI_builds"></a> <a href="https://github.com/wnsdn517/spicy-ex/discussions"><img src="https://img.shields.io/badge/GitHub_Discussions-181818?style=flat&logo=github&logoColor=white" alt="GitHub_Discussions"></a>
 
 <sub>Bot in Discussion: <code>/release</code> · <code>/beta</code> · <code>/ci</code></sub>
 
@@ -31,8 +31,8 @@ Have an idea, found a bug, or just want to talk? Pick a channel.
 - **Double-tap like:** 14 effect styles, heart/star/like-button mark, and a Try it trial bar.
 - **Share cards:** 7 designs, artist-photo backdrop, multi-line picking, Instagram / Facebook Stories.
 - **Picture-in-Picture:** floating lyrics with song info, landscape layout and several window shapes.
-- **Ad-free listening:** mute ads or replace them with generated music, plus an ad card on the lyrics screen.
-- **Spicy Connect:** an ad-free web player that appears as a Spotify Connect device.
+- **Seamless Listening:** mute ads or replace them with generated music, plus an ad card on the lyrics screen.
+- **Spicy Connect:** a web player with Seamless Listening built in that appears as a Spotify Connect device.
 - **Settings:** bottom sheet with search, About page, fork versioning; Korean and Japanese translations completed.
 
 ## Features

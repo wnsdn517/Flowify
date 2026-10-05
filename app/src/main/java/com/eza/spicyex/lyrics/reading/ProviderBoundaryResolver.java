@@ -124,6 +124,13 @@ public final class ProviderBoundaryResolver {
         if (("1".equals(previous) || "2".equals(previous)) && nextCp == '人') {
             return JoinRelation.ATTACHED;
         }
+        // "doin'" + "it": an apostrophe that ENDS a word of three or more letters is the dropped g
+        // (or a plural possessive), the end of the word - joining it read "doin'it". A short
+        // fragment before it ("y'" + "all", "ma'" + "am") is the inside of one word and stays.
+        if (isApostrophe(previousCp) && letterRunBeforeTrailingApostrophe(previous) >= 3
+                && Character.isLetter(nextCp)) {
+            return JoinRelation.BOUNDARY;
+        }
         if (isClosingPunctuation(nextCp) || isJoinPunctuation(nextCp)
                 || isOpeningPunctuation(previousCp) || isJoinPunctuation(previousCp)) {
             return JoinRelation.ATTACHED;
@@ -176,6 +183,25 @@ public final class ProviderBoundaryResolver {
         return type == Character.START_PUNCTUATION
                 || type == Character.INITIAL_QUOTE_PUNCTUATION
                 || "([{〈《「『【〔〖〘〚".indexOf(cp) >= 0;
+    }
+
+    private static boolean isApostrophe(int cp) {
+        return cp == '\'' || cp == '’';
+    }
+
+    /** Letters directly before the text's trailing apostrophe ("doin'" -> 4, "y'" -> 1). */
+    static int letterRunBeforeTrailingApostrophe(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        int end = text.offsetByCodePoints(text.length(), -1);
+        int count = 0;
+        int i = end;
+        while (i > 0) {
+            int cp = text.codePointBefore(i);
+            if (!Character.isLetter(cp)) break;
+            count++;
+            i -= Character.charCount(cp);
+        }
+        return count;
     }
 
     private static boolean isJoinPunctuation(int cp) {
