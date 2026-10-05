@@ -20,21 +20,19 @@ import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.downloader.Request;
 import org.schabi.newpipe.extractor.downloader.Response;
 import org.schabi.newpipe.extractor.exceptions.ExtractionException;
-import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler;
 import org.schabi.newpipe.extractor.stream.AudioStream;
 import org.schabi.newpipe.extractor.stream.DeliveryMethod;
 import org.schabi.newpipe.extractor.stream.StreamExtractor;
-
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,14 +40,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
 /**
- * Minimal YouTube Music downloader for Spicy EX.
- * Searches YouTube for the current Spotify track, extracts the best audio stream via NewPipe,
- * and downloads it to the app's internal files directory.
+ * Minimal YouTube downloader for Spicy EX.
+ * Uses NewPipe Extractor for stream extraction, simple HTTP search for videoId.
  */
 public final class YoutubeDownloader {
     private static final String TAG = "YoutubeDownloader";
@@ -66,11 +62,8 @@ public final class YoutubeDownloader {
             .followSslRedirects(true)
             .build();
 
-    // NewPipe is initialized once; the extractor is created per extraction
     private volatile boolean newPipeInitialized = false;
     private final Object initLock = new Object();
-
-    // Serialize extractions (Rhino JS parsing is CPU-heavy and not thread-safe)
     private final ReentrantLock extractionLock = new ReentrantLock();
 
     private volatile DownloadTask currentTask;
@@ -85,7 +78,7 @@ public final class YoutubeDownloader {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "YouTube Music Downloads",
+                    "YouTube Downloads",
                     NotificationManager.IMPORTANCE_LOW
             );
             channel.setDescription("Downloads from YouTube for offline playback");
@@ -207,7 +200,7 @@ public final class YoutubeDownloader {
                     return;
                 }
 
-                // Step 1: Search YouTube for the track
+                // Step 1: Search YouTube for the track (simple web search)
                 String query = track.title + " " + track.artist;
                 XpLog.log(TAG + " Searching YouTube for: " + query);
                 showNotification("Downloading...", "Searching: " + query, 0, true);
@@ -255,39 +248,54 @@ public final class YoutubeDownloader {
             }
         }
 
-        /** Searches YouTube and returns the best matching videoId. */
+        /** YouTube web search to get the top result's videoId. */
         private String searchYouTube(String query) {
             try {
-                ensureNewPipeInit();
-                // Use YouTube service (not YouTubeMusic) for search - more reliable
-                org.schabi.newpipe.extractor.services.youtube.YouTubeService service =
-                        (org.schabi.newpipe.extractor.services.youtube.YouTubeService) NewPipe.getService(ServiceList.YouTube);
-                ListLinkHandler handler = service.getSearchLinkHandler(query, 0);
-                List<String> urls = new ArrayList<>();
-                while (handler.hasNext()) {
-                    List<String> batch = handler.next();
-                    if (batch != null) urls.addAll(batch);
-                    if (!urls.isEmpty()) break;
-                }
+                String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
+                String url = "https://www.youtube.com/results?search_query=" + encodedQuery;
 
-                // Filter for watch URLs
-                for (String url : urls) {
-                    if (url.contains("watch?v=")) {
-                        String videoId = url.substring(url.indexOf("watch?v=") + 8);
-                        int amp = videoId.indexOf('&');
-                        if (amp > 0) videoId = videoId.substring(0, amp);
-                        if (videoId.length() == 11) return videoId;
+                okhttp3.Request request = new okhttp3.Request.Builder()
+                        .url(url)
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36")
+                        .header("Accept-Language", "en-US,en;q=0.9")
+                        .build();
+
+                okhttp3.Response response = httpClient.newCall(request).execute();
+                try (ResponseBody body = response.body()) {
+                    if (!response.isSuccessful() || body == null) {
+                        XpLog.log(TAG + " Search HTTP " + response.code() + " for: " + query);
+                        return null;
                     }
+                    String html = body.string();
+                    XpLog.log(TAG + " Search got " + html.length() + " chars for: " + query);
+                    if (html.contains("consent.youtube.com") || html.contains("consent_notices")) {
+                        XpLog.log(TAG + " Search hit a consent page; cannot parse results");
+                        return null;
+                    }
+
+                    // 1) ytInitialData JSON carries every result as "videoId":"<11 chars>".
+                    java.util.regex.Matcher m = java.util.regex.Pattern
+                            .compile("\"videoId\":\"([A-Za-z0-9_-]{11})\"")
+                            .matcher(html);
+                    if (m.find()) return m.group(1);
+
+                    // 2) Fallback: plain watch links.
+                    m = java.util.regex.Pattern
+                            .compile("watch\\?v=([A-Za-z0-9_-]{11})")
+                            .matcher(html);
+                    if (m.find()) return m.group(1);
+
+                    XpLog.log(TAG + " No videoId found in search HTML");
+                    return null;
                 }
-                return null;
-            } catch (ExtractionException | IOException e) {
+            } catch (IOException e) {
                 XpLog.log(TAG + " Search failed: " + e);
                 return null;
             }
         }
 
         /** Holds extracted stream info. */
-        private static class AudioStreamInfo {
+        private final class AudioStreamInfo {
             final String url;
             final java.util.Map<String, String> headers;
             final int bitrate;
@@ -304,9 +312,7 @@ public final class YoutubeDownloader {
             extractionLock.lock();
             try {
                 String watchUrl = "https://www.youtube.com/watch?v=" + videoId;
-                org.schabi.newpipe.extractor.services.youtube.YouTubeService service =
-                        (org.schabi.newpipe.extractor.services.youtube.YouTubeService) NewPipe.getService(ServiceList.YouTube);
-                StreamExtractor extractor = service.getStreamExtractor(watchUrl);
+                StreamExtractor extractor = ServiceList.YouTube.getStreamExtractor(watchUrl);
                 extractor.fetchPage(); // Required before accessing audioStreams
 
                 List<AudioStream> audioStreams = extractor.getAudioStreams();
@@ -338,8 +344,8 @@ public final class YoutubeDownloader {
                 AudioStream chosen = bestM4a != null ? bestM4a : bestAny;
                 if (chosen == null) return null;
 
-                // AudioStream.headers is a field (Map<String, String>), not a method
-                return new AudioStreamInfo(chosen.getUrl(), chosen.headers, chosen.getAverageBitrate());
+                // AudioStream exposes no headers; the fetch wears a plain UA below.
+                return new AudioStreamInfo(chosen.getUrl(), null, chosen.getAverageBitrate());
             } catch (ExtractionException | IOException e) {
                 XpLog.log(TAG + " Stream extraction failed: " + e);
                 return null;
@@ -350,13 +356,12 @@ public final class YoutubeDownloader {
 
         /** Downloads a stream URL to a file with progress updates. */
         private void downloadStream(String url, File destFile, java.util.Map<String, String> headers) throws IOException {
-            Request.Builder requestBuilder = new Request.Builder().url(url);
+            okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder().url(url);
             if (headers != null) {
                 for (java.util.Map.Entry<String, String> h : headers.entrySet()) {
                     requestBuilder.addHeader(h.getKey(), h.getValue());
                 }
             }
-            // googlevideo URLs need a proper User-Agent matching the one that minted the URL
             requestBuilder.addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 
             okhttp3.Request request = requestBuilder.build();
@@ -403,7 +408,7 @@ public final class YoutubeDownloader {
     }
 
     /** OkHttp-backed Downloader for NewPipe. */
-    private static class OkHttpDownloader extends Downloader {
+    private static final class OkHttpDownloader extends Downloader {
         private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
                 .followRedirects(true)
                 .followSslRedirects(true)
@@ -411,14 +416,14 @@ public final class YoutubeDownloader {
 
         @Override
         public Response execute(Request request) {
-            Request.Builder builder = new Request.Builder()
-                    .method(request.getHttpMethod(), request.getDataToSend() != null
-                            ? RequestBody.create(request.getDataToSend(), MediaType.parse("application/json"))
+            okhttp3.Request.Builder builder = new okhttp3.Request.Builder()
+                    .method(request.httpMethod(), request.dataToSend() != null
+                            ? RequestBody.create(request.dataToSend(), MediaType.parse("application/json"))
                             : null)
-                    .url(request.getUrl());
+                    .url(request.url());
 
             boolean hasUA = false;
-            for (java.util.Map.Entry<String, List<String>> entry : request.getHeaders().entrySet()) {
+            for (java.util.Map.Entry<String, List<String>> entry : request.headers().entrySet()) {
                 String name = entry.getKey();
                 List<String> values = entry.getValue();
                 if ("User-Agent".equalsIgnoreCase(name) && !values.isEmpty()) {
@@ -437,7 +442,7 @@ public final class YoutubeDownloader {
                 return new Response(
                         response.code(),
                         response.message(),
-                        response.headers.toMultimap(),
+                        response.headers().toMultimap(),
                         response.body() != null ? response.body().string() : "",
                         response.request().url().toString()
                 );
