@@ -566,7 +566,11 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
 
     private View addButton;
     private Drawable addButtonBackground;
+    private Drawable addButtonStyledBackground;
     private int addButtonPaddingLeft, addButtonPaddingTop, addButtonPaddingRight, addButtonPaddingBottom;
+    private int addButtonStyledWidth = -1;
+    private int addButtonStyledHeight = -1;
+    private final WeakHashMap<View, AddButtonIconState> addButtonIconStates = new WeakHashMap<>();
 
     /**
      * Spotify's like/add button (a custom view, "Add item") in Apple's round, translucent style,
@@ -586,29 +590,104 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
         if (found == null || found.getVisibility() == View.GONE) return;
         if (addButton != found) {
+            restoreAddButton();
             addButton = found;
             addButtonBackground = found.getBackground();
             addButtonPaddingLeft = found.getPaddingLeft();
             addButtonPaddingTop = found.getPaddingTop();
             addButtonPaddingRight = found.getPaddingRight();
             addButtonPaddingBottom = found.getPaddingBottom();
+            int contentInset = Math.round(
+                    4f * activity.getResources().getDisplayMetrics().density);
+            found.setPadding(addButtonPaddingLeft + contentInset,
+                    addButtonPaddingTop + contentInset,
+                    addButtonPaddingRight + contentInset,
+                    addButtonPaddingBottom + contentInset);
         }
-        if (!(found.getBackground() instanceof android.graphics.drawable.GradientDrawable)) {
+        int width = found.getWidth();
+        int height = found.getHeight();
+        if (width != addButtonStyledWidth || height != addButtonStyledHeight) {
+            addButtonStyledWidth = width;
+            addButtonStyledHeight = height;
+            float density = activity.getResources().getDisplayMetrics().density;
+            int visualSize = Math.round(ACTION_BUTTON_SIZE_DP * density);
+            int side = width > 0 && height > 0 ? Math.min(visualSize, Math.min(width, height))
+                    : visualSize;
             android.graphics.drawable.GradientDrawable circle =
                     new android.graphics.drawable.GradientDrawable();
             circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             circle.setColor(0x33FFFFFF);
-            found.setBackground(circle);
+            int insetX = width > side ? (width - side) / 2 : 0;
+            int insetY = height > side ? (height - side) / 2 : 0;
+            addButtonStyledBackground = insetX == 0 && insetY == 0 ? circle
+                    : new android.graphics.drawable.InsetDrawable(
+                            circle, insetX, insetY, insetX, insetY);
+        }
+        if (addButtonStyledBackground != null
+                && found.getBackground() != addButtonStyledBackground) {
+            found.setBackground(addButtonStyledBackground);
+        }
+        shrinkAddButtonIcons(found);
+    }
+
+    private void shrinkAddButtonIcons(View root) {
+        float density = activity.getResources().getDisplayMetrics().density;
+        float targetSize = ACTION_ICON_SIZE_DP * density;
+        ArrayDeque<View> pending = new ArrayDeque<>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            View view = pending.removeFirst();
+            if (view instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) view;
+                for (int i = 0; i < group.getChildCount(); i++) {
+                    pending.addLast(group.getChildAt(i));
+                }
+            }
+            if (!(view instanceof ImageView) || view.getWidth() <= 0 || view.getHeight() <= 0) {
+                continue;
+            }
+            ImageView icon = (ImageView) view;
+            if (icon.getDrawable() == null) continue;
+            AddButtonIconState state = addButtonIconStates.get(icon);
+            if (state == null) {
+                state = new AddButtonIconState(icon.getScaleX(), icon.getScaleY());
+                addButtonIconStates.put(icon, state);
+            }
+            float factor = Math.min(1f, targetSize / Math.max(icon.getWidth(), icon.getHeight()));
+            icon.setScaleX(state.scaleX * factor);
+            icon.setScaleY(state.scaleY * factor);
         }
     }
 
     private void restoreAddButton() {
+        for (java.util.Map.Entry<View, AddButtonIconState> entry : addButtonIconStates.entrySet()) {
+            entry.getValue().restore(entry.getKey());
+        }
+        addButtonIconStates.clear();
         if (addButton != null) {
             addButton.setBackground(addButtonBackground);
             addButton.setPadding(addButtonPaddingLeft, addButtonPaddingTop,
                     addButtonPaddingRight, addButtonPaddingBottom);
         }
         addButton = null;
+        addButtonStyledBackground = null;
+        addButtonStyledWidth = -1;
+        addButtonStyledHeight = -1;
+    }
+
+    private static final class AddButtonIconState {
+        final float scaleX;
+        final float scaleY;
+
+        AddButtonIconState(float scaleX, float scaleY) {
+            this.scaleX = scaleX;
+            this.scaleY = scaleY;
+        }
+
+        void restore(View view) {
+            view.setScaleX(scaleX);
+            view.setScaleY(scaleY);
+        }
     }
 
     private boolean lastStatusBarLight;
