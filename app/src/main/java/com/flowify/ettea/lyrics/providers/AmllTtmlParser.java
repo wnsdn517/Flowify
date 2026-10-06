@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -13,13 +13,13 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
-import static com.eza.spicyex.lyrics.LyricUtils.cleanInvisibles;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.cleanInvisibles;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /**
  * AMLL TTML DB adapter: word-timed {@code <p>/<span>} documents become {@link LyricsDocument}s

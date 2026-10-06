@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
@@ -12,9 +12,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.ui.ActionIconDrawable;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.ui.ActionIconDrawable;
 
 /**
  * Says so on the lyrics screen when playback moves to another device: a frosted-glass card (the
@@ -116,8 +116,8 @@ final class DeviceChangeBanner {
                 phone ? ActionIconDrawable.Kind.SMARTPHONE : ActionIconDrawable.Kind.SPEAKER);
     }
 
-    private com.eza.spicyex.ui.SettingsUiStrings strings() {
-        return com.eza.spicyex.ui.UiLanguage.strings(context, config.get(Settings.UI_LANGUAGE));
+    private com.flowify.ettea.ui.SettingsUiStrings strings() {
+        return com.flowify.ettea.ui.UiLanguage.strings(context, config.get(Settings.UI_LANGUAGE));
     }
 
     private String phoneLabel() {
@@ -172,7 +172,7 @@ final class DeviceChangeBanner {
             host.removeView(old);
         }
         float density = context.getResources().getDisplayMetrics().density;
-        int accent = com.eza.spicyex.settings.PanelStyle.COL_ACCENT | 0xFF000000;
+        int accent = com.flowify.ettea.settings.PanelStyle.COL_ACCENT | 0xFF000000;
         int height = dp(density, 64);
         // A chip: both ends full semicircles. The 40dp badge with 12dp padding sits concentric
         // with the left end.
@@ -224,7 +224,7 @@ final class DeviceChangeBanner {
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         name.setMaxWidth(dp(density, 230));
-        java.lang.ref.WeakReference<android.graphics.Typeface> font = com.eza.spicyex.References.beautifulFont;
+        java.lang.ref.WeakReference<android.graphics.Typeface> font = com.flowify.ettea.References.beautifulFont;
         android.graphics.Typeface face = font == null ? null : font.get();
         name.setTypeface(face == null ? android.graphics.Typeface.DEFAULT_BOLD
                 : android.graphics.Typeface.create(face, android.graphics.Typeface.BOLD));
@@ -256,7 +256,7 @@ final class DeviceChangeBanner {
         showing = card;
 
         View[] parts = {caption, name};
-        if (!com.eza.spicyex.ui.Motion.animationsEnabled()) {
+        if (!com.flowify.ettea.ui.Motion.animationsEnabled()) {
             main.postDelayed(() -> dismiss(card, parts, badge, false), HOLD_MS);
             return;
         }

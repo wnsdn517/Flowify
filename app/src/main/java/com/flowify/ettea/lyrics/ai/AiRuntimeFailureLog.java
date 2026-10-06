@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** Privacy-safe linkage diagnostics for code running inside Spotify's class loader. */
 public final class AiRuntimeFailureLog {
@@ -27,7 +27,7 @@ public final class AiRuntimeFailureLog {
         for (int depth = 0; cursor != null && depth < 6; depth++) {
             for (StackTraceElement frame : cursor.getStackTrace()) {
                 String owner = frame.getClassName();
-                if (!owner.startsWith("com.eza.spicyex.lyrics.ai.")) continue;
+                if (!owner.startsWith("com.flowify.ettea.lyrics.ai.")) continue;
                 int split = owner.lastIndexOf('.');
                 return owner.substring(split + 1) + "." + frame.getMethodName();
             }

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -19,7 +19,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 /**
  * Line-synced fallback from KuGou's public mobile/lyrics endpoints - a Chinese catalogue that
@@ -169,9 +169,9 @@ public final class KuGouAdapter {
                 if (!song.has("hash")) continue;
                 int duration = song.has("duration") ? song.get("duration").getAsInt() : -1;
                 if (target != null && !TrackMatchScorer.score(target,
-                        AppleTtmlMirrorAdapter.searchTitle(com.eza.spicyex.lyrics.Json.optString(song, "songname")),
-                        TrackMatchScorer.splitArtists(com.eza.spicyex.lyrics.Json.optString(song, "singername")),
-                        com.eza.spicyex.lyrics.Json.optString(song, "album_name"),
+                        AppleTtmlMirrorAdapter.searchTitle(com.flowify.ettea.lyrics.Json.optString(song, "songname")),
+                        TrackMatchScorer.splitArtists(com.flowify.ettea.lyrics.Json.optString(song, "singername")),
+                        com.flowify.ettea.lyrics.Json.optString(song, "album_name"),
                         duration > 0 ? duration * 1000L : 0L).accepted()) {
                     continue;
                 }
@@ -244,12 +244,12 @@ public final class KuGouAdapter {
                 if (!element.isJsonObject()) continue;
                 JsonObject candidate = element.getAsJsonObject();
                 if (!candidate.has("id") || !candidate.has("accesskey")) continue;
-                String song = com.eza.spicyex.lyrics.Json.optString(candidate, "song");
-                String singer = com.eza.spicyex.lyrics.Json.optString(candidate, "singer");
+                String song = com.flowify.ettea.lyrics.Json.optString(candidate, "song");
+                String singer = com.flowify.ettea.lyrics.Json.optString(candidate, "singer");
                 if (target != null && !(song.isEmpty() && singer.isEmpty())
                         && !TrackMatchScorer.score(target, AppleTtmlMirrorAdapter.searchTitle(song),
                         TrackMatchScorer.splitArtists(singer), null,
-                        (long) com.eza.spicyex.lyrics.Json.optDouble(candidate, 0d, "duration")).accepted()) {
+                        (long) com.flowify.ettea.lyrics.Json.optDouble(candidate, 0d, "duration")).accepted()) {
                     continue;
                 }
                 return new Candidate(candidate.get("id").getAsString(), candidate.get("accesskey").getAsString());

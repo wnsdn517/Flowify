@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -22,9 +22,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpReflect;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpReflect;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -47,13 +47,13 @@ import java.util.WeakHashMap;
 final class LyricsPipController {
     private static final String PIP_HOST_ACTIVITY =
             "com.spotify.nowplaying.musicinstallation.NowPlayingActivity";
-    private static final String EXTRA_PIP = "com.eza.spicyex.LYRICS_PIP";
+    private static final String EXTRA_PIP = "com.flowify.ettea.LYRICS_PIP";
     /** With EXTRA_PIP: open the host full screen ("docked"), PiP armed to auto-enter on leave. */
-    private static final String EXTRA_DOCK = "com.eza.spicyex.LYRICS_PIP_DOCK";
+    private static final String EXTRA_DOCK = "com.flowify.ettea.LYRICS_PIP_DOCK";
     private static final int TAG_DOCK_ROOT = 0x53504C44; // SPLD
     private static final String LYRICS_PAGE_ACTIVITY =
             "com.spotify.lyrics.fullscreenview.page.LyricsFullscreenPageActivity";
-    private static final String ACTION_CONTROL = "com.eza.spicyex.LYRICS_PIP_CONTROL";
+    private static final String ACTION_CONTROL = "com.flowify.ettea.LYRICS_PIP_CONTROL";
     private static final String EXTRA_CONTROL = "control";
     private static final int CONTROL_PREVIOUS = 1;
     private static final int CONTROL_TOGGLE = 2;
@@ -66,8 +66,8 @@ final class LyricsPipController {
     private Rational aspect = new Rational(3, 4);
 
     private static Rational aspectSetting(Context context) {
-        int[] ratio = com.eza.spicyex.Settings.pipShapeRatio(
-                com.eza.spicyex.SpotifyPlusConfig.from(context).get(com.eza.spicyex.Settings.PIP_SHAPE));
+        int[] ratio = com.flowify.ettea.Settings.pipShapeRatio(
+                com.flowify.ettea.SpotifyPlusConfig.from(context).get(com.flowify.ettea.Settings.PIP_SHAPE));
         return new Rational(ratio[0], ratio[1]);
     }
 
@@ -257,8 +257,8 @@ final class LyricsPipController {
     boolean openFromLyrics(Activity from) {
         if (from != null && docked.containsKey(from)) return enterFromDock(from);
         if (from == null || !isSupported(from) || !hosts.isEmpty() || opener != null) return false;
-        if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(from)
-                .get(com.eza.spicyex.Settings.PIP_ENABLED))) return false;
+        if (!Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig.from(from)
+                .get(com.flowify.ettea.Settings.PIP_ENABLED))) return false;
         open(from, false);
         return opener != null;
     }
@@ -267,8 +267,8 @@ final class LyricsPipController {
      *  False (close as usual) when off, unsupported, or PiP is already up or on its way. */
     boolean openOnClose(Activity from) {
         if (from == null || !isSupported(from) || !hosts.isEmpty() || opener != null) return false;
-        if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(from)
-                .get(com.eza.spicyex.Settings.PIP_ON_CLOSE))) return false;
+        if (!Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig.from(from)
+                .get(com.flowify.ettea.Settings.PIP_ON_CLOSE))) return false;
         open(from, true);
         return opener != null;
     }
@@ -399,8 +399,8 @@ final class LyricsPipController {
      *  before it: left in front, it shows its now-playing page next to the PiP window. */
     private void leave(Activity from) {
         final int task = from.getTaskId();
-        final boolean toBack = !Boolean.FALSE.equals(com.eza.spicyex.SpotifyPlusConfig.from(from)
-                .get(com.eza.spicyex.Settings.PIP_LEAVE_SPOTIFY));
+        final boolean toBack = !Boolean.FALSE.equals(com.flowify.ettea.SpotifyPlusConfig.from(from)
+                .get(com.flowify.ettea.Settings.PIP_LEAVE_SPOTIFY));
         if (!from.isFinishing()) {
             if (toBack) {
                 try {
@@ -416,7 +416,7 @@ final class LyricsPipController {
         // Spotify sometimes closes the lyrics page itself while the host opens; then whatever
         // of its task is in front (its main screen) goes back instead, once it has resumed.
         main.postDelayed(() -> {
-            Activity current = com.eza.spicyex.References.currentActivity();
+            Activity current = com.flowify.ettea.References.currentActivity();
             if (current == null || hosts.containsKey(current) || current.isFinishing()
                     || current.getTaskId() != task) return;
             try {
@@ -505,8 +505,8 @@ final class LyricsPipController {
     /** Whether the lyrics should live in a dock: "PiP on close" on, and auto-enter available. */
     private static boolean dockWanted(Activity activity) {
         if (Build.VERSION.SDK_INT < 31 || !isSupported(activity)) return false;
-        return Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(activity)
-                .get(com.eza.spicyex.Settings.PIP_ON_CLOSE));
+        return Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig.from(activity)
+                .get(com.flowify.ettea.Settings.PIP_ON_CLOSE));
     }
 
     /** The takeover lyrics page reopens as a dock; the page itself goes without an animation. */
@@ -548,8 +548,8 @@ final class LyricsPipController {
     }
 
     private static boolean inPlayerWanted(Activity activity) {
-        return Build.VERSION.SDK_INT >= 26 && Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig
-                .from(activity).get(com.eza.spicyex.Settings.LYRICS_IN_PLAYER));
+        return Build.VERSION.SDK_INT >= 26 && Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig
+                .from(activity).get(com.flowify.ettea.Settings.LYRICS_IN_PLAYER));
     }
 
     private static final long IN_PLACE_ENTER_MS = 280L;
@@ -901,8 +901,8 @@ final class LyricsPipController {
     private List<RemoteAction> actions(Activity activity) {
         lastPlaying = host.isPlayerActuallyPlaying();
         List<RemoteAction> list = new ArrayList<>(4);
-        if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(activity)
-                .get(com.eza.spicyex.Settings.PIP_CONTROLS))) return list;
+        if (!Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig.from(activity)
+                .get(com.flowify.ettea.Settings.PIP_CONTROLS))) return list;
         list.add(action(activity, CONTROL_PREVIOUS, android.R.drawable.ic_media_previous, "Previous"));
         list.add(lastPlaying
                 ? action(activity, CONTROL_TOGGLE, android.R.drawable.ic_media_pause, "Pause")
@@ -911,7 +911,7 @@ final class LyricsPipController {
         // The only way to like a track from inside a PiP window: the shell's own gestures/buttons
         // are regular views, and nothing in a PiP window can be touched - only the system's own
         // remote actions are. Hidden for anything a like cannot apply to (not a song, no session).
-        com.eza.spicyex.SpotifyTrack track = host.getCurrentTrackSafely();
+        com.flowify.ettea.SpotifyTrack track = host.getCurrentTrackSafely();
         if (SpotifyCollectionAction.isSong(track)) {
             RemoteAction like = track.saved
                     ? action(activity, CONTROL_LIKE, android.R.drawable.btn_star_big_on, "Unlike")
@@ -949,7 +949,7 @@ final class LyricsPipController {
                 else if (control == CONTROL_TOGGLE) host.togglePlayPause();
                 else if (control == CONTROL_NEXT) host.skipToNextTrack();
                 else if (control == CONTROL_LIKE) {
-                    com.eza.spicyex.SpotifyTrack track = host.getCurrentTrackSafely();
+                    com.flowify.ettea.SpotifyTrack track = host.getCurrentTrackSafely();
                     if (SpotifyCollectionAction.isSong(track)) {
                         // Any mode but the setting's "Off" default just has to pass enabled();
                         // this toggle has nothing to do with the mini player's own like button.

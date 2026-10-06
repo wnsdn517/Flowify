@@ -45,7 +45,7 @@
              a different UID than this app's - exported=false would refuse every real call.
              Forwards commands to WebPlayerService (full flavor only), running as this app's UID. -->
         <receiver
-                android:name="com.eza.spicyex.player.PlayerWarmReceiver"
+                android:name="com.flowify.ettea.player.PlayerWarmReceiver"
                 android:exported="true"/>
 
         <!-- BOOT_COMPLETED is one of the few background service starts Android explicitly
@@ -54,7 +54,7 @@
              at boot if Connect was last known enabled, so Spotify's later warm-up broadcast
              usually finds it already running instead of needing another background start. -->
         <receiver
-                android:name="com.eza.spicyex.player.BootWarmReceiver"
+                android:name="com.flowify.ettea.player.BootWarmReceiver"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
@@ -62,12 +62,12 @@
         </receiver>
 
           <service
-               android:name="com.eza.spicyex.player.WebPlayerService"
+               android:name="com.flowify.ettea.player.WebPlayerService"
                android:exported="true"
                android:foregroundServiceType="mediaPlayback"
                android:process=":player"/>
           <activity
-               android:name="com.eza.spicyex.player.WebLoginActivity"
+               android:name="com.flowify.ettea.player.WebLoginActivity"
                android:exported="true"
                android:process=":player"
                android:launchMode="singleTask"

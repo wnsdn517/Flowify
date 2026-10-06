@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -11,14 +11,14 @@ import java.util.Collections;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingProvenance;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingUnitKind;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingProvenance;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingUnitKind;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 public class ReadingRenderPlanCacheTest {
     @Test

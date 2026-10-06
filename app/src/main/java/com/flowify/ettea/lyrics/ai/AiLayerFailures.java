@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerFailure;
 
 import java.util.Locale;
 

@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.PaidArtifactIdentity;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.PaidArtifactIdentity;
 
 /**
  * One run's identity: which document, which layer, and under exactly which configuration.

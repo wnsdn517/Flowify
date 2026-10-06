@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import org.junit.Test;
 
@@ -12,17 +12,17 @@ import static org.junit.Assert.assertTrue;
 public class LayoutEditorGeometryContractTest {
     @Test
     public void roundButtonsUseOriginalRendering() throws Exception {
-        String source = read("src/main/java/com/eza/spicyex/hooks/NativeIconButtons.java");
+        String source = read("src/main/java/com/flowify/ettea/hooks/NativeIconButtons.java");
         assertTrue(source.contains("static GradientDrawable createRoundButtonBackground()"));
         assertTrue(!source.contains("new InsetDrawable(ring"));
 
-        String follow = read("src/main/java/com/eza/spicyex/hooks/LyricsJumpToCurrentController.java");
+        String follow = read("src/main/java/com/flowify/ettea/hooks/LyricsJumpToCurrentController.java");
         assertTrue(follow.contains("canvas.drawRoundRect(bounds, radius, radius, stroke)"));
     }
 
     @Test
     public void landscapeEditorUsesCompactDockAndReservedBand() throws Exception {
-        String editor = read("src/main/java/com/eza/spicyex/hooks/LyricsLayoutEditController.java");
+        String editor = read("src/main/java/com/flowify/ettea/hooks/LyricsLayoutEditController.java");
         assertTrue(editor.contains("button.setImageDrawable(new ActionIconDrawable(kind, color, density))"));
         assertTrue(editor.contains("button.setScaleType(ImageView.ScaleType.CENTER_INSIDE)"));
         assertTrue(editor.contains("button.setPadding(dp(12), dp(12), dp(12), dp(12))"));
@@ -36,7 +36,7 @@ public class LayoutEditorGeometryContractTest {
         assertTrue(editor.contains("return Math.max(0, overlayHeightPx() - row.top) + dp(PANEL_GAP_DP);"));
         assertTrue(!editor.contains("s(\"mode_card\", \"Now playing card\")"));
 
-        String shell = read("src/main/java/com/eza/spicyex/hooks/NativeSpicyShellViewImpl.java");
+        String shell = read("src/main/java/com/flowify/ettea/hooks/NativeSpicyShellViewImpl.java");
         assertFalse(shell.contains("landscapeEditorActive"));
         assertTrue(shell.contains(".landscape(isLandscape() || twoColumn)"));
         assertTrue(shell.contains("if (!isLandscape() && !twoColumn)"));
@@ -49,7 +49,7 @@ public class LayoutEditorGeometryContractTest {
         assertTrue(shell.contains("trackInfoController.columnFitSidePx()"));
         assertTrue(shell.contains("FrameLayout floatingChipHost = twoColumn ? this : lyricsFrame"));
 
-        String readout = read("src/main/java/com/eza/spicyex/hooks/TrackInfoReadoutController.java");
+        String readout = read("src/main/java/com/flowify/ettea/hooks/TrackInfoReadoutController.java");
         assertTrue(readout.contains("topRowLp.topMargin = topInsetPx;"));
         assertFalse(readout.contains("editorTopClearancePx"));
     }
@@ -108,7 +108,7 @@ public class LayoutEditorGeometryContractTest {
 
     @Test
     public void topReadoutReservesConfiguredControlEdge() throws Exception {
-        String source = read("src/main/java/com/eza/spicyex/hooks/TrackInfoReadoutController.java");
+        String source = read("src/main/java/com/flowify/ettea/hooks/TrackInfoReadoutController.java");
         assertTrue(source.contains("Settings.CHROME_CLUSTER_POSITION"));
         assertTrue(source.contains("sidePad + (controlsLeft ? railClearance : 0)"));
         assertTrue(source.contains("sidePad + (controlsLeft ? 0 : railClearance)"));
@@ -116,7 +116,7 @@ public class LayoutEditorGeometryContractTest {
 
     @Test
     public void twoColumnEditorKeepsPositionAsAnOnOffRow() throws Exception {
-        String editor = read("src/main/java/com/eza/spicyex/hooks/LyricsLayoutEditController.java");
+        String editor = read("src/main/java/com/flowify/ettea/hooks/LyricsLayoutEditController.java");
         // Two-column's column is a readout placement, so the position control is no longer a
         // four-way chip row whose Top/Bottom/Header values have nothing to act on: it stays, as one
         // On/Off row over the same setting, and Off is the only value that means anything there.
@@ -138,7 +138,7 @@ public class LayoutEditorGeometryContractTest {
 
     @Test
     public void layoutEditorOptionsAreTheSettingsBottomSheetOnPhones() throws Exception {
-        String editor = read("src/main/java/com/eza/spicyex/hooks/LyricsLayoutEditController.java");
+        String editor = read("src/main/java/com/flowify/ettea/hooks/LyricsLayoutEditController.java");
 
         // One surface, rounded on every corner, its own elevation, inset from every screen edge.
         assertTrue(editor.contains("panelBg.setCornerRadius(dp(20))"));

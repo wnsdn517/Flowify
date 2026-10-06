@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,10 +11,10 @@ import android.text.Spanned;
 import android.text.style.ReplacementSpan;
 import java.util.ArrayList;
 import java.util.List;
-import com.eza.spicyex.lyrics.reading.CodePointRanges;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import com.flowify.ettea.lyrics.reading.CodePointRanges;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /**
  * Builds the furigana (ruby) spannable for a Japanese lyric line: the kana reading drawn in a

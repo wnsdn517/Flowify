@@ -1,7 +1,7 @@
-package com.eza.spicyex.motion;
+package com.flowify.ettea.motion;
 
-import com.eza.spicyex.hooks.NativeRuntime;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.hooks.NativeRuntime;
+import com.flowify.ettea.xposed.XpLog;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

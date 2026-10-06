@@ -1,21 +1,21 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.safe;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.safe;
 
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 
-import com.eza.spicyex.BuildStamp;
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.References;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.cache.CacheClearKind;
-import com.eza.spicyex.lyrics.session.AIPaidArtifactCache;
+import com.flowify.ettea.BuildStamp;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.References;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.cache.CacheClearKind;
+import com.flowify.ettea.lyrics.session.AIPaidArtifactCache;
 
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpReflect;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpReflect;
 
 /**
  * Native Spicy shell.
@@ -218,7 +218,7 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
     }
 
     @Override
-    public boolean toggleSpotifySaved(String mode, com.eza.spicyex.SpotifyTrack expected) {
+    public boolean toggleSpotifySaved(String mode, com.flowify.ettea.SpotifyTrack expected) {
         return playbackBridge.toggleSpotifySaved(mode, expected, this::getCurrentTrackSafely);
     }
 
@@ -243,18 +243,18 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
     }
 
     @Override
-    public void refreshLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    public void refreshLyricsLayer(com.flowify.ettea.lyrics.session.LayerKind layer) {
         lyricsSessionManager.refreshLayer(layer);
     }
 
     @Override
-    public com.eza.spicyex.lyrics.ai.AiRequestStartResult requestAiLyricsLayer(
-            com.eza.spicyex.lyrics.session.LayerKind layer) {
+    public com.flowify.ettea.lyrics.ai.AiRequestStartResult requestAiLyricsLayer(
+            com.flowify.ettea.lyrics.session.LayerKind layer) {
         return lyricsSessionManager.requestAiLayer(layer);
     }
 
     @Override
-    public void restoreLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    public void restoreLyricsLayer(com.flowify.ettea.lyrics.session.LayerKind layer) {
         lyricsSessionManager.restoreLayer(layer);
     }
 
@@ -295,7 +295,7 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
 
     @Override
     public void refreshCatalogSource(
-            com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId sourceId,
+            com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId sourceId,
             CatalogActionCallback callback) {
         lyricsSessionManager.refreshCatalogSource(sourceId, callback);
     }

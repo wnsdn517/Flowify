@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import android.content.Context;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.lyrics.session.AIPaidArtifactCache;
-import com.eza.spicyex.lyrics.session.PaidArtifactIdentity;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.lyrics.session.AIPaidArtifactCache;
+import com.flowify.ettea.lyrics.session.PaidArtifactIdentity;
 
 /** One run's durable records, with deletion ownership retained from its first read. */
 public final class AiPaidRecords implements AiRecordStore {

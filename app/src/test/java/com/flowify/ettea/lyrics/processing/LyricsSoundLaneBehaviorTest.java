@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -8,26 +8,26 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.lyrics.ai.AiContract;
-import com.eza.spicyex.lyrics.ai.AiCredentialStore;
-import com.eza.spicyex.lyrics.ai.AiHttpTestControl;
-import com.eza.spicyex.lyrics.ai.AiRecordStores;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.lyrics.ai.AiSignal;
-import com.eza.spicyex.lyrics.ai.AiSoundRun;
-import com.eza.spicyex.lyrics.ai.FakeAiRecordStore;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.CanonicalRow;
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerProvenance;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.lyrics.session.SoundEntry;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.lyrics.ai.AiContract;
+import com.flowify.ettea.lyrics.ai.AiCredentialStore;
+import com.flowify.ettea.lyrics.ai.AiHttpTestControl;
+import com.flowify.ettea.lyrics.ai.AiRecordStores;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.lyrics.ai.AiSignal;
+import com.flowify.ettea.lyrics.ai.AiSoundRun;
+import com.flowify.ettea.lyrics.ai.FakeAiRecordStore;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.CanonicalRow;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerProvenance;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.SoundEntry;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 
 import org.junit.After;
 import org.junit.Before;
@@ -42,8 +42,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 /**
  * The Sound lane's paid-reuse contract, driven on the JVM.

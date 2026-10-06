@@ -1,4 +1,4 @@
-package com.eza.spicyex.xposed;
+package com.flowify.ettea.xposed;
 
 import org.junit.Rule;
 import org.junit.Test;

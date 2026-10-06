@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.catalog.CatalogResolver.Resolution;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SelectionMode;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.TimingLevel;
+import com.flowify.ettea.lyrics.catalog.CatalogResolver.Resolution;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SelectionMode;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.TimingLevel;
 
 import java.util.ArrayList;
 import java.util.List;

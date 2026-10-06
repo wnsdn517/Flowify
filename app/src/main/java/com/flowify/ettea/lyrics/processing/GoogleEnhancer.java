@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.language.SpicyKoreanG2P;
-import com.eza.spicyex.lyrics.language.SpicyRomanizer;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyKoreanG2P;
+import com.flowify.ettea.lyrics.language.SpicyRomanizer;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import android.content.Context;
 import android.net.Uri;
@@ -28,9 +28,9 @@ import java.util.regex.Pattern;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.cache.LyricCaches;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.cache.LyricCaches;
 
 /** Google Translate-backed romanization and translation enhancer. */
 public final class GoogleEnhancer {
@@ -269,8 +269,8 @@ public final class GoogleEnhancer {
 
     private static boolean contextTranslationEnabled(Context context) {
         try {
-            return context != null && Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(context)
-                    .get(com.eza.spicyex.Settings.CONTEXT_TRANSLATION));
+            return context != null && Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig.from(context)
+                    .get(com.flowify.ettea.Settings.CONTEXT_TRANSLATION));
         } catch (Throwable ignored) {
             return false;
         }

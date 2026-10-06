@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /**
  * What kind of row this is, decided during enumeration and never revisited.

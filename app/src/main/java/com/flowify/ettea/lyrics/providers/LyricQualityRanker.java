@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 /** Pure source-quality scorer for lyric candidate arbitration. */
 public final class LyricQualityRanker {

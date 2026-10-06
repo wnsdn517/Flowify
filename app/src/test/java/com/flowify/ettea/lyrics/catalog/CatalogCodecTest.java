@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCodec;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCodec;
 
 import org.junit.Test;
 

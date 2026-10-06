@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /**
  * Decides what a freshly fetched document means for the session's canonical base.

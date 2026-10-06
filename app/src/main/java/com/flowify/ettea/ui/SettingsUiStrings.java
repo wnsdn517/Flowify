@@ -1,7 +1,7 @@
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
-import com.eza.spicyex.References;
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.References;
+import com.flowify.ettea.Settings;
 
 import android.content.Context;
 import android.content.res.Configuration;
@@ -17,7 +17,7 @@ import java.util.Map;
 
 /** Resource-backed text resolver for the in-Spotify settings panel. */
 public final class SettingsUiStrings {
-    private static final String MODULE_PACKAGE = "com.eza.spicyex";
+    private static final String MODULE_PACKAGE = "com.flowify.ettea";
 
     private final Context hostContext;
     private final Resources moduleResources;
@@ -182,7 +182,7 @@ public final class SettingsUiStrings {
         // (zh, enumerated last while building the language picker's native labels) won
         // for every previously built Resources and flipped dialogs to Chinese on read
         // alone. A null return fails closed into the literal fallbacks in get().
-        return com.eza.spicyex.xposed.XpRes.resourcesForLanguage(language);
+        return com.flowify.ettea.xposed.XpRes.resourcesForLanguage(language);
     }
 
     private String localeName(String language) {

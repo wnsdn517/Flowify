@@ -1,20 +1,20 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.reading.ReadingModels.Boundary;
-import com.eza.spicyex.lyrics.reading.ReadingModels.BoundaryKind;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.JoinRelation;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SourceSpan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SpanJoinEvidence;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.reading.ReadingModels.Boundary;
+import com.flowify.ettea.lyrics.reading.ReadingModels.BoundaryKind;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.JoinRelation;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SourceSpan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SpanJoinEvidence;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
 
 /** Resolves provider-specific boundary evidence once, at the adapter edge. */
 public final class ProviderBoundaryResolver {

@@ -1,6 +1,6 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -16,10 +16,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.SkipGapPolicy;
-import com.eza.spicyex.ui.ActionIconDrawable;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.SkipGapPolicy;
+import com.flowify.ettea.ui.ActionIconDrawable;
 
 import java.util.function.Supplier;
 

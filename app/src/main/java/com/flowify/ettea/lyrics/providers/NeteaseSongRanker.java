@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.eza.spicyex.lyrics.Json;
+import com.flowify.ettea.lyrics.Json;
 
 import java.util.ArrayList;
 import java.util.Collections;

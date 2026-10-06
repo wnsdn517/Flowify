@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
 import com.google.gson.JsonObject;
 
-import com.eza.spicyex.lyrics.session.DetectionArtifact;
+import com.flowify.ettea.lyrics.session.DetectionArtifact;
 
 import org.junit.Test;
 

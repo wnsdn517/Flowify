@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
 /**
  * Lightweight script routing for language detection.
  *
  * <p>Identifies the script family of a lyric line with code-point ranges only — no model, no
- * allocation beyond the scan itself. The result lets {@link com.eza.spicyex.lyrics.session
+ * allocation beyond the scan itself. The result lets {@link com.flowify.ettea.lyrics.session
  * .DetectionArtifact} rows skip detector work for obvious scripts and lets the detector manager
  * load only the language family a line can belong to.
  *

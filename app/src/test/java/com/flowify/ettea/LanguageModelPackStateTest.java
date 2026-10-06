@@ -1,9 +1,9 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import com.eza.spicyex.lyrics.language.LanguageModelPack;
+import com.flowify.ettea.lyrics.language.LanguageModelPack;
 
 import org.junit.Test;
 

@@ -1,11 +1,11 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
 import org.junit.Test;
 
 public class AgentCommandChannelTest {

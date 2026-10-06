@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
 
 /**
  * In-flight identity for one provider request. Every inflight fetch is keyed by the track, the

@@ -1,8 +1,8 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.lyrics.LyricsBackgroundStyle;
-import com.eza.spicyex.lyrics.ai.AiSettings;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.lyrics.LyricsBackgroundStyle;
+import com.flowify.ettea.lyrics.ai.AiSettings;
 
 /**
  * Pure panel policy: visibility, availability, commit policy, and rebuild scope.

@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.SoundEntry;
+import com.flowify.ettea.lyrics.session.SoundEntry;
 
 /**
  * Which rows the deterministic pipeline left for AI to fill, and which it already answered.

@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -10,14 +10,14 @@ import java.util.Collections;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.reading.DefaultCanonicalLineBuilder;
-import com.eza.spicyex.lyrics.reading.DefaultRenderPlanBuilder;
-import com.eza.spicyex.lyrics.reading.KoreanReadingProcessor;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParagraphProvenance;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SourceSpan;
+import com.flowify.ettea.lyrics.reading.DefaultCanonicalLineBuilder;
+import com.flowify.ettea.lyrics.reading.DefaultRenderPlanBuilder;
+import com.flowify.ettea.lyrics.reading.KoreanReadingProcessor;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParagraphProvenance;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SourceSpan;
 
 public class RenderPlanBuilderTest {
     @Test

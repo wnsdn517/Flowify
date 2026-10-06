@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import static org.junit.Assert.assertEquals;
 
-import com.eza.spicyex.lyrics.cache.LyricCaches;
+import com.flowify.ettea.lyrics.cache.LyricCaches;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

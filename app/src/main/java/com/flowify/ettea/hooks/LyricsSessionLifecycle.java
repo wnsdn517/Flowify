@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Pure idempotent lifetime gate shared by session subscriptions, requests, and demand leases. */
 final class LyricsSessionLifecycle {

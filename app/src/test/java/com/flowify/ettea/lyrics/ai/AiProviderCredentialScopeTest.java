@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.Settings;
 
 import org.junit.Test;
 

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -8,10 +8,10 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 /** Canonical base codec, source shape, and replacement identity. */
 public class CanonicalSourceTest {

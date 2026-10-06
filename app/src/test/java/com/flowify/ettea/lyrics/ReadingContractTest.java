@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -20,19 +20,19 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import com.eza.spicyex.lyrics.reading.CodePointRanges;
-import com.eza.spicyex.lyrics.reading.DefaultCanonicalLineBuilder;
-import com.eza.spicyex.lyrics.reading.KoreanReadingProcessor;
-import com.eza.spicyex.lyrics.reading.ReadingModels.Boundary;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParagraphProvenance;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingAnnotation;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SourceSpan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.reading.CodePointRanges;
+import com.flowify.ettea.lyrics.reading.DefaultCanonicalLineBuilder;
+import com.flowify.ettea.lyrics.reading.KoreanReadingProcessor;
+import com.flowify.ettea.lyrics.reading.ReadingModels.Boundary;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParagraphProvenance;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingAnnotation;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SourceSpan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
 
 public class ReadingContractTest {
     @Test

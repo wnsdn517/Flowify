@@ -1,17 +1,17 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
 
 import org.junit.Test;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 public class LyricsSecondaryRowUpdaterTest {
     @Test

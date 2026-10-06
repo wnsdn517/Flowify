@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /**
  * One immutable timed span of canonical source text (a syllable in word-synced lyrics).

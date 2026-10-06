@@ -1,4 +1,4 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 import android.app.Notification;
 import android.app.Service;

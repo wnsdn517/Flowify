@@ -1,16 +1,16 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.catalog.CatalogPickerModel.DataMark;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerModel.Row;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerModel.RowKind;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerState.Climb;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerState.Shown;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerModel.DataMark;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerModel.Row;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerModel.RowKind;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerState.Climb;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerState.Shown;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
 
 import org.junit.Test;
 

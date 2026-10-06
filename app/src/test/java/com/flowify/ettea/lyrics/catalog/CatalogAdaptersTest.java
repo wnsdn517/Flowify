@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -6,12 +6,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.MatchMethod;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.ProviderStatus;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.MatchMethod;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.ProviderStatus;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
 
 import org.junit.Test;
 

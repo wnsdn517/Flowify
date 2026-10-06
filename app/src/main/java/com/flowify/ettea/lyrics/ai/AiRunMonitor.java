@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** Receives the credential-free JSON body immediately before each provider dispatch. */
 public interface AiRunMonitor {

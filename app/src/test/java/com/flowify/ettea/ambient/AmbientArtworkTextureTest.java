@@ -1,4 +1,4 @@
-package com.eza.spicyex.ambient;
+package com.flowify.ettea.ambient;
 
 import org.junit.Test;
 import java.util.Arrays;

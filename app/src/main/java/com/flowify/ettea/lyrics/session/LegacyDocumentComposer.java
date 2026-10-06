@@ -1,11 +1,11 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 /**
  * Migration adapter: folds session layers into the legacy mutable {@link LyricsDocument} shape at
@@ -127,7 +127,7 @@ public final class LegacyDocumentComposer {
         if (sound.japaneseReading != null) line.japaneseReading = sound.japaneseReading;
         else if (line.detection != null && line.detection.hasLanguage()
                 && !"ja".equals(line.detection.language)
-                && com.eza.spicyex.lyrics.language.SpicyTextDetection.hasCjkIdeograph(line.text)) {
+                && com.flowify.ettea.lyrics.language.SpicyTextDetection.hasCjkIdeograph(line.text)) {
             // A lane entry that carries no Japanese reading is proof the line is not Japanese:
             // drop any parse-time or provider Han reading instead of letting stale furigana
             // reach the renderer.

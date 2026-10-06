@@ -1,6 +1,6 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.Settings;
 
 /** Classifies settings for ordinary and explicitly composed row renderers. */
 public final class SettingUiSpec {

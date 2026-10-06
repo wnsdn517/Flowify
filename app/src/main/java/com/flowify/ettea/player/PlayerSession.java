@@ -1,4 +1,4 @@
-package com.eza.spicyex.player;
+package com.flowify.ettea.player;
 
 import android.webkit.WebView;
 

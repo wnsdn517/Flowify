@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Application;
 import android.content.Context;
@@ -6,13 +6,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.ArrayDeque;
 
 public final class SpotifyConnectHook {
-    private static final String ENTRY = "com.eza.spicyex.spotifyconnect.ConnectEntry";
+    private static final String ENTRY = "com.flowify.ettea.spotifyconnect.ConnectEntry";
 
     private SpotifyConnectHook() {
     }
@@ -23,7 +23,7 @@ public final class SpotifyConnectHook {
             entry.getMethod("init", Context.class).invoke(null, context);
             XpLog.log("[SpicyConnect] init dispatched ok (picker scan v6)");
             try {
-                context.getPackageManager().getPackageInfo("com.eza.spicyex", 0);
+                context.getPackageManager().getPackageInfo("com.flowify.ettea", 0);
                 XpLog.log("[SpicyConnect] self-visibility: VISIBLE");
             } catch (Throwable t) {
                 XpLog.log("[SpicyConnect] self-visibility: INVISIBLE type="
@@ -96,7 +96,7 @@ public final class SpotifyConnectHook {
 
     private static String autoSwitchMode(Context app) {
         try {
-            return com.eza.spicyex.SpotifyPlusConfig.from(app).get(com.eza.spicyex.Settings.CONNECT_AUTO_SWITCH);
+            return com.flowify.ettea.SpotifyPlusConfig.from(app).get(com.flowify.ettea.Settings.CONNECT_AUTO_SWITCH);
         } catch (Throwable t) {
             return SWITCH_ON_START;
         }
@@ -199,8 +199,8 @@ public final class SpotifyConnectHook {
     private static void onLocalPlaybackStarted(Context context, android.media.AudioTrack track) {
         if (localTakeoverSent) return;
         Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
-        if (!Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(app)
-                .get(com.eza.spicyex.Settings.CONNECT_ENABLED))) return;
+        if (!Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig.from(app)
+                .get(com.flowify.ettea.Settings.CONNECT_ENABLED))) return;
         String mode = autoSwitchMode(app);
         if (!SWITCH_ON_FIRST_PLAY.equals(mode) && !SWITCH_ON_START.equals(mode)) return;
         localTakeoverSent = true;
@@ -419,8 +419,8 @@ public final class SpotifyConnectHook {
 
     private static void onSpotifyResumed(android.app.Activity activity) {
         Context app = activity.getApplicationContext();
-        if (app == null || !Boolean.TRUE.equals(com.eza.spicyex.SpotifyPlusConfig.from(app)
-                .get(com.eza.spicyex.Settings.CONNECT_ENABLED))) return;
+        if (app == null || !Boolean.TRUE.equals(com.flowify.ettea.SpotifyPlusConfig.from(app)
+                .get(com.flowify.ettea.Settings.CONNECT_ENABLED))) return;
         String mode = autoSwitchMode(app);
         boolean auto = SWITCH_ON_START.equals(mode) || SWITCH_ON_FIRST_PLAY.equals(mode);
         long now = android.os.SystemClock.elapsedRealtime();
@@ -520,8 +520,8 @@ public final class SpotifyConnectHook {
         android.os.ResultReceiver reply = newReply(context, listener);
         boolean recovery = true;
         try {
-            recovery = !Boolean.FALSE.equals(com.eza.spicyex.SpotifyPlusConfig.from(context)
-                    .get(com.eza.spicyex.Settings.CONNECT_NETWORK_RECOVERY));
+            recovery = !Boolean.FALSE.equals(com.flowify.ettea.SpotifyPlusConfig.from(context)
+                    .get(com.flowify.ettea.Settings.CONNECT_NETWORK_RECOVERY));
         } catch (Throwable ignored) {
         }
         try {

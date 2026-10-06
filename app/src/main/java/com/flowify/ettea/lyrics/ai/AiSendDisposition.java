@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** Whether an enumerated row travels to the provider, and if not, why not. */
 public enum AiSendDisposition {

@@ -1,7 +1,7 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.lyrics.ai.AiCredentialStore;
-import com.eza.spicyex.lyrics.ai.AiSettings;
+import com.flowify.ettea.lyrics.ai.AiCredentialStore;
+import com.flowify.ettea.lyrics.ai.AiSettings;
 
 /**
  * The API key row's value, split from the panel that draws it.

@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
 
 import java.util.ArrayList;
 import java.util.Collections;

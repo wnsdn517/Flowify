@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,7 +61,7 @@ public final class AiLyricContext {
         out.append(",\"artists\":[");
         for (int i = 0; i < artists.size(); i++) {
             if (i > 0) out.append(',');
-            com.eza.spicyex.lyrics.session.Digests.appendJsonString(out, artists.get(i));
+            com.flowify.ettea.lyrics.session.Digests.appendJsonString(out, artists.get(i));
         }
         out.append("],\"album\":");
         appendNullable(out, album);
@@ -70,6 +70,6 @@ public final class AiLyricContext {
 
     private static void appendNullable(StringBuilder out, String value) {
         if (value == null) out.append("null");
-        else com.eza.spicyex.lyrics.session.Digests.appendJsonString(out, value);
+        else com.flowify.ettea.lyrics.session.Digests.appendJsonString(out, value);
     }
 }

@@ -1,4 +1,4 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import java.text.Normalizer;
 import java.util.ArrayList;

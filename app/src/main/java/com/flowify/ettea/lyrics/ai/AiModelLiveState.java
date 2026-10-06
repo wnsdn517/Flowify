@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** One process-local liveness result for the selected provider/model configuration. */
 public final class AiModelLiveState {

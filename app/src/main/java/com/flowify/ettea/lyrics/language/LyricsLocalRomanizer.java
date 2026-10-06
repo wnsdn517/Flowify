@@ -1,21 +1,21 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.LyricsDisplayMode;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.processing.SpicyProcessing;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.LyricsDisplayMode;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.processing.SpicyProcessing;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
 
-import com.eza.spicyex.xposed.XpLog;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import com.flowify.ettea.xposed.XpLog;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /** Local Japanese/Chinese/generic romanization helpers for lyric documents. */
 public final class LyricsLocalRomanizer {
@@ -158,7 +158,7 @@ public final class LyricsLocalRomanizer {
                     ? local : "";
         }
         if (!isBlank(line.romanizedText)) {
-            com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan plan =
+            com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan plan =
                     ReadingPlanFactory.timedLegacy(line, line.romanizedText, "LocalScript");
             if (ReadingPlanFactory.hasTransformedReading(plan)) {
                 line.readingRenderPlan = plan;
@@ -218,7 +218,7 @@ public final class LyricsLocalRomanizer {
 
     private static String romanizeText(RomanizationOptions opts, LyricsDocument doc, String text,
             String fullText, String lineChineseMode,
-            com.eza.spicyex.lyrics.session.DetectionResult detection) {
+            com.flowify.ettea.lyrics.session.DetectionResult detection) {
         try {
             String language = ReadingLanguagePolicy.language(text, detection, doc == null ? "" : doc.language);
             if (SpicyTextDetection.hasCjkIdeograph(text) && language.isEmpty()) return "";

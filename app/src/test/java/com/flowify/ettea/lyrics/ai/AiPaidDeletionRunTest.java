@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import static org.junit.Assert.*;
 
-import com.eza.spicyex.lyrics.session.AIPaidArtifactCache;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.PaidArtifactIdentity;
+import com.flowify.ettea.lyrics.session.AIPaidArtifactCache;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.PaidArtifactIdentity;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;

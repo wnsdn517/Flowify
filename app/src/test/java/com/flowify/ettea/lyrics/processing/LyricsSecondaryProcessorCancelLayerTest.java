@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import static org.junit.Assert.assertEquals;
 
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerKind;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 import okhttp3.OkHttpClient;

@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.MatchMethod;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.TimingLevel;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCodec;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.MatchMethod;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.TimingLevel;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCodec;
 
 import java.util.Locale;
 
@@ -79,7 +79,7 @@ public final class CatalogLegacyImport {
 
     private static boolean hasTiming(LyricsDocument doc) {
         if (doc == null) return false;
-        for (com.eza.spicyex.lyrics.LyricsLine line : doc.lines) {
+        for (com.flowify.ettea.lyrics.LyricsLine line : doc.lines) {
             if (line != null && (line.startMs > 0 || line.endMs > 0)) return true;
         }
         return false;
@@ -87,7 +87,7 @@ public final class CatalogLegacyImport {
 
     private static boolean hasProviderTranslation(LyricsDocument doc) {
         if (doc == null) return false;
-        for (com.eza.spicyex.lyrics.LyricsLine line : doc.lines) {
+        for (com.flowify.ettea.lyrics.LyricsLine line : doc.lines) {
             if (line != null && !isBlank(line.providerTranslatedText)) return true;
         }
         return false;
@@ -95,7 +95,7 @@ public final class CatalogLegacyImport {
 
     private static boolean hasBackgroundVocals(LyricsDocument doc) {
         if (doc == null) return false;
-        for (com.eza.spicyex.lyrics.LyricsLine line : doc.lines) {
+        for (com.flowify.ettea.lyrics.LyricsLine line : doc.lines) {
             if (line != null && !line.backgroundLines.isEmpty()) return true;
         }
         return false;

@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 
 /** Synchronous lookup of a session detection result for arbitrary text. */
 public interface TextDetectionLookup {

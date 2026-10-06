@@ -1,9 +1,9 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.cache.CacheClearKind;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.cache.CacheClearKind;
 
 /**
  * The seam between lyric surfaces and their hosting Xposed hook.
@@ -69,18 +69,18 @@ public interface LyricsHost {
      * The shell never starts provider work itself: the session is the only scheduler, so one
      * settings change costs one run however many surfaces are open.
      */
-    void refreshLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind layer);
+    void refreshLyricsLayer(com.flowify.ettea.lyrics.session.LayerKind layer);
 
     /**
      * Explicit owner action: reuse or generate AI for one layer, preserving what is displayed.
      *
      * @return typed acceptance or refusal reason; never a conflated boolean
      */
-    com.eza.spicyex.lyrics.ai.AiRequestStartResult requestAiLyricsLayer(
-            com.eza.spicyex.lyrics.session.LayerKind layer);
+    com.flowify.ettea.lyrics.ai.AiRequestStartResult requestAiLyricsLayer(
+            com.flowify.ettea.lyrics.session.LayerKind layer);
 
     /** Restores the canonical/Google baseline without scheduling another AI request. */
-    void restoreLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind layer);
+    void restoreLyricsLayer(com.flowify.ettea.lyrics.session.LayerKind layer);
 
     /** Clears durable data and invalidates the matching live-session authority. */
     void clearLyricsCache(CacheClearKind kind);
@@ -109,7 +109,7 @@ public interface LyricsHost {
     void resetCatalogToAuto(CatalogActionCallback callback);
 
     /** Fetches exactly the requested provider and records its catalog result. */
-    void refreshCatalogSource(com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId sourceId,
+    void refreshCatalogSource(com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId sourceId,
                               CatalogActionCallback callback);
 
     /** Runs the QQ and NetEase adapters for the current track. */
@@ -132,7 +132,7 @@ public interface LyricsHost {
 
     interface CatalogPickerRowsCallback {
         void onRows(String trackUri,
-                    java.util.List<com.eza.spicyex.lyrics.catalog.CatalogPickerModel.Row> rows);
+                    java.util.List<com.flowify.ettea.lyrics.catalog.CatalogPickerModel.Row> rows);
     }
 
     interface CatalogActionCallback {

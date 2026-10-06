@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import static org.junit.Assert.assertEquals;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 

@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -6,19 +6,19 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.LyricTimeline;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.session.LyricPipelineMetrics;
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.LyricTimeline;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.session.LyricPipelineMetrics;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 import java.util.UUID;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /** Optional HyperGlow consumer of the process-level lyric session. */
 final class SpicyLyricBridgeCoordinator implements LyricsSessionManager.Listener {

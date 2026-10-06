@@ -1,19 +1,19 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
 
 import android.content.Context;
 import android.os.Handler;
 
 import java.util.concurrent.ExecutorService;
 
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
 
 import okhttp3.OkHttpClient;
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 /**
  * Owner of the two independent derived lanes.

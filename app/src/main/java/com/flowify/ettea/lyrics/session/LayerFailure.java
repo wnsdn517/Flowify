@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /**
  * Privacy-safe failure record for a derived-layer run. Holds a classification and an exception

@@ -1,4 +1,4 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 /**
  * How a setting's edit reaches the store.

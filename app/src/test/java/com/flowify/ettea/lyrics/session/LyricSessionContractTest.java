@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -14,10 +14,10 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 /** Phase 0 contracts: canonical identity, independent layers, and stale-result guards. */
 public class LyricSessionContractTest {
@@ -546,10 +546,10 @@ public class LyricSessionContractTest {
         LyricsDocument canonical = document("今天我们一起唱歌");
         LyricsLine line = canonical.lines.get(0);
         line.detection = DetectionResult.detected("", line.text,
-                com.eza.spicyex.lyrics.language.ScriptClassifier.ScriptClass.CHINESE, "zh", .99);
-        line.japaneseReading = new com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor.JapaneseReading(
+                com.flowify.ettea.lyrics.language.ScriptClassifier.ScriptClass.CHINESE, "zh", .99);
+        line.japaneseReading = new com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor.JapaneseReading(
                 line.text, "jin tian", Collections.singletonList(
-                new com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor.FuriganaSegment(0, 1, "きん")));
+                new com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor.FuriganaSegment(0, 1, "きん")));
         LyricSession session = LyricSession.of(CanonicalBase.fromDocument("spotify:track:a", canonical), 1);
         String row0 = session.base.rows.get(0).rowId;
         session = session.withSound(readySound(session, SoundEntry.line(row0, "jin tian", "pinyin")));

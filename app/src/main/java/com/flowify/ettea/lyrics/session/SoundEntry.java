@@ -1,12 +1,12 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
 
 /**
  * Reading output for one canonical row.
@@ -60,12 +60,12 @@ public final class SoundEntry implements LayerEntry {
      * the session can own. It must stay lossless, or the composer cannot reproduce what the lane
      * rendered.
      */
-    public static SoundEntry fromLine(CanonicalRow row, com.eza.spicyex.lyrics.LyricsLine line) {
+    public static SoundEntry fromLine(CanonicalRow row, com.flowify.ettea.lyrics.LyricsLine line) {
         if (row == null || line == null) return null;
         List<SpanReading> spans = new ArrayList<>();
         int count = Math.min(row.spans.size(), line.syllables.size());
         for (int i = 0; i < count; i++) {
-            com.eza.spicyex.lyrics.SyllableSegment segment = line.syllables.get(i);
+            com.flowify.ettea.lyrics.SyllableSegment segment = line.syllables.get(i);
             if (segment == null || Digests.nz(segment.romanizedText).isEmpty()) continue;
             spans.add(new SpanReading(row.spans.get(i).spanId, i, segment.romanizedText));
         }

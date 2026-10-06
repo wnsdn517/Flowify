@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** Lifecycle state of one derived layer within a session. */
 public enum LayerStatus {

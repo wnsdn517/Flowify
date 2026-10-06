@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -6,9 +6,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.ProviderStatus;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.ProviderStatus;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
 
 import java.util.ArrayList;
 import java.util.EnumMap;

@@ -1,15 +1,15 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 import android.Manifest;
 import android.app.Application;
 import android.content.Context;
 import android.content.pm.PackageManager;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /** Bounded runtime checks only. Never invokes root or reads logs/files. */
 public final class SpicySetupCheckCollector {
@@ -56,8 +56,8 @@ public final class SpicySetupCheckCollector {
 
     private static boolean moduleResourcesAvailable(Context context) {
         try {
-            return com.eza.spicyex.xposed.XpRes.moduleResources(context) != null
-                    || com.eza.spicyex.References.modResources != null;
+            return com.flowify.ettea.xposed.XpRes.moduleResources(context) != null
+                    || com.flowify.ettea.References.modResources != null;
         } catch (Throwable ignored) {
             return false;
         }
@@ -139,7 +139,7 @@ public final class SpicySetupCheckCollector {
 
     private static String modulePackageStatus(Context context) {
         try {
-            context.getPackageManager().getPackageInfo("com.eza.spicyex", 0);
+            context.getPackageManager().getPackageInfo("com.flowify.ettea", 0);
             return "present";
         } catch (PackageManager.NameNotFoundException ignored) {
             return "not_visible_or_missing";

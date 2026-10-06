@@ -1,6 +1,6 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerKind;
 
 /**
  * What the translation row does when a request is asked for, and when one is already showing.

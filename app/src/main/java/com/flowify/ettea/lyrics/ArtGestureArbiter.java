@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /**
  * Pure touch-arbitration state machine for the fullscreen track-info artwork.

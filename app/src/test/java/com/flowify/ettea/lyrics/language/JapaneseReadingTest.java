@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.FuriganaText;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.FuriganaText;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 
 import static org.junit.Assert.assertEquals;
@@ -14,8 +14,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
 
 import org.junit.Test;
 

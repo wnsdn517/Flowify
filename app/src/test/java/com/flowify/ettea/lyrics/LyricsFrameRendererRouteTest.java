@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -70,7 +70,7 @@ public class LyricsFrameRendererRouteTest {
     @Test
     public void hyperAodBounceUsesDirectSplinePathForSyntheticRows() throws Exception {
         String source = new String(java.nio.file.Files.readAllBytes(
-                new java.io.File("src/main/java/com/eza/spicyex/lyrics/LyricsFrameRenderer.java").toPath()),
+                new java.io.File("src/main/java/com/flowify/ettea/lyrics/LyricsFrameRenderer.java").toPath()),
                 java.nio.charset.StandardCharsets.UTF_8);
         String compact = source.replaceAll("\\s+", " ");
         // Direct motion stays on for every shared style (Apple disables it via !appleStyle only);

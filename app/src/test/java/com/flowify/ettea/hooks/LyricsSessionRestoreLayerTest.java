@@ -1,24 +1,24 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerProvenance;
-import com.eza.spicyex.lyrics.session.LayerStatus;
-import com.eza.spicyex.lyrics.session.LyricSession;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.session.MeaningEntry;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.lyrics.session.SoundEntry;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerProvenance;
+import com.flowify.ettea.lyrics.session.LayerStatus;
+import com.flowify.ettea.lyrics.session.LyricSession;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.session.MeaningEntry;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.SoundEntry;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -37,12 +37,12 @@ public class LyricsSessionRestoreLayerTest {
     private void assertSiblingCompletes(LayerKind restored) throws Exception {
         FakeAndroidContext context = new FakeAndroidContext();
         // No work is dispatched by restore; real lanes still perform cancellation.
-        com.eza.spicyex.lyrics.processing.LyricsSecondaryProcessor processor =
-                new com.eza.spicyex.lyrics.processing.LyricsSecondaryProcessor(context,
+        com.flowify.ettea.lyrics.processing.LyricsSecondaryProcessor processor =
+                new com.flowify.ettea.lyrics.processing.LyricsSecondaryProcessor(context,
                         new okhttp3.OkHttpClient(), null, null, null, null, null, 1);
-        com.eza.spicyex.lyrics.processing.LyricsSecondaryProcessingSession processing =
-                new com.eza.spicyex.lyrics.processing.LyricsSecondaryProcessingSession(context,
-                        com.eza.spicyex.SpotifyPlusConfig.from(context), processor, 1, "test");
+        com.flowify.ettea.lyrics.processing.LyricsSecondaryProcessingSession processing =
+                new com.flowify.ettea.lyrics.processing.LyricsSecondaryProcessingSession(context,
+                        com.flowify.ettea.SpotifyPlusConfig.from(context), processor, 1, "test");
         LyricsSessionManager manager = new LyricsSessionManager(context, null, processing,
                 null, () -> 0L);
         LyricsDocument input = new LyricsDocument();

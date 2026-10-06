@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import android.content.Context;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.CatalogResolver.Resolution;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCache;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCodec;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.CatalogResolver.Resolution;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCache;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCodec;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
 
 /**
  * The session's single entry point into the catalog. Loading a track imports the public

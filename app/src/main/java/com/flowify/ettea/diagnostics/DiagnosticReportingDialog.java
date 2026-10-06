@@ -1,4 +1,4 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 import android.app.Dialog;
 import android.content.ClipData;
@@ -30,13 +30,13 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.eza.spicyex.BuildConfig;
-import com.eza.spicyex.ui.GlossyToggle;
-import com.eza.spicyex.R;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.ui.UiLanguage;
+import com.flowify.ettea.BuildConfig;
+import com.flowify.ettea.ui.GlossyToggle;
+import com.flowify.ettea.R;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.ui.UiLanguage;
 
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -336,7 +336,7 @@ public final class DiagnosticReportingDialog {
     }
 
     /** Where reports go: this fork's issue tracker. */
-    static final String ISSUES_NEW_URL = "https://github.com/wnsdn517/spicy-ex/issues/new";
+    static final String ISSUES_NEW_URL = "https://github.com/wnsdn517/Flowify/issues/new";
     /** GitHub refuses very long links; the body is cut to fit, the full JSON is on the clipboard. */
     private static final int ISSUE_BODY_MAX = 5500;
 

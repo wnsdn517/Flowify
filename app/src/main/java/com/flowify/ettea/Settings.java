@@ -1,9 +1,9 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
-import com.eza.spicyex.settings.SettingsPanel;
+import com.flowify.ettea.settings.SettingsPanel;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
-import com.eza.spicyex.lyrics.LyricsBackgroundStyle;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.LyricsBackgroundStyle;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,7 +75,7 @@ public final class Settings {
             );
 
     // How the double-tap like is acknowledged on screen. Each style is its own design (see
-    // com.eza.spicyex.ui.LikeBursts); looks only.
+    // com.flowify.ettea.ui.LikeBursts); looks only.
     public static final StringSetting DOUBLE_TAP_LIKE_EFFECT =
             (StringSetting) enumSetting(
                     "lyrics_double_tap_like_effect", GESTURES, "Double-tap effect", "Aurora",

@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import android.app.Activity;
 import android.content.Context;
@@ -14,15 +14,15 @@ import android.view.Gravity;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /** Text, font, and chip factory for the native lyrics shell. */
 public final class LyricsTextFactory {

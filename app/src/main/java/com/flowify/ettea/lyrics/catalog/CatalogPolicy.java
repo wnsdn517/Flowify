@@ -1,11 +1,11 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import android.content.Context;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -1,4 +1,4 @@
-package com.eza.spicyex.xposed;
+package com.flowify.ettea.xposed;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;

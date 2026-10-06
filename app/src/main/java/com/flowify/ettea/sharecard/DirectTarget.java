@@ -1,4 +1,4 @@
-package com.eza.spicyex.sharecard;
+package com.flowify.ettea.sharecard;
 
 import android.content.ComponentName;
 import android.graphics.drawable.Drawable;

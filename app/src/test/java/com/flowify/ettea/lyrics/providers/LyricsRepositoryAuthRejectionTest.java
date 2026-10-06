@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

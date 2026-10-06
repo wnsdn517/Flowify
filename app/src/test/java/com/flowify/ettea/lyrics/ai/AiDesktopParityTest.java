@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-import com.eza.spicyex.lyrics.session.Digests;
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.Digests;
+import com.flowify.ettea.lyrics.session.LayerKind;
 
 import org.junit.Test;
 

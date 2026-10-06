@@ -1,8 +1,8 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.xposed.SpotifySymbolResolver;
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.SpotifySymbolResolver;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
 
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;

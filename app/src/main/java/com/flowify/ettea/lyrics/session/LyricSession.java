@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /**
  * One current-track session: an immutable canonical base plus two independent derived layers.

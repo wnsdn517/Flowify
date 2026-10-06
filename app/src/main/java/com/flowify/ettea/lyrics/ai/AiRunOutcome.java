@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerFailure;
 
 /**
  * How one run ended, in the terms a caller has to act on.

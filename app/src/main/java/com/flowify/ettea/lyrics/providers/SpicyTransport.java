@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.content.Context;
 import android.content.SharedPreferences;

@@ -1,6 +1,6 @@
 // Double-tap like style "Pulse" (Settings.DOUBLE_TAP_LIKE_EFFECT): the Glow mark with a
 // heartbeat. See LikeBursts for the list.
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;

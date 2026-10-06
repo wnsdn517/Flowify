@@ -1,9 +1,9 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
-import com.eza.spicyex.lyrics.catalog.CatalogPolicy;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogPolicy;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

@@ -1,4 +1,4 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 /** Shared normalization/label helpers for settings values that affect multiple render surfaces. */
 public final class SettingsValueNormalizer {

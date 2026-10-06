@@ -1,14 +1,14 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.CatalogSource;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.CatalogSource;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /** Package-local state machine for provider fallback decisions. */
 final class LyricsProviderChain {

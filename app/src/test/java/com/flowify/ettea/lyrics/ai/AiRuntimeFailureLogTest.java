@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import org.junit.Test;
 
@@ -11,7 +11,7 @@ public final class AiRuntimeFailureLogTest {
         NoClassDefFoundError failure = new NoClassDefFoundError(
                 "Could not initialize class okhttp3.internal.Util");
         failure.setStackTrace(new StackTraceElement[]{new StackTraceElement(
-                "com.eza.spicyex.lyrics.ai.AiHttp", "client", "AiHttp.java", 82)});
+                "com.flowify.ettea.lyrics.ai.AiHttp", "client", "AiHttp.java", 82)});
 
         assertEquals("NoClassDefFoundError:at=AiHttp.client",
                 AiRuntimeFailureLog.describe(failure));

@@ -1,6 +1,6 @@
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.Settings;
 
 import android.content.Context;
 

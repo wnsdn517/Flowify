@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

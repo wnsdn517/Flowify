@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -12,13 +12,13 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.reading.ProviderBoundaryResolver;
-import com.eza.spicyex.lyrics.reading.ReadingModels.Boundary;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParagraphProvenance;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SourceSpan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SpanJoinEvidence;
+import com.flowify.ettea.lyrics.reading.ProviderBoundaryResolver;
+import com.flowify.ettea.lyrics.reading.ReadingModels.Boundary;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParagraphProvenance;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SourceSpan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SpanJoinEvidence;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

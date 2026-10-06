@@ -1,11 +1,11 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.session.LayerConfigIds;
+import com.flowify.ettea.lyrics.session.LayerConfigIds;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

@@ -1,22 +1,22 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 import org.junit.Test;
 import java.util.List;
 
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
 
 public class LyricsLocalRomanizerDocumentContextTest {
     private static final RomanizationOptions JYUTPING = new RomanizationOptions(
@@ -216,7 +216,7 @@ public class LyricsLocalRomanizerDocumentContextTest {
             segment.endMs = (i + 1) * 100;
             line.syllables.add(segment);
         }
-        line.text = com.eza.spicyex.lyrics.reading.SyllableCanonicalizer.canonicalize(
+        line.text = com.flowify.ettea.lyrics.reading.SyllableCanonicalizer.canonicalize(
                 "suzume", line.text, line.syllables).text;
         assertEquals("時はまくらぎ 風はにきはだ 星はうぶすな 人はかげろう", line.text);
         String reading = LyricsLocalRomanizer.romanizeLine(JYUTPING, doc, line, line.text);
@@ -244,7 +244,7 @@ public class LyricsLocalRomanizerDocumentContextTest {
             segment.endMs = (i + 1) * 100;
             line.syllables.add(segment);
         }
-        line.text = com.eza.spicyex.lyrics.reading.SyllableCanonicalizer.canonicalize(
+        line.text = com.flowify.ettea.lyrics.reading.SyllableCanonicalizer.canonicalize(
                 "person-counter", line.text, line.syllables).text;
         assertEquals("ほらこのまま 2人 血が", line.text);
         String reading = LyricsLocalRomanizer.romanizeLine(JYUTPING, doc, line, line.text);

@@ -1,18 +1,18 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
 import android.content.Context;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.lyrics.catalog.ArtifactKind;
-import com.eza.spicyex.lyrics.catalog.CatalogStore;
-import com.eza.spicyex.lyrics.session.Digests;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.lyrics.catalog.ArtifactKind;
+import com.flowify.ettea.lyrics.catalog.CatalogStore;
+import com.flowify.ettea.lyrics.session.Digests;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.processing.SpicyProcessing;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.processing.SpicyProcessing;
 
 /** Preference-backed caches used by native Spicy lyrics processing. */
 public final class LyricCaches {

@@ -1,15 +1,15 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 import android.content.Context;
 
-import com.eza.spicyex.diagnostics.DiagnosticCaptureStore;
-import com.eza.spicyex.diagnostics.DiagnosticEventBuffer;
+import com.flowify.ettea.diagnostics.DiagnosticCaptureStore;
+import com.flowify.ettea.diagnostics.DiagnosticEventBuffer;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /** Privacy-safe, rate-limited diagnostics for defensive hook/cache paths. */
 public final class Diagnostics {

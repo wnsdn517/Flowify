@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.media.AudioTimestamp;
 import android.media.AudioTrack;
@@ -8,7 +8,7 @@ import android.util.SparseArray;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /**
  * How far the sound being heard trails the position Spotify reports.

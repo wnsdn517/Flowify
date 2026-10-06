@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.AlertDialog;
 import android.content.ContentResolver;
@@ -12,10 +12,10 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.widget.Toast;
 
-import com.eza.spicyex.R;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.R;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

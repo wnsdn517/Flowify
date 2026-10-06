@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.Digests;
+import com.flowify.ettea.lyrics.session.Digests;
 
 import java.util.ArrayList;
 import java.util.Collections;

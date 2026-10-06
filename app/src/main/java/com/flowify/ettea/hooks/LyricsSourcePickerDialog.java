@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 import android.graphics.Typeface;
@@ -10,14 +10,14 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerModel;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerState;
-import com.eza.spicyex.settings.RowSyncPlan;
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.PanelDialog;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerModel;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerState;
+import com.flowify.ettea.settings.RowSyncPlan;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.PanelDialog;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

@@ -1,14 +1,14 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.settings.SettingsValueNormalizer;
-import com.eza.spicyex.SpotifyPlusConfig;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.settings.SettingsValueNormalizer;
+import com.flowify.ettea.SpotifyPlusConfig;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /**
  * Owns normalized runtime reads for the fullscreen and now-playing lyrics surfaces.

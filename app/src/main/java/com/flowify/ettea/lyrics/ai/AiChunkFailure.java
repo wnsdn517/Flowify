@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** A chunk's terminal failure, as stored in its record. Identity-safe: no lyric text, no body. */
 public final class AiChunkFailure {

@@ -17,7 +17,7 @@ Xiaomi HyperOS 3 lockscreen/AOD integration: [HyperGlow](https://github.com/amar
 
 Have an idea, found a bug, or just want to talk? Pick a channel.
 
-<a href="https://t.me/spicy_ex"><img src="https://img.shields.io/badge/Announcements-229ED9?style=flat&logo=telegram&logoColor=white" alt="Announcements"></a> <a href="https://t.me/spicy_ex_discussion"><img src="https://img.shields.io/badge/Discussion-7B61FF?style=flat&logo=telegram&logoColor=white" alt="Discussion"></a> <a href="https://t.me/spicy_ex_ci"><img src="https://img.shields.io/badge/CI_builds-2EA44F?style=flat&logo=telegram&logoColor=white" alt="CI_builds"></a> <a href="https://github.com/wnsdn517/spicy-ex/discussions"><img src="https://img.shields.io/badge/GitHub_Discussions-181818?style=flat&logo=github&logoColor=white" alt="GitHub_Discussions"></a>
+<a href="https://t.me/flowfiy_music"><img src="https://img.shields.io/badge/Announcements-229ED9?style=flat&logo=telegram&logoColor=white" alt="Announcements"></a> <a href="https://t.me/flowify_discussion"><img src="https://img.shields.io/badge/Discussion-7B61FF?style=flat&logo=telegram&logoColor=white" alt="Discussion"></a> <a href="https://t.me/flowify_ci"><img src="https://img.shields.io/badge/CI_builds-2EA44F?style=flat&logo=telegram&logoColor=white" alt="CI_builds"></a> <a href="https://github.com/wnsdn517/Flowify/discussions"><img src="https://img.shields.io/badge/GitHub_Discussions-181818?style=flat&logo=github&logoColor=white" alt="GitHub_Discussions"></a>
 
 <sub>Bot in Discussion: <code>/release</code> · <code>/beta</code> · <code>/ci</code></sub>
 

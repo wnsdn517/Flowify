@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import com.google.gson.*;
 import org.junit.Test;

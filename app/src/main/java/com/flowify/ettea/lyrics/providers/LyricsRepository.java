@@ -1,16 +1,16 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.content.Context;
 import android.net.Uri;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.Json;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.AcquisitionScope;
-import com.eza.spicyex.lyrics.catalog.CatalogAdapters;
-import com.eza.spicyex.lyrics.catalog.CatalogPolicy;
-import com.eza.spicyex.lyrics.catalog.CatalogSource;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.Json;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.AcquisitionScope;
+import com.flowify.ettea.lyrics.catalog.CatalogAdapters;
+import com.flowify.ettea.lyrics.catalog.CatalogPolicy;
+import com.flowify.ettea.lyrics.catalog.CatalogSource;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -21,15 +21,15 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import static com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri;
 
 /** Fetch/fallback coordinator for remote lyrics (Apple Music + Spotify native + LRCLIB). */
 public final class LyricsRepository {
@@ -86,10 +86,10 @@ public final class LyricsRepository {
             return;
         }
         if (scope.sourceOrderMode) {
-            java.util.List<com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source> order =
+            java.util.List<com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source> order =
                     new java.util.ArrayList<>();
             for (CatalogSource.SourceId source : scope.sources) {
-                com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source mapped =
+                com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source mapped =
                         CatalogPolicy.preferenceSource(source);
                 if (mapped != null) order.add(mapped);
             }
@@ -112,7 +112,7 @@ public final class LyricsRepository {
 
     /** Fetches exactly one picker source. This path never falls through to another provider. */
     public void fetchSource(Context context, SpotifyTrack track, int generation,
-                            com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source source,
+                            com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source source,
                             boolean karaokeOriginalLyrics,
                             ResultCallback callback) {
         if (source == null || callback == null) return;
@@ -122,7 +122,7 @@ public final class LyricsRepository {
 
     /** Source-order Auto: first enabled source in user order that yields lyrics wins. */
     private void fetchOrderedSources(Context context, SpotifyTrack track, int generation,
-                                     java.util.List<com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source> enabledOrder,
+                                     java.util.List<com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source> enabledOrder,
                                      String accessToken, boolean karaokeOriginalLyrics,
                                      ResultCallback callback) {
         if (enabledOrder == null || enabledOrder.isEmpty()) {
@@ -134,7 +134,7 @@ public final class LyricsRepository {
     }
 
     private void attemptOrderedSource(Context context, SpotifyTrack track, int generation,
-                                      java.util.List<com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source> enabledOrder,
+                                      java.util.List<com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source> enabledOrder,
                                       int index, String accessToken, boolean karaokeOriginalLyrics,
                                       ResultCallback callback) {
         if (index >= enabledOrder.size()) {
@@ -204,7 +204,7 @@ public final class LyricsRepository {
         callback.onError(message);
     }
 
-    private static String labelFor(com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source source) {
+    private static String labelFor(com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source source) {
         if (source == null) return "Auto";
         switch (source) {
             case APPLE_MUSIC: return "Apple Music";
@@ -224,10 +224,10 @@ public final class LyricsRepository {
     }
 
     private static boolean isStepEnabled(
-            java.util.List<com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source> enabledOrder,
-            com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source... anyOf) {
+            java.util.List<com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source> enabledOrder,
+            com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source... anyOf) {
         if (enabledOrder == null || anyOf == null) return false;
-        for (com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source source : anyOf) {
+        for (com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source source : anyOf) {
             if (enabledOrder.contains(source)) return true;
         }
         return false;

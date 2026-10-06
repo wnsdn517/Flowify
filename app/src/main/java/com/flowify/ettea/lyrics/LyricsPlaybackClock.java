@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import android.os.SystemClock;
 
-import com.eza.spicyex.SpotifyTrack;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import com.flowify.ettea.SpotifyTrack;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /** Smooths Spotify's coarse playback progress samples for lyrics animation. */
 public final class LyricsPlaybackClock {

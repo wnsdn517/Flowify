@@ -1,17 +1,17 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
-import com.eza.spicyex.lyrics.language.SpicyRomanizer;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingAnnotation;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingProvenance;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingUnitKind;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.SpicyRomanizer;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingAnnotation;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingProvenance;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingUnitKind;
 
 public final class KoreanReadingProcessor {
     private KoreanReadingProcessor() {}

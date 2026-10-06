@@ -1,11 +1,11 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -48,7 +48,7 @@ public class LyricsFetchCoordinatorStaleErrorTest {
 
     private Object operation(String key) throws Exception {
         Class<?> type = Class.forName(
-                "com.eza.spicyex.hooks.LyricsFetchCoordinator$InFlightFetch");
+                "com.flowify.ettea.hooks.LyricsFetchCoordinator$InFlightFetch");
         Constructor<?> constructor = type.getDeclaredConstructor(String.class, boolean.class);
         constructor.setAccessible(true);
         return constructor.newInstance(key, false);
@@ -66,7 +66,7 @@ public class LyricsFetchCoordinatorStaleErrorTest {
             Object argument) throws Exception {
         Class<?> argumentType = "deliverError".equals(method) ? String.class : LyricsDocument.class;
         Method deliver = LyricsFetchCoordinator.class.getDeclaredMethod(method,
-                Class.forName("com.eza.spicyex.hooks.LyricsFetchCoordinator$InFlightFetch"),
+                Class.forName("com.flowify.ettea.hooks.LyricsFetchCoordinator$InFlightFetch"),
                 argumentType);
         deliver.setAccessible(true);
         deliver.invoke(coordinator, operation, argument);

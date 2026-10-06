@@ -1,19 +1,19 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
-import com.eza.spicyex.lyrics.language.SpicyRomanizer;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.SpicyRomanizer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 import java.lang.reflect.Constructor;
 
 import org.junit.Test;
-import com.eza.spicyex.lyrics.LyricsBackgroundStyle;
-import com.eza.spicyex.lyrics.LyricsRenderConfig;
+import com.flowify.ettea.lyrics.LyricsBackgroundStyle;
+import com.flowify.ettea.lyrics.LyricsRenderConfig;
 
 public class LyricsTransliterationSessionTest {
     @Test

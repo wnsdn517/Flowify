@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.eza.spicyex.Diagnostics;
+import com.flowify.ettea.Diagnostics;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -37,8 +37,8 @@ public final class AIPaidArtifactCache {
      * Existing records are never evicted to make room; a full finite quota still refuses writes.
      */
     private static long quotaBytes(Context context) {
-        return com.eza.spicyex.lyrics.cache.CacheStoragePolicy.paidAiQuota(
-                com.eza.spicyex.lyrics.cache.CacheStoragePolicy.totalBudget(context));
+        return com.flowify.ettea.lyrics.cache.CacheStoragePolicy.paidAiQuota(
+                com.flowify.ettea.lyrics.cache.CacheStoragePolicy.totalBudget(context));
     }
 
     private static volatile AIPaidArtifactDatabase database;

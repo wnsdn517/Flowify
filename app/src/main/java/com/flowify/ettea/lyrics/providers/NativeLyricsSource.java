@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -9,14 +9,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.Json;
-import com.eza.spicyex.lyrics.LyricTimeline;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.SyllableCanonicalizer;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.Json;
+import com.flowify.ettea.lyrics.LyricTimeline;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.SyllableCanonicalizer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -25,11 +25,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 
-import com.eza.spicyex.xposed.XpLog;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import static com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri;
-import com.eza.spicyex.Diagnostics;
+import com.flowify.ettea.xposed.XpLog;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri;
+import com.flowify.ettea.Diagnostics;
 
 /** Spotify-native lyrics source backed by captured models and Spotify's local lyrics_db. */
 public final class NativeLyricsSource implements LyricsRepository.NativeLyricsProvider {

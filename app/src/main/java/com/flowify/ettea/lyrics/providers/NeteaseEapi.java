@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

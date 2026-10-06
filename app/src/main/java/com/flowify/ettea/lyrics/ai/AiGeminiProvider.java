@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

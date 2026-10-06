@@ -1,17 +1,17 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import android.content.Context;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.MatchMethod;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.ProviderStatus;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.TimingLevel;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCodec;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.MatchMethod;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.ProviderStatus;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.TimingLevel;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCodec;
 
 import java.util.ArrayList;
 import java.util.Collections;

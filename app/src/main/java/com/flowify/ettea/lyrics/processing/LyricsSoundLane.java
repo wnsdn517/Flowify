@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.LyricsLocalRomanizer;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.LyricsLocalRomanizer;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import android.content.Context;
 import android.os.Handler;
@@ -18,36 +18,36 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.lyrics.ai.AiCancelledException;
-import com.eza.spicyex.lyrics.ai.AiContract;
-import com.eza.spicyex.lyrics.ai.AiLiveMonitor;
-import com.eza.spicyex.lyrics.ai.AiRunOutcome;
-import com.eza.spicyex.lyrics.ai.AiRunMonitor;
-import com.eza.spicyex.lyrics.ai.AiRequestLiveState;
-import com.eza.spicyex.lyrics.ai.AiRuntimeFailureLog;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.lyrics.ai.AiSignal;
-import com.eza.spicyex.lyrics.ai.AiSoundOverlay;
-import com.eza.spicyex.lyrics.ai.AiSoundRun;
-import com.eza.spicyex.lyrics.ai.AiText;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
-import com.eza.spicyex.lyrics.session.CanonicalRow;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerProvenance;
-import com.eza.spicyex.lyrics.session.LyricPipelineMetrics;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.lyrics.session.SoundEntry;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.lyrics.ai.AiCancelledException;
+import com.flowify.ettea.lyrics.ai.AiContract;
+import com.flowify.ettea.lyrics.ai.AiLiveMonitor;
+import com.flowify.ettea.lyrics.ai.AiRunOutcome;
+import com.flowify.ettea.lyrics.ai.AiRunMonitor;
+import com.flowify.ettea.lyrics.ai.AiRequestLiveState;
+import com.flowify.ettea.lyrics.ai.AiRuntimeFailureLog;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.lyrics.ai.AiSignal;
+import com.flowify.ettea.lyrics.ai.AiSoundOverlay;
+import com.flowify.ettea.lyrics.ai.AiSoundRun;
+import com.flowify.ettea.lyrics.ai.AiText;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.session.CanonicalRow;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerProvenance;
+import com.flowify.ettea.lyrics.session.LyricPipelineMetrics;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.SoundEntry;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 import okhttp3.OkHttpClient;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 /**
  * The Sound lane: deterministic on-device readings, with an optional network romanization fallback.

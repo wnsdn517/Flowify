@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerKind;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -39,7 +39,7 @@ import okhttp3.ResponseBody;
  *   # .env:  OPENROUTER_SURVEY=1
  *   #        OPENROUTER_API_KEY=sk-or-…
  *   ./gradlew :app:testDebugUnitTest --rerun-tasks \
- *       --tests "com.eza.spicyex.lyrics.ai.OpenRouterModelSurveyTest" -i
+ *       --tests "com.flowify.ettea.lyrics.ai.OpenRouterModelSurveyTest" -i
  * </pre>
  *
  * <p>Both are required. The key alone is not enough on purpose: it lives in {@code .env} for other

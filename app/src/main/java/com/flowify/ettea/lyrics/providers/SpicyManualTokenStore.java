@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.content.Context;
 
-import com.eza.spicyex.lyrics.ai.AiCredentialStore;
+import com.flowify.ettea.lyrics.ai.AiCredentialStore;
 
 /** Keystore-backed owner of the experimental desktop Spotify token used by Spicy. */
 public final class SpicyManualTokenStore {

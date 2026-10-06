@@ -1,9 +1,9 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.lyrics.providers.NativeLyricsSource;
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpReflect;
+import com.flowify.ettea.lyrics.providers.NativeLyricsSource;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpReflect;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -168,8 +168,8 @@ final class NativeLyricsNetworkHook {
     private static String currentTrackId() {
         try {
             if (hint == null) return "";
-            com.eza.spicyex.SpotifyTrack track = hint.getCurrentTrack();
-            return track == null ? "" : com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri(track.uri);
+            com.flowify.ettea.SpotifyTrack track = hint.getCurrentTrack();
+            return track == null ? "" : com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri(track.uri);
         } catch (Throwable ignored) {
             return "";
         }

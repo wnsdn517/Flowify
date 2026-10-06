@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import java.util.Map;
 import java.util.WeakHashMap;

@@ -1,14 +1,14 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import android.content.Context;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerProvenance;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.lyrics.session.SoundEntry;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerProvenance;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.SoundEntry;
 
 import java.util.ArrayList;
 import java.util.List;

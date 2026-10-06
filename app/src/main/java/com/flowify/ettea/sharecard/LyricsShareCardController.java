@@ -1,4 +1,4 @@
-package com.eza.spicyex.sharecard;
+package com.flowify.ettea.sharecard;
 
 import android.app.Activity;
 import android.content.ContentValues;
@@ -39,13 +39,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.hooks.NativeRuntime;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.hooks.NativeRuntime;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -57,10 +57,10 @@ import java.util.concurrent.Executors;
 import okhttp3.Request;
 import okhttp3.Response;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import static com.eza.spicyex.lyrics.LyricUtils.spotifyUriToWebUrl;
-import static com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.spotifyUriToWebUrl;
+import static com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri;
 
 /**
  * Lyric share card: a preview sheet over the lyrics, and the image it shares.
@@ -230,8 +230,8 @@ public final class LyricsShareCardController {
     public LyricsShareCardController(Activity activity) {
         this.activity = activity;
         this.prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        this.strings = com.eza.spicyex.ui.UiLanguage.strings(activity,
-                com.eza.spicyex.SpotifyPlusConfig.from(activity).get(com.eza.spicyex.Settings.UI_LANGUAGE));
+        this.strings = com.flowify.ettea.ui.UiLanguage.strings(activity,
+                com.flowify.ettea.SpotifyPlusConfig.from(activity).get(com.flowify.ettea.Settings.UI_LANGUAGE));
         this.design = enumOr(Design.class, prefs.getString(PREF_DESIGN, null), Design.GLASS);
         this.backdrop = enumOr(Backdrop.class, prefs.getString(PREF_BACKDROP, null), Backdrop.BLUR);
         this.spotifyCode = prefs.getBoolean(PREF_CODE, false);
@@ -929,8 +929,8 @@ public final class LyricsShareCardController {
     private int hintPasses() {
         String mode;
         try {
-            mode = com.eza.spicyex.SpotifyPlusConfig.from(activity)
-                    .get(com.eza.spicyex.Settings.SHARE_GESTURE_HINT);
+            mode = com.flowify.ettea.SpotifyPlusConfig.from(activity)
+                    .get(com.flowify.ettea.Settings.SHARE_GESTURE_HINT);
         } catch (Throwable ignored) {
             mode = "First few times";
         }
@@ -4335,8 +4335,8 @@ public final class LyricsShareCardController {
         String trackId = trackIdFromUri(t == null ? "" : t.uri);
         if (trackId.isEmpty()) return;
         String trackUri = safe(t.uri);
-        String metaArtist = trackUri.equals(com.eza.spicyex.References.lastTrackUri)
-                ? com.eza.spicyex.References.lastArtistUri : "";
+        String metaArtist = trackUri.equals(com.flowify.ettea.References.lastTrackUri)
+                ? com.flowify.ettea.References.lastArtistUri : "";
         NETWORK.execute(() -> {
             Bitmap image = null;
             try {
@@ -4344,7 +4344,7 @@ public final class LyricsShareCardController {
                         ? metaArtist.substring("spotify:artist:".length()) : null;
                 if (artistId == null) {
                     XpLog.log(TAG + " artist: no artist_uri in metadata, trying Web API");
-                    String authToken = com.eza.spicyex.hooks.SpotifyWebApiToken.current();
+                    String authToken = com.flowify.ettea.hooks.SpotifyWebApiToken.current();
                     if (authToken == null) {
                         XpLog.log(TAG + " artist: no Web API token either");
                     } else {
@@ -4434,7 +4434,7 @@ public final class LyricsShareCardController {
     /** The artist's largest image from the Web API, with Spotify's own captured token. */
     private static Bitmap artistImageFromWebApi(String artistId) {
         try {
-            String authToken = com.eza.spicyex.hooks.SpotifyWebApiToken.current();
+            String authToken = com.flowify.ettea.hooks.SpotifyWebApiToken.current();
             if (authToken == null) return null;
             org.json.JSONObject artist = getJson("https://api.spotify.com/v1/artists/" + artistId, authToken);
             org.json.JSONArray images = artist == null ? null : artist.optJSONArray("images");

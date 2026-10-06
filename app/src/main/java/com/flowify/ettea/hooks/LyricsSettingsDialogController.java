@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -9,14 +9,14 @@ import android.view.View;
 import android.view.Window;
 import android.widget.FrameLayout;
 
-import com.eza.spicyex.settings.SettingsPanel;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.ui.VsyncFrameScheduler;
-import com.eza.spicyex.lyrics.LyricsAmbientController;
-import com.eza.spicyex.ui.Motion;
-import com.eza.spicyex.ui.PanelSurface;
+import com.flowify.ettea.settings.SettingsPanel;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.ui.VsyncFrameScheduler;
+import com.flowify.ettea.lyrics.LyricsAmbientController;
+import com.flowify.ettea.ui.Motion;
+import com.flowify.ettea.ui.PanelSurface;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /** Owns the in-Spotify settings modal lifecycle and render-loop pause/resume. */
 final class LyricsSettingsDialogController {
@@ -305,11 +305,11 @@ final class LyricsSettingsDialogController {
         sheet.setOrientation(android.widget.LinearLayout.VERTICAL);
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{com.eza.spicyex.settings.PanelStyle.COL_CARD_TOP | 0xFF000000,
-                        com.eza.spicyex.settings.PanelStyle.COL_CARD | 0xFF000000});
+                new int[]{com.flowify.ettea.settings.PanelStyle.COL_CARD_TOP | 0xFF000000,
+                        com.flowify.ettea.settings.PanelStyle.COL_CARD | 0xFF000000});
         float r = 30 * density;
         bg.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
-        bg.setStroke(Math.max(1, Math.round(density)), com.eza.spicyex.settings.PanelStyle.COL_CARD_BORDER);
+        bg.setStroke(Math.max(1, Math.round(density)), com.flowify.ettea.settings.PanelStyle.COL_CARD_BORDER);
         sheet.setBackground(bg);
         bg.setAlpha(halfMode ? COLLAPSED_ALPHA : expandedAlpha());
         sheet.setClipToOutline(true);
@@ -322,8 +322,8 @@ final class LyricsSettingsDialogController {
         pill.setBackground(pillBg);
         handle.addView(pill, new FrameLayout.LayoutParams(Math.round(40 * density),
                 Math.round(5 * density), Gravity.CENTER));
-        handle.setContentDescription(com.eza.spicyex.ui.UiLanguage.strings(activity,
-                new SettingsStore(activity).get(com.eza.spicyex.Settings.UI_LANGUAGE))
+        handle.setContentDescription(com.flowify.ettea.ui.UiLanguage.strings(activity,
+                new SettingsStore(activity).get(com.flowify.ettea.Settings.UI_LANGUAGE))
                 .get("settings_panel_resize", "Resize settings panel"));
         sheet.addView(handle, new android.widget.LinearLayout.LayoutParams(
                 android.view.ViewGroup.LayoutParams.MATCH_PARENT, Math.round(26 * density)));

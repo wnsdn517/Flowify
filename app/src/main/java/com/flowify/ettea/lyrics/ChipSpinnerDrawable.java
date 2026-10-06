@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -10,7 +10,7 @@ import android.graphics.drawable.Drawable;
 
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable;
 
-import com.eza.spicyex.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.ActionIconDrawable;
 
 /**
  * Toggle-chip progress spinner. We do NOT hand-draw the arc — this wraps androidx's

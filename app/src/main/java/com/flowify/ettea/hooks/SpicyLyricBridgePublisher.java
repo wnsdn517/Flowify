@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,9 +11,9 @@ import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 
 import com.eza.hyperglow.bridge.ISpicyLyricBridge;
-import com.eza.spicyex.Diagnostics;
+import com.flowify.ettea.Diagnostics;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

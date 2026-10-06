@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
 
 public final class CodePointRanges {
     private CodePointRanges() {}

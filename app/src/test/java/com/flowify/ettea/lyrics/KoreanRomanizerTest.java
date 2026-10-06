@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyRomanizer;
+import com.flowify.ettea.lyrics.language.SpicyRomanizer;
 
 import static org.junit.Assert.assertEquals;
 

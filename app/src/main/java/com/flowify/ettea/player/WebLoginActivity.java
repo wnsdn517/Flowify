@@ -1,4 +1,4 @@
-package com.eza.spicyex.player;
+package com.flowify.ettea.player;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -26,7 +26,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.R;
+import com.flowify.ettea.R;
 
 import java.util.ArrayList;
 import java.util.List;

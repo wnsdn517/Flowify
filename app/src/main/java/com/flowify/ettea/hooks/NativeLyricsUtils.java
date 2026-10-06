@@ -1,13 +1,13 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 import android.content.Context;
 import android.text.TextUtils;
 import android.widget.TextView;
 
-import com.eza.spicyex.References;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.References;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import java.util.Locale;
 
@@ -67,8 +67,8 @@ final class NativeLyricsUtils {
         try {
             boolean landscape = context.getResources().getDisplayMetrics().widthPixels
                     > context.getResources().getDisplayMetrics().heightPixels;
-            com.eza.spicyex.SpotifyPlusConfig config = com.eza.spicyex.SpotifyPlusConfig.from(context);
-            String mode = config == null ? "Off" : config.get(com.eza.spicyex.Settings.STATUS_BAR_HIDDEN_MODE);
+            com.flowify.ettea.SpotifyPlusConfig config = com.flowify.ettea.SpotifyPlusConfig.from(context);
+            String mode = config == null ? "Off" : config.get(com.flowify.ettea.Settings.STATUS_BAR_HIDDEN_MODE);
             if ("Both".equals(mode)) return true;
             return landscape ? "Landscape".equals(mode) : "Portrait".equals(mode);
         } catch (Throwable ignored) {
@@ -119,11 +119,11 @@ final class NativeLyricsUtils {
     }
 
     static boolean isBlank(String value) {
-        return com.eza.spicyex.lyrics.LyricUtils.isBlank(value);
+        return com.flowify.ettea.lyrics.LyricUtils.isBlank(value);
     }
 
     static String safe(String value) {
-        return com.eza.spicyex.lyrics.LyricUtils.safe(value);
+        return com.flowify.ettea.lyrics.LyricUtils.safe(value);
     }
 
     static String emptyFallback(String value, String fallback) {
@@ -139,7 +139,7 @@ final class NativeLyricsUtils {
     }
 
     static String trackIdFromUri(String uri) {
-        return com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri(uri);
+        return com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri(uri);
     }
 
     static String shortTrackId(String uri) {

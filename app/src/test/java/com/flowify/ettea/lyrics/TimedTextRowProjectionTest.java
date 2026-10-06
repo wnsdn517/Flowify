@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -14,12 +14,12 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
-import com.eza.spicyex.lyrics.reading.SyllableCanonicalizer;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.reading.SyllableCanonicalizer;
 
 public class TimedTextRowProjectionTest {
     @Test

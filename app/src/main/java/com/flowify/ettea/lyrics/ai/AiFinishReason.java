@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /**
  * Why the model stopped generating. A closed mapping, and the authority on refusals.

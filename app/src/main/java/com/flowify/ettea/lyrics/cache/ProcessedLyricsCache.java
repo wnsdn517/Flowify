@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
-import com.eza.spicyex.lyrics.language.JapaneseReadingEngine;
-import com.eza.spicyex.lyrics.language.ScriptClassifier;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.JapaneseReadingEngine;
+import com.flowify.ettea.lyrics.language.ScriptClassifier;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import android.content.Context;
 
@@ -11,36 +11,36 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.Gson;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
-import com.eza.spicyex.lyrics.reading.CodePointRanges;
-import com.eza.spicyex.lyrics.reading.DefaultRenderPlanBuilder;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.CanonicalRow;
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.DetectionArtifact;
-import com.eza.spicyex.lyrics.session.DetectionResult;
-import com.eza.spicyex.lyrics.session.DetectionStatus;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.session.MeaningEntry;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.lyrics.session.SoundEntry;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.providers.LyricsParser;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
+import com.flowify.ettea.lyrics.reading.CodePointRanges;
+import com.flowify.ettea.lyrics.reading.DefaultRenderPlanBuilder;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.CanonicalRow;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.DetectionArtifact;
+import com.flowify.ettea.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionStatus;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.session.MeaningEntry;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.SoundEntry;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.providers.LyricsParser;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.eza.spicyex.xposed.XpLog;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import com.eza.spicyex.lyrics.Json;
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.xposed.XpLog;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import com.flowify.ettea.lyrics.Json;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 /**
  * Durable per-layer artifact records for reading (Sound) and translation (Meaning).
@@ -448,16 +448,16 @@ public final class ProcessedLyricsCache {
                 Json.optString(item, "language"),
                 Json.optDouble(item, 0.0, "confidence"),
                 DetectionStatus.fromName(Json.optString(item, "status")),
-                com.eza.spicyex.lyrics.session.DetectionEvidence.fromName(Json.optString(item, "evidence")));
+                com.flowify.ettea.lyrics.session.DetectionEvidence.fromName(Json.optString(item, "evidence")));
     }
 
-    private static com.eza.spicyex.lyrics.language.ScriptClassifier.ScriptClass scriptClassFromName(String name) {
-        if (name == null || name.isEmpty()) return com.eza.spicyex.lyrics.language.ScriptClassifier.ScriptClass.OTHER;
+    private static com.flowify.ettea.lyrics.language.ScriptClassifier.ScriptClass scriptClassFromName(String name) {
+        if (name == null || name.isEmpty()) return com.flowify.ettea.lyrics.language.ScriptClassifier.ScriptClass.OTHER;
         try {
-            return com.eza.spicyex.lyrics.language.ScriptClassifier.ScriptClass.valueOf(
+            return com.flowify.ettea.lyrics.language.ScriptClassifier.ScriptClass.valueOf(
                     name.toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException ignored) {
-            return com.eza.spicyex.lyrics.language.ScriptClassifier.ScriptClass.OTHER;
+            return com.flowify.ettea.lyrics.language.ScriptClassifier.ScriptClass.OTHER;
         }
     }
 

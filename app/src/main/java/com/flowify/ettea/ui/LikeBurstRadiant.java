@@ -1,6 +1,6 @@
 // Double-tap like style "Radiant" (Settings.DOUBLE_TAP_LIKE_EFFECT), kept as it was
 // designed at 06a7e3fd. See LikeBursts for the list.
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;

@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
-import com.eza.spicyex.lyrics.session.DetectionStatus;
+import com.flowify.ettea.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionStatus;
 import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;

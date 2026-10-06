@@ -1,4 +1,4 @@
-package com.eza.spicyex.ambient;
+package com.flowify.ettea.ambient;
 
 import android.graphics.Bitmap;
 import android.view.View;

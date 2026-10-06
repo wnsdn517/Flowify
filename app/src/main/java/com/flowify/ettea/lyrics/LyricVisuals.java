@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import android.graphics.Color;
 
 import java.util.ArrayList;
 import java.util.List;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /** Display-only helpers for native Spicy lyric rows and backgrounds. */
 public final class LyricVisuals {

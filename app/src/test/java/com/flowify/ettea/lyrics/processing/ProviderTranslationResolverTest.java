@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.LatinLanguageGate;
-import com.eza.spicyex.lyrics.language.ScriptClassifier;
-import com.eza.spicyex.lyrics.language.TextDetectionLookup;
+import com.flowify.ettea.lyrics.language.LatinLanguageGate;
+import com.flowify.ettea.lyrics.language.ScriptClassifier;
+import com.flowify.ettea.lyrics.language.TextDetectionLookup;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 
 import org.junit.Test;
 
@@ -15,9 +15,9 @@ import java.util.HashSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 public class ProviderTranslationResolverTest {
     @Test

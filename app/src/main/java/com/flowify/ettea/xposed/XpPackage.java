@@ -1,4 +1,4 @@
-package com.eza.spicyex.xposed;
+package com.flowify.ettea.xposed;
 
 /**
  * Package metadata for hooks, replacing the legacy load-package param surface. Only the fields this module

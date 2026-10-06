@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** UI-local bridge between an accepted AI action and the next session publication. */
 public final class AiRequestFeedbackState {

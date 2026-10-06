@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -170,11 +170,11 @@ public class PaidArtifactStoreTest {
 
     @Test
     public void onlyAiAuthoredArtifactsAreTreatedAsPaid() {
-        assertFalse(com.eza.spicyex.lyrics.cache.ProcessedLyricsCache.isPaid(
+        assertFalse(com.flowify.ettea.lyrics.cache.ProcessedLyricsCache.isPaid(
                 artifact(LayerAuthority.DETERMINISTIC, "local", "", "reading-v3")));
-        assertFalse(com.eza.spicyex.lyrics.cache.ProcessedLyricsCache.isPaid(
+        assertFalse(com.flowify.ettea.lyrics.cache.ProcessedLyricsCache.isPaid(
                 artifact(LayerAuthority.MACHINE, "google", "", "translate-v1")));
-        assertTrue(com.eza.spicyex.lyrics.cache.ProcessedLyricsCache.isPaid(
+        assertTrue(com.flowify.ettea.lyrics.cache.ProcessedLyricsCache.isPaid(
                 artifact(LayerAuthority.AI, "prov", "model", "prompt")));
     }
 

@@ -1,4 +1,4 @@
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.animation.ValueAnimator;
 import android.content.Context;

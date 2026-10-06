@@ -1,6 +1,6 @@
 // Double-tap like style "Bloom" (Settings.DOUBLE_TAP_LIKE_EFFECT), kept as it was
 // designed at 33000ac4. See LikeBursts for the list.
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;

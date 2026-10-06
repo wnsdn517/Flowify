@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import com.google.gson.*;
-import com.eza.spicyex.lyrics.Json;
+import com.flowify.ettea.lyrics.Json;
 
 /** Last Spicy outcome stays available even when arbitration selects a fallback provider. */
 public final class SpicyNetworkDiagnostics {

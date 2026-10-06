@@ -1,16 +1,16 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.Json;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
-import com.eza.spicyex.lyrics.reading.SyllableCanonicalizer;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.Json;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.reading.SyllableCanonicalizer;
 
 /**
  * Serializes the canonical projection of a parsed document: original text, timing, spans, and

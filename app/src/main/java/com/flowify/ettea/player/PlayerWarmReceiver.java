@@ -1,4 +1,4 @@
-package com.eza.spicyex.player;
+package com.flowify.ettea.player;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -19,11 +19,11 @@ import android.util.Log;
  */
 public final class PlayerWarmReceiver extends BroadcastReceiver {
     private static final String TAG = "[SpicyPlayer]";
-    private static final String PACKAGE = "com.eza.spicyex";
-    private static final String SERVICE_CLASS = "com.eza.spicyex.player.WebPlayerService";
-    private static final String ACTION_WARMUP = "com.eza.spicyex.player.WARMUP";
-    private static final String ACTION_STOP = "com.eza.spicyex.player.STOP";
-    private static final String ACTION_LOGIN = "com.eza.spicyex.player.LOGIN";
+    private static final String PACKAGE = "com.flowify.ettea";
+    private static final String SERVICE_CLASS = "com.flowify.ettea.player.WebPlayerService";
+    private static final String ACTION_WARMUP = "com.flowify.ettea.player.WARMUP";
+    private static final String ACTION_STOP = "com.flowify.ettea.player.STOP";
+    private static final String ACTION_LOGIN = "com.flowify.ettea.player.LOGIN";
     static final String PREFS_NAME = "SpicyPlayer";
     static final String KEY_CONNECT_LAST_ENABLED = "connect_last_enabled";
 

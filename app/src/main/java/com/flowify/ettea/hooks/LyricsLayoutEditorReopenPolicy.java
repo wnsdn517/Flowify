@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /**
  * Coordinates layout editor reopening across configuration changes (rotation, fold posture).

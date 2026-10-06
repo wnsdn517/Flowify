@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
-import com.eza.spicyex.Diagnostics;
+import com.flowify.ettea.Diagnostics;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /**
  * The document, a row, or a chunk cannot be made to fit the transport and model bounds.

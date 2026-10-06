@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
 import java.util.ArrayList;
 import java.util.Collections;

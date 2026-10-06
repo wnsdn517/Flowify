@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.processing.SpicyProcessing;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.processing.SpicyProcessing;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 
 /** Target-independent reading route. Han is a script, not a Chinese language declaration. */
 public final class ReadingLanguagePolicy {

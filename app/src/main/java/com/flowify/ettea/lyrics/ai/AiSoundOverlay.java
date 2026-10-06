@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.SoundEntry;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.session.SoundEntry;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;

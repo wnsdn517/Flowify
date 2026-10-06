@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.LyricsLocalRomanizer;
-import com.eza.spicyex.lyrics.language.ScriptClassifier;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.LyricsLocalRomanizer;
+import com.flowify.ettea.lyrics.language.ScriptClassifier;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -11,12 +11,12 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
 
 public class LyricsSurfaceRowPlannerTest {
     @Test
@@ -335,7 +335,7 @@ public class LyricsSurfaceRowPlannerTest {
     @Test
     public void chineseSentenceSyncCreatesTimedLayoutGroupsWithoutSpaces() {
         AppliedLine line = line("看看鏡子裡的你帶著");
-        line.sourceLine.detection = com.eza.spicyex.lyrics.session.DetectionResult.detected("",
+        line.sourceLine.detection = com.flowify.ettea.lyrics.session.DetectionResult.detected("",
                 line.text, ScriptClassifier.ScriptClass.CHINESE, "zh", .99);
         line.startMs = 1000;
         line.endMs = 5000;
@@ -403,7 +403,7 @@ public class LyricsSurfaceRowPlannerTest {
         for (SyllableSegment segment : line.words) {
             if (segment == null || segment.text.trim().isEmpty() || !segment.boundaryAfter) continue;
             visibleBoundaries++;
-            int end = com.eza.spicyex.lyrics.reading.CodePointRanges
+            int end = com.flowify.ettea.lyrics.reading.CodePointRanges
                     .codePointOffsetToUtf16Index(line.text, segment.canonicalEndCp);
             assertTrue(end < line.text.length());
             assertTrue(Character.isWhitespace(line.text.codePointAt(end)));

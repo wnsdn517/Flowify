@@ -1,12 +1,12 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import static org.junit.Assert.*;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.CatalogPolicy;
-import com.eza.spicyex.lyrics.catalog.CatalogState;
-import com.eza.spicyex.lyrics.catalog.LyricsCatalog;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.CatalogPolicy;
+import com.flowify.ettea.lyrics.catalog.CatalogState;
+import com.flowify.ettea.lyrics.catalog.LyricsCatalog;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collections;

@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.KoreanRomanizerTest;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.KoreanRomanizerTest;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 
 import static org.junit.Assert.assertEquals;
@@ -396,10 +396,10 @@ public class KoreanPronunciationTest {
 
     @Test
     public void koreanSettingKeepsCycleMode() {
-        assertEquals("cycle", com.eza.spicyex.Settings.KOREAN_ROMANIZATION.coerce("cycle"));
-        assertEquals(KoreanDisplayMode.RR_STANDARD.value, com.eza.spicyex.Settings.KOREAN_ROMANIZATION.coerce("plain"));
-        assertEquals(KoreanDisplayMode.WORD_TRANSLIT.value, com.eza.spicyex.Settings.LAST_KOREAN_CYCLE_MODE.coerce("Letter-by-letter"));
-        assertEquals(KoreanDisplayMode.RR_PRONUNCIATION.value, com.eza.spicyex.Settings.LAST_KOREAN_CYCLE_MODE.coerce("Pronunciation"));
+        assertEquals("cycle", com.flowify.ettea.Settings.KOREAN_ROMANIZATION.coerce("cycle"));
+        assertEquals(KoreanDisplayMode.RR_STANDARD.value, com.flowify.ettea.Settings.KOREAN_ROMANIZATION.coerce("plain"));
+        assertEquals(KoreanDisplayMode.WORD_TRANSLIT.value, com.flowify.ettea.Settings.LAST_KOREAN_CYCLE_MODE.coerce("Letter-by-letter"));
+        assertEquals(KoreanDisplayMode.RR_PRONUNCIATION.value, com.flowify.ettea.Settings.LAST_KOREAN_CYCLE_MODE.coerce("Pronunciation"));
     }
 
     @Test
@@ -409,8 +409,8 @@ public class KoreanPronunciationTest {
 
     @Test
     public void koreanReadingOffSettingRoundTrips() {
-        assertEquals("Off", com.eza.spicyex.Settings.KOREAN_ROMANIZATION.coerce("Off"));
-        assertEquals("Off", com.eza.spicyex.Settings.KOREAN_ROMANIZATION.coerce("off"));
+        assertEquals("Off", com.flowify.ettea.Settings.KOREAN_ROMANIZATION.coerce("Off"));
+        assertEquals("Off", com.flowify.ettea.Settings.KOREAN_ROMANIZATION.coerce("off"));
         assertEquals(KoreanDisplayMode.OFF, KoreanDisplayMode.fromSetting("Off"));
         assertEquals(KoreanDisplayMode.OFF, KoreanDisplayMode.fromSetting("off"));
         assertEquals("Off", KoreanDisplayMode.valueOfSetting("Off"));

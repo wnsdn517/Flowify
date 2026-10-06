@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import android.app.Activity;
 import android.content.Context;
@@ -11,8 +11,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.R;
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.R;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;

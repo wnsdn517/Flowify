@@ -1,15 +1,15 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.ai.AiContract;
-import com.eza.spicyex.lyrics.ai.AiFinishReason;
-import com.eza.spicyex.lyrics.ai.AiModelProbe;
-import com.eza.spicyex.lyrics.ai.AiRequestLiveState;
-import com.eza.spicyex.lyrics.ai.AiUsage;
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.ai.AiContract;
+import com.flowify.ettea.lyrics.ai.AiFinishReason;
+import com.flowify.ettea.lyrics.ai.AiModelProbe;
+import com.flowify.ettea.lyrics.ai.AiRequestLiveState;
+import com.flowify.ettea.lyrics.ai.AiUsage;
+import com.flowify.ettea.lyrics.session.LayerKind;
 import com.google.gson.JsonObject;
 
 import org.junit.After;

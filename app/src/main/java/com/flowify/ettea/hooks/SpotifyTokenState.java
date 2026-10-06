@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /**
  * Pure JVM owner for the captured Spotify access-token lifecycle state.

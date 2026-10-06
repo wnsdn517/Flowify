@@ -1,12 +1,12 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 
 import org.junit.Before;
 import org.junit.Test;

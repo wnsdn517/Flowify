@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
 import android.content.ContentValues;
 import android.content.Context;

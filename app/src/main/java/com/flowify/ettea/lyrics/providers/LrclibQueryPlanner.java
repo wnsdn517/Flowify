@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import com.google.gson.JsonObject;
-import com.eza.spicyex.lyrics.Json;
+import com.flowify.ettea.lyrics.Json;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 /**
  * Pure JVM query planning and candidate selection for LRCLIB.

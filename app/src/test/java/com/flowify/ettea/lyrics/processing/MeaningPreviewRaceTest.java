@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -6,19 +6,19 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerProvenance;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.session.MeaningEntry;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerProvenance;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.session.MeaningEntry;
 
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 
 /**
  * The Google preview race table from the handover, settled one child at a time. Every row of the

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** Identity of one current-track session over one canonical source revision. */
 public final class SessionIdentity {

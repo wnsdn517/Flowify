@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerKind;
 
 /** Small immutable preset catalog shared by settings and the native composer. */
 public final class AiPresets {

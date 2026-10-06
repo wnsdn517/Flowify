@@ -1,9 +1,9 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.Settings;
 
 import org.junit.Test;
 

@@ -1,21 +1,21 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.safe;
-import static com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri;
 
 import android.content.Context;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.providers.LyricsParser;
-import com.eza.spicyex.lyrics.providers.LyricsRepository;
-import com.eza.spicyex.lyrics.providers.NativeLyricsSource;
-import com.eza.spicyex.lyrics.providers.SpicyManualTokenStore;
-import com.eza.spicyex.lyrics.catalog.CatalogRequestIdentity;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.providers.LyricsParser;
+import com.flowify.ettea.lyrics.providers.LyricsRepository;
+import com.flowify.ettea.lyrics.providers.NativeLyricsSource;
+import com.flowify.ettea.lyrics.providers.SpicyManualTokenStore;
+import com.flowify.ettea.lyrics.catalog.CatalogRequestIdentity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,7 +70,7 @@ final class LyricsFetchCoordinator {
             Context context,
             SpotifyTrack track,
             int generation,
-            com.eza.spicyex.lyrics.catalog.AcquisitionScope scope,
+            com.flowify.ettea.lyrics.catalog.AcquisitionScope scope,
             NativeSpicyLyricsHook.LyricsResultCallback callback
     ) {
         Diagnostics.event("lyrics_fetch", "request_started",
@@ -115,7 +115,7 @@ final class LyricsFetchCoordinator {
                 // credential-free Apple request can still upgrade a native baseline, so a
                 // tokenless fetch must stay open for it the same way a token-bound one does.
                 boolean appleEnabled = scope != null && scope.allows(
-                        com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId.APPLE);
+                        com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId.APPLE);
                 existing = new InFlightFetch(operationKey,
                         CatalogRequestIdentity.upgradeExpected(authorized != null, appleEnabled));
                 existing.callbacks.add(callback);
@@ -163,11 +163,11 @@ final class LyricsFetchCoordinator {
 
     /** One strict provider request shared by every picker/surface caller for this track. */
     void fetchCatalogSource(Context context, SpotifyTrack track, int generation,
-                            com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId source,
+                            com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId source,
                             NativeSpicyLyricsHook.LyricsResultCallback callback) {
-        com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source repositorySource =
+        com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source repositorySource =
                 repositorySource(source);
-        boolean karaokeOriginalLyrics = com.eza.spicyex.lyrics.catalog.CatalogPolicy.read(context)
+        boolean karaokeOriginalLyrics = com.flowify.ettea.lyrics.catalog.CatalogPolicy.read(context)
                 .karaokeOriginalLyrics;
         String bare = fetchTrackKey(track);
         String key = pickerKey(bare, source, karaokeOriginalLyrics);
@@ -210,7 +210,7 @@ final class LyricsFetchCoordinator {
     }
 
     static String pickerKey(String bareTrackId,
-                            com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId source,
+                            com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId source,
                             boolean karaokeOriginalLyrics) {
         String base = CatalogRequestIdentity.key(bareTrackId, source, "picker-v1",
                 CatalogRequestIdentity.authEpoch(source,
@@ -219,32 +219,32 @@ final class LyricsFetchCoordinator {
         return base + (karaokeOriginalLyrics ? "|karaoke-original" : "|karaoke-verbatim");
     }
 
-    static com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source repositorySource(
-            com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId source) {
+    static com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source repositorySource(
+            com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId source) {
         if (source == null) return null;
         switch (source) {
             case APPLE:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.APPLE_MUSIC;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.APPLE_MUSIC;
             case SPOTIFY_NATIVE:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.SPOTIFY;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.SPOTIFY;
             case AMLL:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.AMLL;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.AMLL;
             case LRCLIB:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.LRCLIB;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.LRCLIB;
             case QQ:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.QQ;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.QQ;
             case NETEASE:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.NETEASE;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.NETEASE;
             case KUGOU:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.KUGOU;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.KUGOU;
             case GENIUS:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.GENIUS;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.GENIUS;
             case MUSIXMATCH:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.MUSIXMATCH;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.MUSIXMATCH;
             case BETTERLYRICS:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.BETTERLYRICS;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.BETTERLYRICS;
             case BINILYRICS:
-                return com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.BINILYRICS;
+                return com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.BINILYRICS;
             default:
                 return null;
         }

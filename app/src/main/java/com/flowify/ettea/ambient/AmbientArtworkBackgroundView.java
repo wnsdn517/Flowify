@@ -1,4 +1,4 @@
-package com.eza.spicyex.ambient;
+package com.flowify.ettea.ambient;
 
 import android.content.Context;
 import android.graphics.*;
@@ -246,7 +246,7 @@ public final class AmbientArtworkBackgroundView extends View implements AmbientB
     private boolean animating() {
         return enabled && moving && playing && !thermalThrottled && texture != null
                 && isAttachedToWindow() && getWindowVisibility() == VISIBLE && isShown()
-                && com.eza.spicyex.ui.Motion.animationsEnabled();
+                && com.flowify.ettea.ui.Motion.animationsEnabled();
     }
     private void schedule() {
         if (!animating()) {

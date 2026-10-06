@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -15,7 +15,7 @@ import java.util.zip.InflaterInputStream;
 
 /**
  * Candidate payload codecs. The normalized document reuses
- * {@link com.eza.spicyex.lyrics.session.CanonicalSourceCodec}: provider translations travel
+ * {@link com.flowify.ettea.lyrics.session.CanonicalSourceCodec}: provider translations travel
  * inside it, generated reading/translation text never does.
  *
  * <p>Provider transliteration rides a separate slot because the document model reuses

@@ -1,10 +1,10 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
 
 import org.junit.Test;
 

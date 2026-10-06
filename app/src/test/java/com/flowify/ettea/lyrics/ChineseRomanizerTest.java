@@ -1,15 +1,15 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.LyricsLocalRomanizer;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.language.ScriptClassifier;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.LyricsLocalRomanizer;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.ScriptClassifier;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 import java.util.Collections;
 
@@ -76,7 +76,7 @@ public class ChineseRomanizerTest {
         LyricsLine line = new LyricsLine();
         line.text = "中国";
         doc.language = "ja";
-        line.detection = com.eza.spicyex.lyrics.session.DetectionResult.detected("", line.text,
+        line.detection = com.flowify.ettea.lyrics.session.DetectionResult.detected("", line.text,
                 ScriptClassifier.ScriptClass.CHINESE, "zh", .99);
         line.japaneseReading = new SpicyJapaneseChineseProcessor.JapaneseReading(
                 "中国", "naka kuni", Collections.singletonList(

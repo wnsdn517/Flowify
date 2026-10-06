@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 import org.junit.Test;
 import static org.junit.Assert.*;
 

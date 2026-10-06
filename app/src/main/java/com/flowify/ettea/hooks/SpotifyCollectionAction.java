@@ -1,7 +1,7 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyTrack;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyTrack;
 
 import java.util.List;
 import java.util.function.Supplier;

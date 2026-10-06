@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -8,7 +8,7 @@ import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-import com.eza.spicyex.Diagnostics;
+import com.flowify.ettea.Diagnostics;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;

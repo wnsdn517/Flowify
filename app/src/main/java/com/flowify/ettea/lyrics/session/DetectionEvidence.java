@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** Provenance of the language label, independent of translation target. */
 public enum DetectionEvidence {

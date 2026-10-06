@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Pure state gate for current-track identity, demand, and stale-result rejection. */
 final class LyricsSessionPolicy {

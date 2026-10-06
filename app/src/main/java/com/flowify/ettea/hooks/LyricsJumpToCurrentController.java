@@ -1,7 +1,7 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeIconButtons.applyPressScale;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeIconButtons.applyPressScale;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -18,10 +18,10 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.LyricsTextFactory;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.LyricsTextFactory;
 
 /** Owns the floating "jump back to active lyric" affordance. */
 final class LyricsJumpToCurrentController {

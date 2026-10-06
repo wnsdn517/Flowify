@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /** One timed word/syllable. Parse data lives on this object; renderer state is external. */
 public class SyllableSegment {

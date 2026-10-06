@@ -1,16 +1,16 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.BuildStamp;
-import com.eza.spicyex.AppSigningIdentity;
-import com.eza.spicyex.CurrentLyricState;
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.FeatureAvailability;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.ui.UiLanguage;
-import com.eza.spicyex.ui.GlossyToggle;
+import com.flowify.ettea.BuildStamp;
+import com.flowify.ettea.AppSigningIdentity;
+import com.flowify.ettea.CurrentLyricState;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.FeatureAvailability;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.ui.UiLanguage;
+import com.flowify.ettea.ui.GlossyToggle;
 
 import android.content.Context;
 import android.content.Intent;
@@ -28,29 +28,29 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.eza.spicyex.diagnostics.DiagnosticReportingDialog;
-import com.eza.spicyex.lyrics.cache.CacheClearKind;
-import com.eza.spicyex.lyrics.cache.CacheStoragePolicy;
-import com.eza.spicyex.lyrics.language.LanguageModelPack;
-import com.eza.spicyex.lyrics.providers.LyricsFetchDiagnosticsState;
-import com.eza.spicyex.lyrics.providers.SpicyManualTokenStore;
-import com.eza.spicyex.hooks.LocalFilesFolderHook;
-import com.eza.spicyex.settings.PanelDialogs;
-import com.eza.spicyex.settings.PanelPolicy;
-import com.eza.spicyex.settings.PanelSnapshot;
-import com.eza.spicyex.settings.PanelStrings;
-import com.eza.spicyex.settings.PanelStyle;
-import com.eza.spicyex.settings.PanelTags;
-import com.eza.spicyex.settings.RowSyncPlan;
-import com.eza.spicyex.settings.SettingLabels;
-import com.eza.spicyex.settings.SettingRowFactory;
-import com.eza.spicyex.settings.SettingUiSpec;
-import com.eza.spicyex.settings.SettingsUiSchema;
-import com.eza.spicyex.settings.SettingsWriter;
-import com.eza.spicyex.settings.SourceOrderEditor;
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.ActionIconDrawable.Kind;
-import com.eza.spicyex.ui.Motion;
+import com.flowify.ettea.diagnostics.DiagnosticReportingDialog;
+import com.flowify.ettea.lyrics.cache.CacheClearKind;
+import com.flowify.ettea.lyrics.cache.CacheStoragePolicy;
+import com.flowify.ettea.lyrics.language.LanguageModelPack;
+import com.flowify.ettea.lyrics.providers.LyricsFetchDiagnosticsState;
+import com.flowify.ettea.lyrics.providers.SpicyManualTokenStore;
+import com.flowify.ettea.hooks.LocalFilesFolderHook;
+import com.flowify.ettea.settings.PanelDialogs;
+import com.flowify.ettea.settings.PanelPolicy;
+import com.flowify.ettea.settings.PanelSnapshot;
+import com.flowify.ettea.settings.PanelStrings;
+import com.flowify.ettea.settings.PanelStyle;
+import com.flowify.ettea.settings.PanelTags;
+import com.flowify.ettea.settings.RowSyncPlan;
+import com.flowify.ettea.settings.SettingLabels;
+import com.flowify.ettea.settings.SettingRowFactory;
+import com.flowify.ettea.settings.SettingUiSpec;
+import com.flowify.ettea.settings.SettingsUiSchema;
+import com.flowify.ettea.settings.SettingsWriter;
+import com.flowify.ettea.settings.SourceOrderEditor;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.ActionIconDrawable.Kind;
+import com.flowify.ettea.ui.Motion;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -103,7 +103,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     public static final int EDITOR_CARD = 2;
     private final java.util.function.Consumer<CacheClearKind> onClearCache;
     private final Runnable onResyncTiming;
-    private com.eza.spicyex.hooks.LyricsHost lyricsHost;
+    private com.flowify.ettea.hooks.LyricsHost lyricsHost;
 
     private LinearLayout sectionsContainer;
     private TextView panelTitle;
@@ -216,7 +216,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     private LinearLayout searchBar;
     private android.widget.EditText searchField;
     private LinearLayout searchResults;
-    private volatile com.eza.spicyex.settings.SettingsSearch searchIndex;
+    private volatile com.flowify.ettea.settings.SettingsSearch searchIndex;
 
     /** A result that opens a Layout Editor rather than a panel row. */
     private static final class EditorTarget {
@@ -231,7 +231,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
 
     /**
      * The search field above the section list. Typing swaps the list for results (see
-     * {@link com.eza.spicyex.settings.SettingsSearch} for how they are found: any language,
+     * {@link com.flowify.ettea.settings.SettingsSearch} for how they are found: any language,
      * typos, other words for the same idea); tapping one opens its section, scrolls to the row
      * and marks it, or opens the editor for what only the Layout Editor edits.
      */
@@ -323,11 +323,11 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
      * are the rows that are not settings - the AI key and model, Connect sign-in, the language
      * models, the current song's lyrics - which open the page they live on.
      */
-    private synchronized com.eza.spicyex.settings.SettingsSearch searchIndex() {
+    private synchronized com.flowify.ettea.settings.SettingsSearch searchIndex() {
         if (searchIndex != null) return searchIndex;
-        List<com.eza.spicyex.settings.SettingsSearch.Entry> entries = new ArrayList<>();
+        List<com.flowify.ettea.settings.SettingsSearch.Entry> entries = new ArrayList<>();
         java.util.Set<Settings.Setting<?>> editorOwned =
-                new java.util.HashSet<>(com.eza.spicyex.hooks.LayoutEditorSettings.covered());
+                new java.util.HashSet<>(com.flowify.ettea.hooks.LayoutEditorSettings.covered());
         LinkedHashMap<Settings.Section, List<Settings.Setting<?>>> grouped = new LinkedHashMap<>();
         for (Settings.Section section : SettingsUiSchema.orderedSections()) {
             List<Settings.Setting<?>> items = new ArrayList<>();
@@ -340,29 +340,29 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         sections.add(Settings.DEBUG);
         for (Settings.Section section : sections) {
             String name = uiStrings.section(section);
-            entries.add(new com.eza.spicyex.settings.SettingsSearch.Entry(section,
-                    names(name, com.eza.spicyex.ui.SettingsUiResourceNames.section(section), section.label), "", section.id,
+            entries.add(new com.flowify.ettea.settings.SettingsSearch.Entry(section,
+                    names(name, com.flowify.ettea.ui.SettingsUiResourceNames.section(section), section.label), "", section.id,
                     sectionKeywords(section)).withId("section:" + section.id));
             List<Settings.Setting<?>> items = grouped.get(section);
             if (items == null) continue;
             for (Settings.Setting<?> setting : items) {
                 if (setting == Settings.LYRICS_SOURCE_OVERRIDE || setting == Settings.LYRICS_SOURCE_ORDER) continue;
-                entries.add(new com.eza.spicyex.settings.SettingsSearch.Entry(setting,
-                        names(searchTitle(setting), com.eza.spicyex.ui.SettingsUiResourceNames.setting(setting), setting.label),
+                entries.add(new com.flowify.ettea.settings.SettingsSearch.Entry(setting,
+                        names(searchTitle(setting), com.flowify.ettea.ui.SettingsUiResourceNames.setting(setting), setting.label),
                         name, section.id, settingKeywords(setting, section)).withId(setting.key));
             }
         }
         // What only the Layout Editor edits: found here too, opening the editor.
         String lyricsEditor = uiStrings.get("settings_search_editor_lyrics", "Layout editor · Lyrics screen");
         String cardEditor = uiStrings.get("settings_search_editor_card", "Layout editor · Now playing");
-        for (Settings.Setting<?> setting : com.eza.spicyex.hooks.LayoutEditorSettings.covered()) {
-            boolean card = com.eza.spicyex.hooks.LayoutEditorSettings.isCardSetting(setting);
+        for (Settings.Setting<?> setting : com.flowify.ettea.hooks.LayoutEditorSettings.covered()) {
+            boolean card = com.flowify.ettea.hooks.LayoutEditorSettings.isCardSetting(setting);
             List<String> extra = settingKeywords(setting, null);
             extra.add("layout editor");
             extra.add(uiStrings.section(Settings.LYRICS_SCREEN));
-            entries.add(new com.eza.spicyex.settings.SettingsSearch.Entry(
+            entries.add(new com.flowify.ettea.settings.SettingsSearch.Entry(
                     new EditorTarget(card ? EDITOR_CARD : EDITOR_LYRICS, setting),
-                    names(searchTitle(setting), com.eza.spicyex.ui.SettingsUiResourceNames.setting(setting), setting.label),
+                    names(searchTitle(setting), com.flowify.ettea.ui.SettingsUiResourceNames.setting(setting), setting.label),
                     card ? cardEditor : lyricsEditor, card ? "editor_card" : "editor_lyrics", extra)
                     .withId("editor:" + setting.key));
         }
@@ -381,12 +381,12 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         addExtra(entries, Settings.DEBUG, "settings_action_resync_timing", "Reset lyrics sync", "sync timing reset");
         // Synonym groups: each language's own words, from its strings file.
         List<List<String>> concepts = new ArrayList<>();
-        for (String id : com.eza.spicyex.settings.SettingsSearch.CONCEPT_IDS) {
-            concepts.add(com.eza.spicyex.settings.SettingsSearch.mergeTerms(
+        for (String id : com.flowify.ettea.settings.SettingsSearch.CONCEPT_IDS) {
+            concepts.add(com.flowify.ettea.settings.SettingsSearch.mergeTerms(
                     uiStrings.inEveryLanguage("search_terms_" + id)));
         }
         // Names are also read in Latin letters, and what earlier searches taught is added back.
-        searchIndex = new com.eza.spicyex.settings.SettingsSearch(entries, concepts, romanizer(),
+        searchIndex = new com.flowify.ettea.settings.SettingsSearch(entries, concepts, romanizer(),
                 searchPrefs().getString(PREF_LEARNED, ""));
         return searchIndex;
     }
@@ -409,12 +409,12 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         }
     }
 
-    private void addExtra(List<com.eza.spicyex.settings.SettingsSearch.Entry> entries, Settings.Section section,
+    private void addExtra(List<com.flowify.ettea.settings.SettingsSearch.Entry> entries, Settings.Section section,
                           String resource, String fallback, String keywords) {
         List<String> extra = new ArrayList<>();
         extra.add(keywords);
         extra.add(section.label);
-        entries.add(new com.eza.spicyex.settings.SettingsSearch.Entry(section,
+        entries.add(new com.flowify.ettea.settings.SettingsSearch.Entry(section,
                 names(uiStrings.get(resource, fallback).replace(" (%1$s)", "").replace("%1$s", ""), resource, fallback),
                 uiStrings.section(section), section.id, extra).withId("extra:" + resource));
     }
@@ -472,7 +472,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
 
     private void renderSearchResults(String query) {
         searchResults.removeAllViews();
-        List<com.eza.spicyex.settings.SettingsSearch.Result> results = searchIndex().search(query, 12, 4);
+        List<com.flowify.ettea.settings.SettingsSearch.Result> results = searchIndex().search(query, 12, 4);
         if (results.isEmpty()) {
             TextView empty = style.text(uiStrings.get("settings_search_empty", "No matching settings"), 14,
                     PanelStyle.COL_SUMMARY, false);
@@ -482,7 +482,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             return;
         }
         boolean relatedShown = false;
-        for (com.eza.spicyex.settings.SettingsSearch.Result result : results) {
+        for (com.flowify.ettea.settings.SettingsSearch.Result result : results) {
             if (result.related && !relatedShown) {
                 relatedShown = true;
                 TextView caption = style.text(uiStrings.get("settings_search_related", "Related"), 13,
@@ -494,7 +494,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         }
     }
 
-    private View searchResultRow(final com.eza.spicyex.settings.SettingsSearch.Entry entry) {
+    private View searchResultRow(final com.flowify.ettea.settings.SettingsSearch.Entry entry) {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -540,19 +540,19 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         return row;
     }
 
-    private void openSearchResult(com.eza.spicyex.settings.SettingsSearch.Entry entry) {
+    private void openSearchResult(com.flowify.ettea.settings.SettingsSearch.Entry entry) {
         hideKeyboard();
         Object target = entry.target;
         // A search that needed this result teaches it the words that were typed for it.
-        com.eza.spicyex.settings.SettingsSearch index = searchIndex;
+        com.flowify.ettea.settings.SettingsSearch index = searchIndex;
         if (index != null && index.learn(searchField.getText().toString(), entry)) {
             searchPrefs().edit().putString(PREF_LEARNED, index.exportLearned()).apply();
         }
         searchField.setText("");
         if (target instanceof EditorTarget) {
             EditorTarget editor = (EditorTarget) target;
-            com.eza.spicyex.hooks.LayoutEditorSettings.requestElement(
-                    com.eza.spicyex.hooks.LayoutEditorSettings.elementFor(editor.setting));
+            com.flowify.ettea.hooks.LayoutEditorSettings.requestElement(
+                    com.flowify.ettea.hooks.LayoutEditorSettings.elementFor(editor.setting));
             openEditor(editor.mode);
         } else if (target instanceof Settings.Section) {
             Settings.Section section = (Settings.Section) target;
@@ -804,10 +804,10 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     /** One immutable applied-state snapshot per render pass; policy reads this, never the store. */
     @Override public PanelSnapshot snapshot() {
         PanelSnapshot.Builder snapshot = PanelSnapshot.builder()
-                .languageModelReady(com.eza.spicyex.lyrics.language.LanguageModelPack.isReady())
+                .languageModelReady(com.flowify.ettea.lyrics.language.LanguageModelPack.isReady())
                 .animatedBackgroundAvailable(FeatureAvailability.animatedBackgroundAvailable())
-                .spicySourceEnabled(com.eza.spicyex.lyrics.session.LyricsSourcePreferences.sourceEnabled(
-                        context, com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source.SPICY));
+                .spicySourceEnabled(com.flowify.ettea.lyrics.session.LyricsSourcePreferences.sourceEnabled(
+                        context, com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source.SPICY));
         snapshot.put(Settings.AI_ENABLED, store.get(Settings.AI_ENABLED));
         snapshot.put(Settings.PIP_ENABLED, store.get(Settings.PIP_ENABLED));
         snapshot.put(Settings.PIP_ON_CLOSE, store.get(Settings.PIP_ON_CLOSE));
@@ -901,7 +901,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         }
     }
 
-    private static final String FORK_REPO = "wnsdn517/spicy-ex";
+    private static final String FORK_REPO = "wnsdn517/Flowify";
 
     /**
      * The page's head: the wordmark shining in the album's colour, the version in the fork's
@@ -913,8 +913,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         hero.setOrientation(LinearLayout.VERTICAL);
         hero.setGravity(Gravity.CENTER_HORIZONTAL);
         hero.setPadding(style.dp(8), style.dp(20), style.dp(8), style.dp(18));
-        java.lang.ref.WeakReference<android.graphics.Typeface> font = com.eza.spicyex.References.beautifulFont;
-        hero.addView(new com.eza.spicyex.ui.WordmarkView(context, uiStrings.appName(),
+        java.lang.ref.WeakReference<android.graphics.Typeface> font = com.flowify.ettea.References.beautifulFont;
+        hero.addView(new com.flowify.ettea.ui.WordmarkView(context, uiStrings.appName(),
                         PanelStyle.COL_ACCENT, font == null ? null : font.get()),
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -969,12 +969,12 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         rows.infoRow(system, "Android", android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")");
         rows.infoRow(system, uiStrings.get("settings_about_device", "Device"),
                 android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL);
-        String framework = com.eza.spicyex.xposed.XpHooks.frameworkLabel();
+        String framework = com.flowify.ettea.xposed.XpHooks.frameworkLabel();
         if (!framework.isEmpty()) {
             rows.infoRow(system, uiStrings.get("settings_about_framework", "Framework"), framework);
         }
         rows.infoRow(system, uiStrings.get("settings_about_build", "Build"),
-                com.eza.spicyex.BuildConfig.BUILD_DATE + " · " + com.eza.spicyex.BuildConfig.GIT_SHA);
+                com.flowify.ettea.BuildConfig.BUILD_DATE + " · " + com.flowify.ettea.BuildConfig.GIT_SHA);
         rows.actionRow(system, Kind.BUG, uiStrings.get("settings_about_share_bug_info", "Share for a bug report"),
                 v -> shareBugReportInfo());
         style.attachCard(parent, system, -1);
@@ -1034,7 +1034,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     /** Shares app/Spotify/Android/device info as plain text, so a bug report always carries exact
      *  version numbers instead of relying on the reporter to remember or retype them. */
     private void shareBugReportInfo() {
-        String framework = com.eza.spicyex.xposed.XpHooks.frameworkLabel();
+        String framework = com.flowify.ettea.xposed.XpHooks.frameworkLabel();
         String info = "Spicy EX " + BuildStamp.NAME + " (" + BuildStamp.VERSION_CODE + ")\n"
                 + "Spotify: " + spotifyVersion() + "\n"
                 + "Android: " + android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")\n"
@@ -1444,12 +1444,12 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             writer.put(Settings.TAP_SEEK_MODE, "Off");
         }
         if (setting == Settings.LYRICS_SOURCE_MODE) {
-            com.eza.spicyex.lyrics.session.LyricsSourcePreferences.setRankingMode(context,
-                    com.eza.spicyex.lyrics.session.LyricsSourcePreferences.RankingMode.parse(
+            com.flowify.ettea.lyrics.session.LyricsSourcePreferences.setRankingMode(context,
+                    com.flowify.ettea.lyrics.session.LyricsSourcePreferences.RankingMode.parse(
                             String.valueOf(store.get(setting))));
         }
         if (setting == Settings.CONNECT_ENABLED) {
-            com.eza.spicyex.hooks.SpotifyConnectHook.onSettingsChanged(context,
+            com.flowify.ettea.hooks.SpotifyConnectHook.onSettingsChanged(context,
                     Boolean.TRUE.equals(store.get(Settings.CONNECT_ENABLED)));
         }
         if (setting == Settings.UI_LANGUAGE) {
@@ -1518,7 +1518,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             }
         }
         if (typeface == null) typeface = android.graphics.Typeface.create(path, android.graphics.Typeface.NORMAL);
-        java.util.List<String> missing = com.eza.spicyex.lyrics.LyricsFontValidator.missingScripts(typeface);
+        java.util.List<String> missing = com.flowify.ettea.lyrics.LyricsFontValidator.missingScripts(typeface);
         return missing.isEmpty()
                 ? uiStrings.get("settings_lyrics_font_check_all_covered", "Covers every supported language")
                 : uiStrings.get("settings_lyrics_font_check_missing", "Falls back for") + ": "
@@ -1574,7 +1574,9 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         String summary;
         String small = "";
         if (status.phase == LanguageModelPack.Phase.DOWNLOADING) {
-            summary = uiStrings.get("settings_language_model_downloading", "Downloading…");
+            summary = status.progressPercent >= 80
+                    ? uiStrings.get("settings_language_model_installing", "Installing…")
+                    : uiStrings.get("settings_language_model_downloading", "Downloading…");
             small = uiStrings.get("settings_language_model_progress", status.progressPercent + "%");
         } else if (status.phase == LanguageModelPack.Phase.ERROR) {
             summary = uiStrings.get("settings_language_model_failed", "Download failed");
@@ -1612,7 +1614,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     }
 
     private void confirmDeleteModels() {
-        new com.eza.spicyex.ui.PanelDialog(context,
+        new com.flowify.ettea.ui.PanelDialog(context,
                 uiStrings.get("settings_language_models_delete_title", "Delete language models?"))
                 .paragraph(uiStrings.get("settings_language_models_delete_body",
                         "Japanese and Chinese readings and offline language detection stop working until they are downloaded again."))
@@ -1632,7 +1634,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         // itself when there is nothing to do.
         TextView login = rows.actionRow(card, Kind.GLOBE,
                 uiStrings.get("settings_connect_checking", "Checking Spotify sign-in…"),
-                v -> com.eza.spicyex.hooks.SpotifyConnectHook.openLogin(context));
+                v -> com.flowify.ettea.hooks.SpotifyConnectHook.openLogin(context));
         TextView player = rows.infoRow(card,
                 uiStrings.get("settings_connect_status_label", "Player"),
                 uiStrings.get("settings_connect_status_starting", "Starting…"));
@@ -1642,15 +1644,15 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         java.lang.ref.WeakReference<TextView> loginRef = new java.lang.ref.WeakReference<>(login);
         java.lang.ref.WeakReference<TextView> playerRef = new java.lang.ref.WeakReference<>(player);
         java.lang.ref.WeakReference<TextView> deviceRef = new java.lang.ref.WeakReference<>(device);
-        com.eza.spicyex.hooks.SpotifyConnectHook.queryStatus(context, (code, deviceId, activeId, playing) -> {
+        com.flowify.ettea.hooks.SpotifyConnectHook.queryStatus(context, (code, deviceId, activeId, playing) -> {
             TextView loginLabel = loginRef.get();
             TextView playerValue = playerRef.get();
             TextView deviceValue = deviceRef.get();
             if (loginLabel == null || playerValue == null || deviceValue == null) return;
-            if (code == com.eza.spicyex.hooks.SpotifyConnectHook.WARM_STARTING) return;
-            if (code != com.eza.spicyex.hooks.SpotifyConnectHook.WARM_READY) {
+            if (code == com.flowify.ettea.hooks.SpotifyConnectHook.WARM_STARTING) return;
+            if (code != com.flowify.ettea.hooks.SpotifyConnectHook.WARM_READY) {
                 loginLabel.setText(uiStrings.get("settings_connect_login", "Login required · Sign in to Spotify"));
-                playerValue.setText(code == com.eza.spicyex.hooks.SpotifyConnectHook.WARM_LOGIN_REQUIRED
+                playerValue.setText(code == com.flowify.ettea.hooks.SpotifyConnectHook.WARM_LOGIN_REQUIRED
                         ? uiStrings.get("settings_connect_status_login", "Sign-in required")
                         : uiStrings.get("settings_connect_status_failed", "Not running"));
                 deviceValue.setText("—");
@@ -2057,7 +2059,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
 
     private void paintShapeTile(LinearLayout tile, int[] ratio, boolean selected) {
         int color = selected ? PanelStyle.COL_ACCENT : 0xB3FFFFFF;
-        ((ImageView) tile.getChildAt(0)).setImageDrawable(new com.eza.spicyex.ui.AspectRectDrawable(
+        ((ImageView) tile.getChildAt(0)).setImageDrawable(new com.flowify.ettea.ui.AspectRectDrawable(
                 ratio[0] / (float) ratio[1], color, style.density()));
         ((TextView) tile.getChildAt(1)).setTextColor(selected ? PanelStyle.COL_ACCENT : PanelStyle.COL_TITLE);
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
@@ -2082,11 +2084,11 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         chip.setBackground(bg);
     }
 
-    public void setLyricsHost(com.eza.spicyex.hooks.LyricsHost host) {
+    public void setLyricsHost(com.flowify.ettea.hooks.LyricsHost host) {
         lyricsHost = host;
     }
 
-    @Override public com.eza.spicyex.SpotifyTrack currentTrack() {
+    @Override public com.flowify.ettea.SpotifyTrack currentTrack() {
         try {
             return lyricsHost == null ? null : lyricsHost.getCurrentTrackSafely();
         } catch (Throwable ignored) {
@@ -2097,9 +2099,9 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     @Override public void manageCurrentTrackLyrics() {
         try {
             if (!(context instanceof android.app.Activity) || lyricsHost == null) return;
-            com.eza.spicyex.SpotifyTrack current = lyricsHost.getCurrentTrackSafely();
+            com.flowify.ettea.SpotifyTrack current = lyricsHost.getCurrentTrackSafely();
             if (current == null || current.uri == null || current.uri.isEmpty()) return;
-            com.eza.spicyex.hooks.LyricsSourcePickerDialog.show(
+            com.flowify.ettea.hooks.LyricsSourcePickerDialog.show(
                     (android.app.Activity) context, lyricsHost, uiStrings,
                     message -> android.widget.Toast.makeText(context, message,
                             android.widget.Toast.LENGTH_SHORT).show());

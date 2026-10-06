@@ -1,18 +1,18 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.lyrics.providers.LyricsResponseCache;
-import com.eza.spicyex.lyrics.cache.CacheStoragePolicy;
-import com.eza.spicyex.lyrics.providers.SpicyManualTokenStore;
-import com.eza.spicyex.lyrics.session.AIPaidArtifactCache;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCache;
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.PanelDialog;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.lyrics.providers.LyricsResponseCache;
+import com.flowify.ettea.lyrics.cache.CacheStoragePolicy;
+import com.flowify.ettea.lyrics.providers.SpicyManualTokenStore;
+import com.flowify.ettea.lyrics.session.AIPaidArtifactCache;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCache;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.PanelDialog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -175,7 +175,7 @@ public final class PanelDialogs {
 
     /** Custom lyric font: a plain file path rather than a system picker (this module has no
      *  Activity of its own to receive a picker result from inside Spotify's process). Saving
-     *  immediately runs {@link com.eza.spicyex.lyrics.LyricsFontValidator} against the chosen
+     *  immediately runs {@link com.flowify.ettea.lyrics.LyricsFontValidator} against the chosen
      *  file and reports which of the app's supported scripts it doesn't cover - unsupported
      *  scripts still render correctly via Android's own font fallback either way, this is
      *  purely informational up front. */
@@ -211,7 +211,7 @@ public final class PanelDialogs {
             }
         }
         if (typeface == null) typeface = android.graphics.Typeface.create(path, android.graphics.Typeface.NORMAL);
-        List<String> missing = com.eza.spicyex.lyrics.LyricsFontValidator.missingScripts(typeface);
+        List<String> missing = com.flowify.ettea.lyrics.LyricsFontValidator.missingScripts(typeface);
         PanelDialog result = new PanelDialog(style.context(),
                 strings.get("settings_lyrics_font_check_title", "Font language check"));
         if (missing.isEmpty()) {

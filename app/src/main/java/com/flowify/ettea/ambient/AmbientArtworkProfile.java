@@ -1,4 +1,4 @@
-package com.eza.spicyex.ambient;
+package com.flowify.ettea.ambient;
 
 /**
  * Compact artwork variance profile computed during {@link AmbientArtworkTexture} preprocessing.

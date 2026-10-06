@@ -1,13 +1,13 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.eza.spicyex.References;
+import com.flowify.ettea.References;
 
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpReflect;
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpReflect;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 /**
  * Process-wide owner of the captured Spotify access-token lifecycle (packet M2).

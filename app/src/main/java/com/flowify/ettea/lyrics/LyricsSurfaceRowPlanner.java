@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.ReadingLanguagePolicy;
+import com.flowify.ettea.lyrics.language.ReadingLanguagePolicy;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
 
 /**
  * Shared row-shape planner for fullscreen and now-playing surfaces.

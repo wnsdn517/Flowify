@@ -1,4 +1,4 @@
-package com.eza.spicyex.xposed;
+package com.flowify.ettea.xposed;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -85,7 +85,7 @@ public class XpReflectTest {
 
     @Test
     public void findClassIfExistsReturnsNull() {
-        assertNull(XpReflect.findClassIfExists("com.eza.spicyex.xposed.NoSuchClass",
+        assertNull(XpReflect.findClassIfExists("com.flowify.ettea.xposed.NoSuchClass",
                 Fixture.class.getClassLoader()));
     }
 
@@ -103,7 +103,7 @@ public class XpReflectTest {
             assertTrue(expected instanceof NoSuchFieldException);
         }
         try {
-            XpReflect.findClass("com.eza.spicyex.xposed.NoSuchClass",
+            XpReflect.findClass("com.flowify.ettea.xposed.NoSuchClass",
                     Fixture.class.getClassLoader());
             fail("expected NoClassDefFoundError");
         } catch (NoClassDefFoundError expected) {

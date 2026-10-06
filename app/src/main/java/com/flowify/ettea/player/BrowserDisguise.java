@@ -1,4 +1,4 @@
-package com.eza.spicyex.player;
+package com.flowify.ettea.player;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;

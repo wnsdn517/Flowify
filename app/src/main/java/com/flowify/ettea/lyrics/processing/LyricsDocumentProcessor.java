@@ -1,29 +1,29 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.ProviderTextDetectionStore;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.ProviderTextDetectionStore;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import android.content.Context;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.CanonicalRow;
-import com.eza.spicyex.lyrics.session.Digests;
-import com.eza.spicyex.lyrics.session.LayerConfigIds;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.LyricTimeline;
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.LyricsRenderConfig;
-import com.eza.spicyex.lyrics.SyllableSegment;
-import com.eza.spicyex.lyrics.cache.LyricCaches;
-import com.eza.spicyex.lyrics.cache.ProcessedLyricsCache;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.CanonicalRow;
+import com.flowify.ettea.lyrics.session.Digests;
+import com.flowify.ettea.lyrics.session.LayerConfigIds;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.LyricTimeline;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.LyricsRenderConfig;
+import com.flowify.ettea.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.cache.LyricCaches;
+import com.flowify.ettea.lyrics.cache.ProcessedLyricsCache;
 
 /** Shared post-parse and post-processing document helpers. */
 public final class LyricsDocumentProcessor {
@@ -396,13 +396,13 @@ public final class LyricsDocumentProcessor {
 
     /** Persists a lane's Sound artifact under the identity it was produced with. */
     public static void saveSoundArtifact(Context context, CanonicalBase base,
-                                         com.eza.spicyex.lyrics.session.SoundArtifact artifact) {
+                                         com.flowify.ettea.lyrics.session.SoundArtifact artifact) {
         ProcessedLyricsCache.saveSound(context, base, artifact);
     }
 
     /** Persists a lane's Meaning artifact under the identity it was produced with. */
     public static void saveMeaningArtifact(Context context, CanonicalBase base,
-                                           com.eza.spicyex.lyrics.session.MeaningArtifact artifact) {
+                                           com.flowify.ettea.lyrics.session.MeaningArtifact artifact) {
         ProcessedLyricsCache.saveMeaning(context, base, artifact);
     }
 

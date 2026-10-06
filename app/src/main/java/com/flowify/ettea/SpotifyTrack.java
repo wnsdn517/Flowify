@@ -1,4 +1,4 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 public class SpotifyTrack {
     public final String title;

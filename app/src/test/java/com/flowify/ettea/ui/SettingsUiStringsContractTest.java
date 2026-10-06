@@ -1,8 +1,8 @@
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.Settings;
 
-import com.eza.spicyex.settings.SettingsPanel;
+import com.flowify.ettea.settings.SettingsPanel;
 
 import org.junit.Test;
 import org.w3c.dom.Element;
@@ -109,7 +109,7 @@ public class SettingsUiStringsContractTest {
 
     @Test
     public void injectedLyricsShellNeverResolvesModuleIdsAgainstSpotifyResources() throws Exception {
-        File source = new File("src/main/java/com/eza/spicyex/hooks/NativeSpicyShellViewImpl.java");
+        File source = new File("src/main/java/com/flowify/ettea/hooks/NativeSpicyShellViewImpl.java");
         if (!source.isFile()) source = new File("app/" + source.getPath());
         assertTrue(source.isFile());
         String java = new String(Files.readAllBytes(source.toPath()), StandardCharsets.UTF_8);
@@ -120,7 +120,7 @@ public class SettingsUiStringsContractTest {
 
     @Test
     public void layoutEditorActionsAreAppendedToPages() throws Exception {
-        File source = new File("src/main/java/com/eza/spicyex/settings/SettingsPanel.java");
+        File source = new File("src/main/java/com/flowify/ettea/settings/SettingsPanel.java");
         if (!source.isFile()) source = new File("app/" + source.getPath());
         assertTrue(source.isFile());
         String java = new String(Files.readAllBytes(source.toPath()), StandardCharsets.UTF_8);
@@ -132,7 +132,7 @@ public class SettingsUiStringsContractTest {
 
     @Test
     public void legacyBackKeyOffersOwnedLyricsLayersFirst() throws Exception {
-        File source = new File("src/main/java/com/eza/spicyex/hooks/LyricsActivityTakeoverHook.java");
+        File source = new File("src/main/java/com/flowify/ettea/hooks/LyricsActivityTakeoverHook.java");
         if (!source.isFile()) source = new File("app/" + source.getPath());
         assertTrue(source.isFile());
         String java = new String(Files.readAllBytes(source.toPath()), StandardCharsets.UTF_8);
@@ -144,7 +144,7 @@ public class SettingsUiStringsContractTest {
 
     @Test
     public void layoutEditorUsesContinuousSlidersAndSharedChipPanel() throws Exception {
-        File source = new File("src/main/java/com/eza/spicyex/hooks/LyricsLayoutEditController.java");
+        File source = new File("src/main/java/com/flowify/ettea/hooks/LyricsLayoutEditController.java");
         if (!source.isFile()) source = new File("app/" + source.getPath());
         assertTrue(source.isFile());
         String java = new String(Files.readAllBytes(source.toPath()), StandardCharsets.UTF_8);

@@ -1,16 +1,16 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.eza.spicyex.lyrics.Json;
+import com.flowify.ettea.lyrics.Json;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 /**
  * Picks which QQ Music search hits to pull lyrics from, in preference order.

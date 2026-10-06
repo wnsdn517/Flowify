@@ -1,18 +1,18 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.ProviderTextDetectionStore;
-import com.eza.spicyex.lyrics.language.TextDetectionLookup;
+import com.flowify.ettea.lyrics.language.ProviderTextDetectionStore;
+import com.flowify.ettea.lyrics.language.TextDetectionLookup;
 
 import java.util.Locale;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.LyricUtils;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
 /** Selects source-provided translations only when their language is compatible with the target. */
 public final class ProviderTranslationResolver {
     private static final String SIMPLIFIED_ONLY = "这来时个们为国发后里东说车门体边头书见长万与云无广电乐龙汉马风开关听话爱让从对学实进会样还现点动过当应产种经认条达处气华场亲线该飞给众许变记仅办务权张声岁买卖带阶际导叶阳单难选连艺区极运历标识钟岛湾够顾礼旧习";

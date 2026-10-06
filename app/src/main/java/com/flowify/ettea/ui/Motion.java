@@ -1,4 +1,4 @@
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -10,7 +10,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 
 import java.util.WeakHashMap;
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 /**
  * Shared motion tokens and helpers for module chrome (settings panel, dialogs, popups).

@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /**
  * Small source-shape and language rules shared by rendering and processing. Whether a track visit
- * asks any provider is decided by {@link com.eza.spicyex.lyrics.catalog.AcquisitionPlanner}.
+ * asks any provider is decided by {@link com.flowify.ettea.lyrics.catalog.AcquisitionPlanner}.
  */
 public final class LyricsSourcePolicy {
     private LyricsSourcePolicy() {

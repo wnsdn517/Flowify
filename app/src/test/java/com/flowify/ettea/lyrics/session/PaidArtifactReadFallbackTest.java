@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import static org.junit.Assert.*;
 import java.util.concurrent.atomic.AtomicInteger;

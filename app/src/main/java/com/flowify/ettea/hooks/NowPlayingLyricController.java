@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 import android.content.Context;
@@ -8,26 +8,26 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Choreographer;
 
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.ArtworkLyricsOverlayView;
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.LiveLyricCardView;
-import com.eza.spicyex.lyrics.LyricTimeline;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.providers.LyricsFetchErrors;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.language.LyricsLocalRomanizer;
-import com.eza.spicyex.lyrics.LyricsRenderConfig;
-import com.eza.spicyex.lyrics.LyricsRenderMode;
-import com.eza.spicyex.lyrics.session.LyricPipelineMetrics;
-import com.eza.spicyex.lyrics.LyricsShellLifecycle;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.ArtworkLyricsOverlayView;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.LiveLyricCardView;
+import com.flowify.ettea.lyrics.LyricTimeline;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.providers.LyricsFetchErrors;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.language.LyricsLocalRomanizer;
+import com.flowify.ettea.lyrics.LyricsRenderConfig;
+import com.flowify.ettea.lyrics.LyricsRenderMode;
+import com.flowify.ettea.lyrics.session.LyricPipelineMetrics;
+import com.flowify.ettea.lyrics.LyricsShellLifecycle;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -269,7 +269,7 @@ final class NowPlayingLyricController {
         // show a stale lyric while (or instead of) loading.
         if (!id.equals(currentId)) {
             boolean artworkWasVisible = artworkOverlay.isOverlayVisible();
-            if (artworkWasVisible && !config.get(com.eza.spicyex.Settings.STAY_IN_LYRICS)) {
+            if (artworkWasVisible && !config.get(com.flowify.ettea.Settings.STAY_IN_LYRICS)) {
                 closeArtwork();
             }
             currentId = id;
@@ -478,7 +478,7 @@ final class NowPlayingLyricController {
         NowPlayingArtworkTargetResolver.PendingCanvasAction action =
                 NowPlayingArtworkTargetResolver.pendingCanvasAction(
                         true, pendingCanvasTrackId, nextTrackId,
-                        config.get(com.eza.spicyex.Settings.STAY_IN_LYRICS),
+                        config.get(com.flowify.ettea.Settings.STAY_IN_LYRICS),
                         Math.max(0L, nowMs - pendingCanvasAtMs),
                         CANVAS_TRANSFER_SETTLE_MS, target);
         if (action == NowPlayingArtworkTargetResolver.PendingCanvasAction.WAIT) return;
@@ -731,7 +731,7 @@ final class NowPlayingLyricController {
     }
 
     private String segmentRomanizedText(AppliedLine line,
-                                        com.eza.spicyex.lyrics.SyllableSegment segment,
+                                        com.flowify.ettea.lyrics.SyllableSegment segment,
                                         String fullText) {
         // LyricsRowViewFactory calls this only after no timed reading unit matched this segment.
         // Synthetic sentence words do not share the source plan's span IDs, so the plan can exist

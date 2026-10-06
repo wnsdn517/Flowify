@@ -1,6 +1,6 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import java.util.List;
 import java.util.Locale;

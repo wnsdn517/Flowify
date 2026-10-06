@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.CanonicalRow;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.session.MeaningEntry;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.CanonicalRow;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.session.MeaningEntry;
 
 import java.util.Collections;
 import java.util.Set;

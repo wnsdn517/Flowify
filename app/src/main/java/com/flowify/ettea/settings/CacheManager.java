@@ -1,4 +1,4 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import android.content.Context;
 import android.graphics.Paint;
@@ -15,15 +15,15 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.lyrics.providers.LyricsResponseCache;
-import com.eza.spicyex.lyrics.cache.CacheClearKind;
-import com.eza.spicyex.lyrics.cache.CacheStoragePolicy;
-import com.eza.spicyex.lyrics.session.AIPaidArtifactCache;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCache;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
-import com.eza.spicyex.ui.ActionIconDrawable.Kind;
-import com.eza.spicyex.ui.PanelDialog;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.lyrics.providers.LyricsResponseCache;
+import com.flowify.ettea.lyrics.cache.CacheClearKind;
+import com.flowify.ettea.lyrics.cache.CacheStoragePolicy;
+import com.flowify.ettea.lyrics.session.AIPaidArtifactCache;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCache;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.ui.ActionIconDrawable.Kind;
+import com.flowify.ettea.ui.PanelDialog;
 
 import java.util.ArrayList;
 import java.util.Collections;

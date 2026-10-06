@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
 
 /**
  * One renderer row produced by {@link LyricTimeline#applySyncedRows(LyricsDocument)}: a lead

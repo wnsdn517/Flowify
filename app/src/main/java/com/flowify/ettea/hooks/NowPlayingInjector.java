@@ -1,7 +1,7 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.isBlank;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.isBlank;
 
 import android.app.Activity;
 import android.graphics.Rect;
@@ -13,9 +13,9 @@ import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.lyrics.ArtworkLyricsOverlayView;
-import com.eza.spicyex.lyrics.LiveLyricCardView;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.lyrics.ArtworkLyricsOverlayView;
+import com.flowify.ettea.lyrics.LiveLyricCardView;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.WeakHashMap;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /** Owns injection and lifecycle for the now-playing live lyric card. */
 final class NowPlayingInjector {

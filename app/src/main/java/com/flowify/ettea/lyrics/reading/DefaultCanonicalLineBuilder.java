@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
-import com.eza.spicyex.lyrics.reading.ReadingContracts.CanonicalLineBuilder;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingContracts.CanonicalLineBuilder;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
 
 public final class DefaultCanonicalLineBuilder implements CanonicalLineBuilder {
     private final ProviderBoundaryResolver resolver = new ProviderBoundaryResolver();

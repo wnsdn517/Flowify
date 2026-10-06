@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
 /** User-requested cache invalidation routed through the live lyrics session. */
 public enum CacheClearKind {

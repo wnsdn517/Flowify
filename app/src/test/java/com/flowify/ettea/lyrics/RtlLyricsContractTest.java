@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

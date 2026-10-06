@@ -1,6 +1,6 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.SettingsStore;
+import com.flowify.ettea.SettingsStore;
 
 
 import static org.junit.Assert.assertEquals;
@@ -10,9 +10,9 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.eza.spicyex.lyrics.ai.AiCredentialStore;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.lyrics.ai.AiCredentialStore;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 
 import org.junit.Before;
 import org.junit.Test;

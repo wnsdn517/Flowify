@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Settings-panel preview of the ad replacement music: a freshly composed piece each start. */
 public final class AdMusicPreview {

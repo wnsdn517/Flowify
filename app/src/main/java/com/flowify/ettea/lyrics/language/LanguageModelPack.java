@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
 import android.content.Context;
 
-import com.eza.spicyex.BuildConfig;
+import com.flowify.ettea.BuildConfig;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -167,6 +167,7 @@ public final class LanguageModelPack {
         OkHttpClient client = new OkHttpClient.Builder().build();
         Request request = new Request.Builder().url(BuildConfig.LANGUAGE_MODEL_PACK_URL).build();
         Response response = client.newCall(request).execute();
+        String computedSha256;
         try {
             if (!response.isSuccessful() || response.body() == null) {
                 transientStatus = new DownloadStatus(Phase.ERROR, 0, "HTTP_" + response.code());
@@ -175,12 +176,12 @@ public final class LanguageModelPack {
             long total = response.body().contentLength();
             try (InputStream in = response.body().byteStream();
                  OutputStream out = new BufferedOutputStream(new FileOutputStream(archive))) {
-                copy(in, out, total);
+                computedSha256 = copyAndHash(in, out, total);
             }
         } finally {
             response.close();
         }
-        if (!BuildConfig.LANGUAGE_MODEL_PACK_SHA256.equalsIgnoreCase(sha256(archive))) {
+        if (!BuildConfig.LANGUAGE_MODEL_PACK_SHA256.equalsIgnoreCase(computedSha256)) {
             archive.delete();
             transientStatus = new DownloadStatus(Phase.ERROR, 0, "SHA256");
             return;
@@ -221,6 +222,8 @@ public final class LanguageModelPack {
     }
 
     private static void unzip(File archive, File destination) throws IOException {
+        long archiveSize = archive.length();
+        long unzippedRead = 0;
         try (ZipInputStream zip = new ZipInputStream(
                 new BufferedInputStream(new FileInputStream(archive)))) {
             ZipEntry entry;
@@ -235,7 +238,14 @@ public final class LanguageModelPack {
                 }
                 try (OutputStream out = new BufferedOutputStream(new FileOutputStream(output))) {
                     int read;
-                    while ((read = zip.read(buffer)) != -1) out.write(buffer, 0, read);
+                    while ((read = zip.read(buffer)) != -1) {
+                        out.write(buffer, 0, read);
+                        unzippedRead += read;
+                    }
+                }
+                if (archiveSize > 0) {
+                    int extractProgress = 80 + (int) Math.min(18, (unzippedRead * 18L) / (archiveSize * 2L));
+                    transientStatus = new DownloadStatus(Phase.DOWNLOADING, extractProgress, "");
                 }
             }
         }
@@ -269,29 +279,27 @@ public final class LanguageModelPack {
         }
     }
 
-    private static String sha256(File file) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
+    private static String copyAndHash(InputStream in, OutputStream out, long totalBytes) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] buffer = new byte[BUFFER_SIZE];
+            long readTotal = 0;
             int read;
-            while ((read = in.read(buffer)) != -1) digest.update(buffer, 0, read);
-        }
-        StringBuilder out = new StringBuilder(64);
-        for (byte value : digest.digest()) out.append(String.format("%02x", value));
-        return out.toString();
-    }
-
-    private static void copy(InputStream in, OutputStream out, long totalBytes) throws IOException {
-        byte[] buffer = new byte[BUFFER_SIZE];
-        long readTotal = 0;
-        int read;
-        while ((read = in.read(buffer)) != -1) {
-            out.write(buffer, 0, read);
-            readTotal += read;
-            if (totalBytes > 0) {
-                int progress = (int) (readTotal * 100L / totalBytes);
-                transientStatus = new DownloadStatus(Phase.DOWNLOADING, progress, "");
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+                digest.update(buffer, 0, read);
+                readTotal += read;
+                if (totalBytes > 0) {
+                    int progress = (int) (readTotal * 80L / totalBytes);
+                    transientStatus = new DownloadStatus(Phase.DOWNLOADING, progress, "");
+                }
             }
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : digest.digest()) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            if (e instanceof IOException) throw (IOException) e;
+            throw new IOException(e);
         }
     }
 

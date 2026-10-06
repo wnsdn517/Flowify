@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.ReadingLanguagePolicy;
+import com.flowify.ettea.lyrics.language.ReadingLanguagePolicy;
 
 import java.util.List;
 
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
 
 /** Groups provider timing fragments into one visual word without changing their timing ownership. */
 final class TimedWordGrouping {

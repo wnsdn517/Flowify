@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** Typed result of one explicit request to reuse or generate an AI-derived lyric layer. */
 public enum AiRequestStartResult {

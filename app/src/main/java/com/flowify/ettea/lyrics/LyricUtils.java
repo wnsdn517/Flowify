@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /** Shared tiny helpers used across the lyrics + hook code (consolidated from per-file copies). */
 public final class LyricUtils {

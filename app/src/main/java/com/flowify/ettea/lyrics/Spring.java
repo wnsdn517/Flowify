@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /** Closed-form damped spring (port of the Spicy 6 spring solver). */
 public class Spring {

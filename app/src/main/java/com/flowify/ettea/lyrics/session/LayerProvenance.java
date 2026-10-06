@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** Who produced a derived artifact and under which contract. Never contains lyric text. */
 public final class LayerProvenance {

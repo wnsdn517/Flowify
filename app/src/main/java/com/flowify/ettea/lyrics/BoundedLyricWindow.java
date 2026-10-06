@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /**
  * Computes the attached row range for the native Spicy lyrics ScrollView.

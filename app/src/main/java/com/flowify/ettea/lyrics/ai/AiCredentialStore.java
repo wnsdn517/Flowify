@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.eza.spicyex.Diagnostics;
+import com.flowify.ettea.Diagnostics;
 
 import java.nio.charset.StandardCharsets;
 

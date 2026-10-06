@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -16,7 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Test;
-import com.eza.spicyex.lyrics.cache.LyricCaches;
+import com.flowify.ettea.lyrics.cache.LyricCaches;
 
 /**
  * Batched romanization: one request for a song, split back onto the lines it was asked about.

@@ -1,15 +1,15 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.eza.spicyex.lyrics.Json;
+import com.flowify.ettea.lyrics.Json;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 /** Session-local, privacy-safe state for the Spicy client-version probe. */
 public final class SpicyVersionProbeState {

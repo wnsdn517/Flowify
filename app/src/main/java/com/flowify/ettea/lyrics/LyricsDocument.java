@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +27,7 @@ public class LyricsDocument {
      */
     public String catalogCandidateId = "";
     /** Provider identity and persistence outcome; copied across in-flight deliveries only. */
-    public com.eza.spicyex.lyrics.catalog.CatalogDelivery catalogDelivery;
+    public com.flowify.ettea.lyrics.catalog.CatalogDelivery catalogDelivery;
     public boolean spicyPackedPayload;
     public boolean spicyEnvelopeNoticePresent;
     public Integer spicyQueryStatus;

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import android.content.Context;
 import android.os.Handler;
@@ -8,8 +8,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 /** Handles lyric scroll touch hold, optional tap-to-seek, and long-press-to-share gestures. */
 public final class LyricsTapSeekHandler implements View.OnTouchListener {

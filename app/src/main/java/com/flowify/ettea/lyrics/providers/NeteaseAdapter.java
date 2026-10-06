@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.content.Context;
 import android.net.Uri;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.Json;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.CatalogAdapters;
-import com.eza.spicyex.lyrics.catalog.CatalogSource;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.Json;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.CatalogAdapters;
+import com.flowify.ettea.lyrics.catalog.CatalogSource;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -23,7 +23,7 @@ import okhttp3.Callback;
 import okhttp3.Request;
 import okhttp3.Response;
 
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /**
  * NetEase Cloud Music fallback adapter: title search, ranked hits, word-level YRC over the

@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Small, testable invariants shared by runtime controllers while the layout editor is attached. */
 final class LyricsLayoutEditorRuntimePolicy {

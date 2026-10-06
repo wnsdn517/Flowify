@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -6,14 +6,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.eza.spicyex.lyrics.reading.ReadingContracts.RenderPlanBuilder;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingAnnotation;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ValidationResult;
+import com.flowify.ettea.lyrics.reading.ReadingContracts.RenderPlanBuilder;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingAnnotation;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ValidationResult;
 
 public final class DefaultRenderPlanBuilder implements RenderPlanBuilder {
     @Override

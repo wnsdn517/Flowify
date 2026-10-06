@@ -1,7 +1,7 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
 
 import android.content.Context;
 import android.os.Handler;
@@ -10,25 +10,25 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.eza.spicyex.lyrics.ai.AiCredentialStore;
-import com.eza.spicyex.lyrics.ai.AiLastProbe;
-import com.eza.spicyex.lyrics.ai.AiEndpoint;
-import com.eza.spicyex.lyrics.ai.AiGeminiProvider;
-import com.eza.spicyex.lyrics.ai.AiModelDescriptor;
-import com.eza.spicyex.lyrics.ai.AiModelLiveState;
-import com.eza.spicyex.lyrics.ai.AiModelListResult;
-import com.eza.spicyex.lyrics.ai.AiProviderFailure;
-import com.eza.spicyex.lyrics.ai.AiModelProbe;
-import com.eza.spicyex.lyrics.ai.AiRuntimeFailureLog;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.settings.SettingsWriter;
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.PanelDialog;
-import com.eza.spicyex.ui.PanelPickerPopup;
+import com.flowify.ettea.lyrics.ai.AiCredentialStore;
+import com.flowify.ettea.lyrics.ai.AiLastProbe;
+import com.flowify.ettea.lyrics.ai.AiEndpoint;
+import com.flowify.ettea.lyrics.ai.AiGeminiProvider;
+import com.flowify.ettea.lyrics.ai.AiModelDescriptor;
+import com.flowify.ettea.lyrics.ai.AiModelLiveState;
+import com.flowify.ettea.lyrics.ai.AiModelListResult;
+import com.flowify.ettea.lyrics.ai.AiProviderFailure;
+import com.flowify.ettea.lyrics.ai.AiModelProbe;
+import com.flowify.ettea.lyrics.ai.AiRuntimeFailureLog;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.settings.SettingsWriter;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.PanelDialog;
+import com.flowify.ettea.ui.PanelPickerPopup;
 
 import java.util.List;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /**
  * The AI section's rows: the key, the endpoint, and the model.
@@ -246,7 +246,7 @@ public final class AiSettingsRows {
         toast(host.string("settings_ai_checking", "Checking…"));
         final Handler handler = new Handler(context.getMainLooper());
         final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
-        final com.eza.spicyex.lyrics.ai.AiSignal discoverySignal = new com.eza.spicyex.lyrics.ai.AiSignal();
+        final com.flowify.ettea.lyrics.ai.AiSignal discoverySignal = new com.flowify.ettea.lyrics.ai.AiSignal();
         // Backstop only: paged discovery on a slow link (dead-route fallback plus several
         // model-list pages) legitimately exceeds 30s. The transport enforces its own ceiling;
         // this only reclaims a hung settings action so it never spins forever.

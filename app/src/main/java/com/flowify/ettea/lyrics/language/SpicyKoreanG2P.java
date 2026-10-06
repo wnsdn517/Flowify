@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
 /**
  * Lightweight Korean grapheme-to-phoneme pass for the "follow sound" (pronunciation)

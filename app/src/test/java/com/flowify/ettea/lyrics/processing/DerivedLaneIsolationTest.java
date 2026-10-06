@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -15,23 +15,23 @@ import java.util.HashSet;
 
 import org.junit.Test;
 
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerProvenance;
-import com.eza.spicyex.lyrics.session.LayerState;
-import com.eza.spicyex.lyrics.session.LayerStatus;
-import com.eza.spicyex.lyrics.session.LayerConfigIds;
-import com.eza.spicyex.lyrics.session.LyricSession;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.session.MeaningEntry;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.lyrics.session.SoundEntry;
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerProvenance;
+import com.flowify.ettea.lyrics.session.LayerState;
+import com.flowify.ettea.lyrics.session.LayerStatus;
+import com.flowify.ettea.lyrics.session.LayerConfigIds;
+import com.flowify.ettea.lyrics.session.LyricSession;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.session.MeaningEntry;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.SoundEntry;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 /**
  * Phases 2 and 3: the Sound and Meaning lanes must not share readiness, flags, or fate.
@@ -411,7 +411,7 @@ public class DerivedLaneIsolationTest {
         LyricsDocument mounted = document("ichi");
         mounted.lines.get(0).romanizedText = "ichi-r";
         LyricsDocument published = document("ichi");
-        published.lines.get(0).readingRenderPlan = new com.eza.spicyex.lyrics.reading.ReadingModels
+        published.lines.get(0).readingRenderPlan = new com.flowify.ettea.lyrics.reading.ReadingModels
                 .RenderPlan("l0", null, null, null, "ICHI", null);
 
         assertEquals(LyricsDocumentProcessor.DerivedMergeResult.CHANGED,

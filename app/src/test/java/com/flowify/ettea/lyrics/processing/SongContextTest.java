@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import static org.junit.Assert.assertEquals;
 
-import com.eza.spicyex.lyrics.processing.SongContext.Register;
+import com.flowify.ettea.lyrics.processing.SongContext.Register;
 
 import org.junit.Test;
 

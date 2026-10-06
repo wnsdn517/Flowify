@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.ReadingLanguagePolicy;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.ReadingLanguagePolicy;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 /** Shared display-mode decisions for fullscreen rows and the now-playing lyric card. */
 public final class LyricsDisplayMode {
@@ -9,7 +9,7 @@ public final class LyricsDisplayMode {
     }
 
     public static boolean isJapaneseLine(AppliedLine line) {
-        com.eza.spicyex.lyrics.session.DetectionResult detection = ReadingLanguagePolicy.detectionFor(line);
+        com.flowify.ettea.lyrics.session.DetectionResult detection = ReadingLanguagePolicy.detectionFor(line);
         if (detection != null) {
             return detection.hasLanguage() && "ja".equals(detection.language);
         }

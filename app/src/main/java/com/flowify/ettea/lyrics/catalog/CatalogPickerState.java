@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.catalog.CatalogPickerModel.Row;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerModel.RowKind;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerModel.Row;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerModel.RowKind;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -1,4 +1,4 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -6,8 +6,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Build;
 
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpRes;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpRes;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

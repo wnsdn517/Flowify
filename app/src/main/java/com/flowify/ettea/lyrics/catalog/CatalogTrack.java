@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.SpotifyTrack;
+import com.flowify.ettea.SpotifyTrack;
 
 import java.util.Objects;
 

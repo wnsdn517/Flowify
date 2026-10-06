@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Pure ordering gate for asynchronous surface document preparation and commit. */
 final class LyricsSurfaceDocumentGate {

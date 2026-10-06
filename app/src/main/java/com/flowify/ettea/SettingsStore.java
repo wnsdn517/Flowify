@@ -1,10 +1,10 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.eza.spicyex.lyrics.language.LanguageModelPack;
-import com.eza.spicyex.settings.TypedStore;
+import com.flowify.ettea.lyrics.language.LanguageModelPack;
+import com.flowify.ettea.settings.TypedStore;
 
 import java.util.Map;
 
@@ -26,7 +26,7 @@ public final class SettingsStore implements TypedStore {
         this.prefs = prefs;
         this.context = context;
         if (context != null) {
-            com.eza.spicyex.lyrics.language.LanguageModelPack.attachContext(context);
+            com.flowify.ettea.lyrics.language.LanguageModelPack.attachContext(context);
         }
         migrateLikedSongsButton(prefs);
         migrateLineBlurLevel(prefs);
@@ -95,9 +95,9 @@ public final class SettingsStore implements TypedStore {
             prefs.edit().remove(Settings.FULLSCREEN_CONTROLS.key).apply();
             return;
         }
-        String normalized = com.eza.spicyex.lyrics.LyricsShellSettings
+        String normalized = com.flowify.ettea.lyrics.LyricsShellSettings
                 .fullscreenControlsValue(
-                        com.eza.spicyex.lyrics.LyricsShellSettings
+                        com.flowify.ettea.lyrics.LyricsShellSettings
                                 .parseFullscreenControlsSeconds((String) raw));
         if (!normalized.equals(raw)) {
             prefs.edit().putString(Settings.FULLSCREEN_CONTROLS.key, normalized).apply();

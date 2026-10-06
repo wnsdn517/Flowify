@@ -1,7 +1,7 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.xposed.XpPackage;
-import com.eza.spicyex.xposed.SpotifySymbolResolver;
+import com.flowify.ettea.xposed.XpPackage;
+import com.flowify.ettea.xposed.SpotifySymbolResolver;
 
 public abstract class SpotifyHook {
     protected XpPackage lpparm;

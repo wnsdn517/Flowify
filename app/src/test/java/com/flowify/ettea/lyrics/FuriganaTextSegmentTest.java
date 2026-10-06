@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import org.junit.Test;
 

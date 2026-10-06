@@ -1,16 +1,16 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.ui.GlossyToggle;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.ActionIconDrawable.Kind;
+import com.flowify.ettea.ui.GlossyToggle;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.ActionIconDrawable.Kind;
 
 import java.util.List;
 
@@ -122,7 +122,7 @@ public final class SettingRowFactory {
         shape.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         Runnable update = () -> {
             int[] ratio = Settings.pipShapeRatio(host.store().get(setting));
-            shape.setImageDrawable(new com.eza.spicyex.ui.AspectRectDrawable(
+            shape.setImageDrawable(new com.flowify.ettea.ui.AspectRectDrawable(
                     ratio[0] / (float) ratio[1], PanelStyle.COL_ACCENT, style.density()));
         };
         update.run();

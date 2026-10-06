@@ -1,19 +1,19 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -146,7 +146,7 @@ public class LyricsMeaningLaneConfigReplayTest {
                 false, (id, generation, snapshot) -> true, activeMeaning);
         processor.cancelLayer(LayerKind.SOUND);
         processor.start(document.trackId, 1, document, false,
-                com.eza.spicyex.lyrics.language.RomanizationOptions.DEFAULTS, null,
+                com.flowify.ettea.lyrics.language.RomanizationOptions.DEFAULTS, null,
                 "google_unofficial", "en", "ko", "ko", Collections.emptySet(),
                 (id, generation, snapshot) -> true, new Recorder(),
                 java.util.EnumSet.of(LayerKind.SOUND));

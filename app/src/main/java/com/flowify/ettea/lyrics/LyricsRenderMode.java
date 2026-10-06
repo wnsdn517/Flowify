@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.session.LyricsSourcePolicy;
+import com.flowify.ettea.lyrics.session.LyricsSourcePolicy;
 
 /** Shared visual timing mode. Documents without trusted timing never receive karaoke dimming. */
 public final class LyricsRenderMode {

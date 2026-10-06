@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
 
 import com.google.gson.Gson;

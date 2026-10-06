@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 import android.content.Context;
@@ -8,21 +8,21 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.eza.spicyex.BuildConfig;
-import com.eza.spicyex.References;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.catalog.CatalogSource;
-import com.eza.spicyex.lyrics.catalog.LyricsCatalog;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.RankingMode;
-import com.eza.spicyex.lyrics.cache.CacheClearKind;
-import com.eza.spicyex.settings.SourcePreferencesAdapter;
-import com.eza.spicyex.settings.SettingsWriter;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.BuildConfig;
+import com.flowify.ettea.References;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.catalog.CatalogSource;
+import com.flowify.ettea.lyrics.catalog.LyricsCatalog;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences.RankingMode;
+import com.flowify.ettea.lyrics.cache.CacheClearKind;
+import com.flowify.ettea.settings.SourcePreferencesAdapter;
+import com.flowify.ettea.settings.SettingsWriter;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -507,7 +507,7 @@ final class AgentCommandChannel {
                 return;
             }
             agentPicker = new WeakReference<>(LyricsSourcePickerDialog.showForAgent(activity, host,
-                    com.eza.spicyex.ui.UiLanguage.strings(activity, null),
+                    com.flowify.ettea.ui.UiLanguage.strings(activity, null),
                     (ok, detail) -> reply(ok ? "ok" : "error", "picker", detail, correlation)));
         });
     }
@@ -548,7 +548,7 @@ final class AgentCommandChannel {
                 case "refresh": host.refreshLyricsLayer(layer); break;
                 case "restore": host.restoreLyricsLayer(layer); break;
                 case "ai":
-                    com.eza.spicyex.lyrics.ai.AiRequestStartResult result = host.requestAiLyricsLayer(layer);
+                    com.flowify.ettea.lyrics.ai.AiRequestStartResult result = host.requestAiLyricsLayer(layer);
                     reply(result.started() ? "ok" : "error", "layer", result.token, correlation);
                     return;
                 default:

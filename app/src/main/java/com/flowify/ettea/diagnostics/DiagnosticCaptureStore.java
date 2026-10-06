@@ -1,4 +1,4 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 import android.content.Context;
 import android.content.SharedPreferences;

@@ -1,4 +1,4 @@
-package com.eza.spicyex.testsupport;
+package com.flowify.ettea.testsupport;
 
 import android.content.ContextWrapper;
 import android.content.SharedPreferences;

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /**
  * Per-row timing for the Apple-style row cascade: pure motion math, no views.

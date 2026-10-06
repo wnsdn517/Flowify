@@ -1,11 +1,11 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import static org.junit.Assert.*;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.catalog.CatalogAdapters;
-import com.eza.spicyex.lyrics.catalog.CatalogCandidate;
-import com.eza.spicyex.lyrics.catalog.CatalogSource;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.catalog.CatalogAdapters;
+import com.flowify.ettea.lyrics.catalog.CatalogCandidate;
+import com.flowify.ettea.lyrics.catalog.CatalogSource;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;

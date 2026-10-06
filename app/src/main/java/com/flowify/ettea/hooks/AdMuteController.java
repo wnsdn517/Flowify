@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.content.Context;
 import android.media.AudioTrack;
@@ -8,13 +8,13 @@ import android.os.Looper;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
 
 /**
  * What happens while an ad plays: nothing, silence, or soft music in its place
- * ({@link com.eza.spicyex.Settings#AD_MODE}).
+ * ({@link com.flowify.ettea.Settings#AD_MODE}).
  *
  * <p>Spotify's own ad tracks use a "spotify:ad:..." URI (confirmed against the decompiled APK's
  * smali - it's a real, stable scheme Spotify itself branches on, not a guess). There's no way to
@@ -41,7 +41,7 @@ final class AdMuteController {
     // building one there meant garbage on that hot path for every single state update - and for
     // most people the answer is an immediate "disabled, nothing to do". Held once instead; it
     // wraps SharedPreferences, so reads through it stay live and toggling still applies at once.
-    private final com.eza.spicyex.SpotifyPlusConfig config;
+    private final com.flowify.ettea.SpotifyPlusConfig config;
     /** Spotify may reuse the same AudioTrack after an ad. Keep the last non-ad gain so a mute
      *  applied during the ad cannot remain stuck when Spotify skips its next setVolume call. */
     private final Map<AudioTrack, Volume> normalVolumes = new WeakHashMap<>();
@@ -56,14 +56,14 @@ final class AdMuteController {
     /** How long before the last ad ends the music starts its ending, so the ending (at most
      *  AdMusicPlayer's outro plus its fade) is over by the time the song comes in. */
     private static final long MUSIC_END_LEAD_MS = 2600L;
-    private final com.eza.spicyex.lyrics.LyricsPlaybackClock adClock;
+    private final com.flowify.ettea.lyrics.LyricsPlaybackClock adClock;
     private final Runnable recheck = this::check;
 
     AdMuteController(NativeSpicyLyricsHook host, Context context) {
         this.host = host;
         this.context = context;
-        this.config = com.eza.spicyex.SpotifyPlusConfig.from(context);
-        this.adClock = new com.eza.spicyex.lyrics.LyricsPlaybackClock(host::readBestMeasuredProgressMs);
+        this.config = com.flowify.ettea.SpotifyPlusConfig.from(context);
+        this.adClock = new com.flowify.ettea.lyrics.LyricsPlaybackClock(host::readBestMeasuredProgressMs);
     }
 
     void start() {
@@ -80,8 +80,8 @@ final class AdMuteController {
 
     private void check() {
         try {
-            String mode = config.get(com.eza.spicyex.Settings.AD_MODE);
-            if (com.eza.spicyex.Settings.AD_MODE_OFF.equals(mode)) {
+            String mode = config.get(com.flowify.ettea.Settings.AD_MODE);
+            if (com.flowify.ettea.Settings.AD_MODE_OFF.equals(mode)) {
                 if (adActive) endAd();
                 return;
             }
@@ -136,7 +136,7 @@ final class AdMuteController {
     }
 
     private void updateMusic(String mode, SpotifyTrack track) {
-        if (!com.eza.spicyex.Settings.AD_MODE_MUSIC.equals(mode)) {
+        if (!com.flowify.ettea.Settings.AD_MODE_MUSIC.equals(mode)) {
             if (music.isPlaying()) music.fadeOutAndStop();
             return;
         }
@@ -158,7 +158,7 @@ final class AdMuteController {
             if (music.isPlaying()) music.fadeOutAndStop();
             return;
         }
-        music.setTheme(config.get(com.eza.spicyex.Settings.AD_MUSIC_THEME));
+        music.setTheme(config.get(com.flowify.ettea.Settings.AD_MUSIC_THEME));
         music.fadeIn();
         if (remaining > 0) {
             // Look again just in time for the ending (and meanwhile once a second, so a break

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.content.Context;
 
@@ -6,29 +6,29 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.BackgroundLine;
-import com.eza.spicyex.lyrics.Json;
-import com.eza.spicyex.lyrics.LyricTimeline;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
-import com.eza.spicyex.lyrics.SyllableSegment;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.SyllableCanonicalizer;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.BackgroundLine;
+import com.flowify.ettea.lyrics.Json;
+import com.flowify.ettea.lyrics.LyricTimeline;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.SyllableCanonicalizer;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.eza.spicyex.xposed.XpLog;
-import static com.eza.spicyex.lyrics.LyricUtils.cleanInvisibles;
-import static com.eza.spicyex.lyrics.LyricUtils.cleanInvisiblesPreserveEdges;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import static com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri;
+import com.flowify.ettea.xposed.XpLog;
+import static com.flowify.ettea.lyrics.LyricUtils.cleanInvisibles;
+import static com.flowify.ettea.lyrics.LyricUtils.cleanInvisiblesPreserveEdges;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri;
 
 /** Source adapters for remote (Apple Music, Spicy-shaped JSON) and LRCLIB lyric payloads. */
 public final class LyricsParser implements LyricsRepository.Parser {

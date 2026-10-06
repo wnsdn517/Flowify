@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerKind;
 
 import org.junit.Test;
 
@@ -225,7 +225,7 @@ public class AiResponseValidationTest {
 
     private static String quote(String value) {
         StringBuilder out = new StringBuilder();
-        com.eza.spicyex.lyrics.session.Digests.appendJsonString(out, value);
+        com.flowify.ettea.lyrics.session.Digests.appendJsonString(out, value);
         return out.toString();
     }
 

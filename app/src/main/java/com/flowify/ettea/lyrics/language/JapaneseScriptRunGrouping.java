@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.DisplayLayoutGroup;
+import com.flowify.ettea.lyrics.DisplayLayoutGroup;
 
 import java.util.ArrayList;
 import java.util.Collections;

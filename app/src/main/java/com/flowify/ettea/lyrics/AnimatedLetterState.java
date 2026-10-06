@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /** Per-letter animation state for the letter-pop path of long syllables. */
 public class AnimatedLetterState {

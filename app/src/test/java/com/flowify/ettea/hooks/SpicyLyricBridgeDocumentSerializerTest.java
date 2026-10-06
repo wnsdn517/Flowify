@@ -1,16 +1,16 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
-import com.eza.spicyex.lyrics.reading.ReadingPlanFactory;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.reading.ReadingPlanFactory;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -29,11 +29,11 @@ public class SpicyLyricBridgeDocumentSerializerTest {
         LyricsDocument document = new LyricsDocument(); document.language = "ja";
         AppliedLine row = new AppliedLine(); row.text = "中国"; row.endMs = 1000;
         row.sourceLine = new LyricsLine(); row.sourceLine.text = row.text;
-        row.sourceLine.detection = com.eza.spicyex.lyrics.session.DetectionResult.detected("", row.text,
-                com.eza.spicyex.lyrics.language.ScriptClassifier.ScriptClass.CHINESE, "zh", .99);
-        row.japaneseReading = new com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor.JapaneseReading(
+        row.sourceLine.detection = com.flowify.ettea.lyrics.session.DetectionResult.detected("", row.text,
+                com.flowify.ettea.lyrics.language.ScriptClassifier.ScriptClass.CHINESE, "zh", .99);
+        row.japaneseReading = new com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor.JapaneseReading(
                 "中国", "chuugoku", Collections.singletonList(
-                new com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor.FuriganaSegment(0, 2, "ちゅうごく")));
+                new com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor.FuriganaSegment(0, 2, "ちゅうごく")));
         document.appliedLines.add(row);
         JsonObject encoded = JsonParser.parseString(unzip(SpicyLyricBridgeDocumentSerializer.serialize(
                 document, "test", 1, "track"))).getAsJsonObject()

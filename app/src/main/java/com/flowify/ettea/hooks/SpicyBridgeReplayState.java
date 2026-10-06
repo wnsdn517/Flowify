@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Tracks delivery of one retained bridge payload across Binder connections. */
 final class SpicyBridgeReplayState {

@@ -1,7 +1,7 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.lyrics.LyricsBackgroundStyle;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.lyrics.LyricsBackgroundStyle;
 
 /**
  * The single commit point for ordinary setting writes: one write site per value kind.

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /**
  * The persisted outcome of one structured-output probe, and the reasoning allowance derived from

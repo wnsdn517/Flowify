@@ -1,4 +1,4 @@
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.app.Dialog;
 import android.content.Context;
@@ -110,11 +110,11 @@ public final class PanelDialog {
         sheet = true;
         surface.setSheet(true);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{com.eza.spicyex.settings.PanelStyle.COL_CARD_TOP | 0xFF000000,
-                        com.eza.spicyex.settings.PanelStyle.COL_CARD | 0xFF000000});
+                new int[]{com.flowify.ettea.settings.PanelStyle.COL_CARD_TOP | 0xFF000000,
+                        com.flowify.ettea.settings.PanelStyle.COL_CARD | 0xFF000000});
         float r = dp(30);
         bg.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
-        bg.setStroke(Math.max(1, dp(1)), com.eza.spicyex.settings.PanelStyle.COL_CARD_BORDER);
+        bg.setStroke(Math.max(1, dp(1)), com.flowify.ettea.settings.PanelStyle.COL_CARD_BORDER);
         root.setBackground(bg);
         root.setClipToOutline(true);
         root.setPadding(dp(20), 0, dp(20), dp(16));

@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /**
  * Pure policy for the Panel media controls selector, shared by the two-column panel

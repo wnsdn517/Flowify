@@ -1,11 +1,11 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.SpotifyTrack;
+import com.flowify.ettea.SpotifyTrack;
 
 import org.junit.Test;
 

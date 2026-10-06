@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.Diagnostics;
+import com.flowify.ettea.Diagnostics;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -1,14 +1,14 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import java.util.Locale;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import com.eza.spicyex.lyrics.LyricUtils;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import com.flowify.ettea.lyrics.LyricUtils;
 
 /**
  * Android port of Spicy fetchLyrics.ts / Fork/Translation.ts processing gates.

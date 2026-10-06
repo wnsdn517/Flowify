@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Pure transition rule for a settings-driven catalog re-seat. */
 final class LyricsSessionSeatTransition {

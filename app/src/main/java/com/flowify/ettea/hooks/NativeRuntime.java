@@ -1,6 +1,6 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.lyrics.processing.SpicyProcessing;
+import com.flowify.ettea.lyrics.processing.SpicyProcessing;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

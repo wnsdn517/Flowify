@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import android.graphics.Paint;
 import android.graphics.Typeface;

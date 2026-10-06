@@ -1,6 +1,6 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.Settings;
 
 import java.util.Arrays;
 import java.util.Collections;

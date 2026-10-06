@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 import android.database.sqlite.SQLiteDatabase;
 

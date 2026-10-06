@@ -1,13 +1,13 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.DisplayLayoutGroup;
-import com.eza.spicyex.lyrics.LyricTimeline;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.SyllableSegment;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.reading.CodePointRanges;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.DisplayLayoutGroup;
+import com.flowify.ettea.lyrics.LyricTimeline;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.reading.CodePointRanges;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -66,7 +66,7 @@ final class SpicyLyricBridgeDocumentSerializer {
             encoded.addProperty("romanized", bounded(readingText(row)));
             encoded.addProperty("translated", bounded(row.translatedText));
             JsonArray furigana = new JsonArray();
-            if (com.eza.spicyex.lyrics.LyricsDisplayMode.isJapaneseLine(row)
+            if (com.flowify.ettea.lyrics.LyricsDisplayMode.isJapaneseLine(row)
                     && row.japaneseReading != null && row.japaneseReading.furigana != null) {
                 for (SpicyJapaneseChineseProcessor.FuriganaSegment segment : row.japaneseReading.furigana) {
                     if (segment == null || segment.reading == null || segment.reading.trim().isEmpty()) continue;
@@ -81,7 +81,7 @@ final class SpicyLyricBridgeDocumentSerializer {
 
             JsonArray layoutGroups = new JsonArray();
             for (DisplayLayoutGroup group : DisplayLayoutGroup.forLine(
-                    com.eza.spicyex.lyrics.language.ReadingLanguagePolicy.layoutLanguage(row), row.text, row.japaneseReading)) {
+                    com.flowify.ettea.lyrics.language.ReadingLanguagePolicy.layoutLanguage(row), row.text, row.japaneseReading)) {
                 if (group == null || group.end <= group.start) continue;
                 JsonObject layout = new JsonObject();
                 layout.addProperty("start", group.start);

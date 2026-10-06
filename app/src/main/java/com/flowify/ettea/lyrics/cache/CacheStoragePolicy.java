@@ -1,12 +1,12 @@
-package com.eza.spicyex.lyrics.cache;
+package com.flowify.ettea.lyrics.cache;
 
 import android.content.Context;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.providers.LyricsResponseCache;
-import com.eza.spicyex.lyrics.session.AIPaidArtifactCache;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCache;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.providers.LyricsResponseCache;
+import com.flowify.ettea.lyrics.session.AIPaidArtifactCache;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCache;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;

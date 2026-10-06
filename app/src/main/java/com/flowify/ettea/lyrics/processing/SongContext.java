@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import android.net.Uri;
 
@@ -43,7 +43,7 @@ public final class SongContext {
         KEEP
     }
 
-    private static final String USER_AGENT = "SpicyEX/1.0 (lyrics context; github.com/wnsdn517/spicy-ex)";
+    private static final String USER_AGENT = "Flowify/1.0 (lyrics context; github.com/wnsdn517/Flowify)";
     private static final int MAX_TRACKS = 32;
     private static final Map<String, String[]> META = new LinkedHashMap<String, String[]>(16, 0.75f, true) {
         @Override protected boolean removeEldestEntry(Map.Entry<String, String[]> eldest) {
@@ -73,7 +73,7 @@ public final class SongContext {
         synchronized (META) {
             // Lanes key by either the URI or the bare id; keep both.
             META.put(trackUri, meta);
-            META.put(com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri(trackUri), meta);
+            META.put(com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri(trackUri), meta);
         }
     }
 

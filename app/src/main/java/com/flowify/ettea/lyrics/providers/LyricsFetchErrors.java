@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import java.util.Locale;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 /** Classifies fetch failures so durable no-lyrics results do not get mixed with transient errors. */
 public final class LyricsFetchErrors {

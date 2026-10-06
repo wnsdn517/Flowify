@@ -1,4 +1,4 @@
-package com.eza.spicyex.motion;
+package com.flowify.ettea.motion;
 
 import android.content.Context;
 import android.graphics.Matrix;
@@ -11,7 +11,7 @@ import androidx.media3.common.Player;
 import androidx.media3.common.VideoSize;
 import androidx.media3.exoplayer.ExoPlayer;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /**
  * A muted, looping, centre-cropped video surface for motion artwork (ExoPlayer, since Apple's

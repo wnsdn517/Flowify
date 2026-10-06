@@ -1,10 +1,10 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioTrack;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /**
  * Soft instrumental music played in place of an ad. Synthesised on the fly - nothing is bundled or

@@ -1,22 +1,22 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
 
 import android.content.Context;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.ai.AiSettings;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.ai.AiSettings;
 
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 /**
  * Reads layer settings and starts the derived lanes for one document.

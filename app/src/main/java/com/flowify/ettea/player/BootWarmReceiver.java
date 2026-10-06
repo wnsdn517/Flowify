@@ -1,4 +1,4 @@
-package com.eza.spicyex.player;
+package com.flowify.ettea.player;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -23,9 +23,9 @@ import android.util.Log;
  */
 public final class BootWarmReceiver extends BroadcastReceiver {
     private static final String TAG = "[SpicyPlayer]";
-    private static final String PACKAGE = "com.eza.spicyex";
-    private static final String SERVICE_CLASS = "com.eza.spicyex.player.WebPlayerService";
-    private static final String ACTION_WARMUP = "com.eza.spicyex.player.WARMUP";
+    private static final String PACKAGE = "com.flowify.ettea";
+    private static final String SERVICE_CLASS = "com.flowify.ettea.player.WebPlayerService";
+    private static final String ACTION_WARMUP = "com.flowify.ettea.player.WARMUP";
 
     /**
      * Android 15 (API 35) banned launching a mediaPlayback foreground service from a

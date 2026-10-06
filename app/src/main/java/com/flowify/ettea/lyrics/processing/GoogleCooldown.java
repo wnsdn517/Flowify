@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 /**
  * Backs off from Google Translate's unofficial endpoint after it answers 429.

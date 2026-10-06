@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.media.session.MediaController;
 import android.media.session.MediaSession;
@@ -6,18 +6,18 @@ import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.os.SystemClock;
 
-import com.eza.spicyex.References;
-import com.eza.spicyex.SpotifyTrack;
+import com.flowify.ettea.References;
+import com.flowify.ettea.SpotifyTrack;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpPackage;
-import com.eza.spicyex.xposed.SpotifySymbolResolver;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpPackage;
+import com.flowify.ettea.xposed.SpotifySymbolResolver;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
@@ -185,7 +185,7 @@ final class PlaybackBridge {
     private void installMediaSessionHook() {
         try {
             XpHooks.findAfter(MediaSession.class, "setMetadata", "artwork:MediaSession#setMetadata",
-                    param -> com.eza.spicyex.lyrics.cache.SpotifyArtworkCache.capture(
+                    param -> com.flowify.ettea.lyrics.cache.SpotifyArtworkCache.capture(
                             (android.media.MediaMetadata) param.args[0]), android.media.MediaMetadata.class);
         } catch (Throwable t) {
             XpLog.log(NativeSpicyLyricsHook.TAG + " artwork metadata hook unavailable: " + t.getClass().getSimpleName());

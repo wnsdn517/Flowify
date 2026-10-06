@@ -1,16 +1,16 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.LatinLanguageGate;
-import com.eza.spicyex.lyrics.language.LyricsLocalRomanizer;
-import com.eza.spicyex.lyrics.language.ReadingLanguagePolicy;
-import com.eza.spicyex.lyrics.language.ScriptClassifier;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.LatinLanguageGate;
+import com.flowify.ettea.lyrics.language.LyricsLocalRomanizer;
+import com.flowify.ettea.lyrics.language.ReadingLanguagePolicy;
+import com.flowify.ettea.lyrics.language.ScriptClassifier;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import com.eza.spicyex.lyrics.processing.ProviderTranslationResolver;
-import com.eza.spicyex.lyrics.processing.SpicyProcessing;
+import com.flowify.ettea.lyrics.processing.ProviderTranslationResolver;
+import com.flowify.ettea.lyrics.processing.SpicyProcessing;
 
 public class ContextualReadingRoutingTest {
     @Test public void compactBackendLoadsAndAbstainsOnAmbiguousHan() {

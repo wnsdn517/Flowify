@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** Which producer owns a derived layer's current artifact. */
 public enum LayerAuthority {

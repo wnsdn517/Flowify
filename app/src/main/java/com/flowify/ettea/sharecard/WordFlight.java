@@ -1,4 +1,4 @@
-package com.eza.spicyex.sharecard;
+package com.flowify.ettea.sharecard;
 
 import android.content.Context;
 import android.graphics.Bitmap;

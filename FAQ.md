@@ -1,6 +1,6 @@
-# Spicy EX FAQ
+# Flowify FAQ
 
-This FAQ is for this fork ([wnsdn517/spicy-ex](https://github.com/wnsdn517/spicy-ex)). See the
+This FAQ is for this fork ([wnsdn517/Flowify](https://github.com/wnsdn517/Flowify)). See the
 [feature guide](FEATURES_USER.md) for what it adds over upstream.
 
 ### It does not work with my Spotify version
@@ -22,7 +22,7 @@ Spotify only (`com.spotify.music`).
 
 After installing or updating the module, force-stop Spotify and reopen it.
 
-### Spicy EX settings are missing
+### Flowify settings are missing
 
 Check that:
 
@@ -76,7 +76,7 @@ Optional. It publishes lyrics to HyperGlow for HyperOS 3 lockscreen/AOD renderin
 
 ### How do I update?
 
-Install the new APK from this fork's [Releases](https://github.com/wnsdn517/spicy-ex/releases) over
+Install the new APK from this fork's [Releases](https://github.com/wnsdn517/Flowify/releases) over
 the old one, then restart Spotify. With LSPatch, enable **Override version code**.
 
 ### Is it affiliated with upstream or Spotify?

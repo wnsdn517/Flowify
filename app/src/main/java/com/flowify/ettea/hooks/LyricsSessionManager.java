@@ -1,54 +1,54 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.providers.LyricsFetchDiagnosticsState;
-import com.eza.spicyex.lyrics.LyricsRenderConfig;
-import com.eza.spicyex.lyrics.processing.LyricsSecondaryProcessingSession;
-import com.eza.spicyex.lyrics.processing.LyricsSecondaryProcessor;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.CanonicalBaseAdoption;
-import com.eza.spicyex.lyrics.session.CanonicalSourceCache;
-import com.eza.spicyex.lyrics.session.AIPaidArtifactCache;
-import com.eza.spicyex.lyrics.session.DetectionArtifact;
-import com.eza.spicyex.lyrics.session.LyricsDetectionSession;
-import com.eza.spicyex.lyrics.session.LyricsMemoryPressure;
-import com.eza.spicyex.lyrics.providers.LyricsResponseCache;
-import com.eza.spicyex.lyrics.cache.CacheClearKind;
-import com.eza.spicyex.lyrics.cache.LyricCaches;
-import com.eza.spicyex.lyrics.session.LyricPipelineMetrics;
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerState;
-import com.eza.spicyex.lyrics.session.LayerStatus;
-import com.eza.spicyex.lyrics.session.LegacyDocumentComposer;
-import com.eza.spicyex.lyrics.session.LyricSession;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.providers.NativeLyricsSource;
-import com.eza.spicyex.lyrics.catalog.AcquisitionPlanner;
-import com.eza.spicyex.lyrics.catalog.AcquisitionScope;
-import com.eza.spicyex.lyrics.catalog.CatalogAdapters;
-import com.eza.spicyex.lyrics.catalog.CatalogDecisions;
-import com.eza.spicyex.lyrics.catalog.CatalogPickerModel;
-import com.eza.spicyex.lyrics.catalog.CatalogPolicy;
-import com.eza.spicyex.lyrics.catalog.CatalogResolver;
-import com.eza.spicyex.lyrics.catalog.CatalogSource;
-import com.eza.spicyex.lyrics.catalog.CatalogState;
-import com.eza.spicyex.lyrics.catalog.CatalogStore;
-import com.eza.spicyex.lyrics.catalog.LyricsCatalog;
-import com.eza.spicyex.lyrics.ai.AiRequestStartResult;
-import com.eza.spicyex.lyrics.ai.AiSettings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.providers.LyricsFetchDiagnosticsState;
+import com.flowify.ettea.lyrics.LyricsRenderConfig;
+import com.flowify.ettea.lyrics.processing.LyricsSecondaryProcessingSession;
+import com.flowify.ettea.lyrics.processing.LyricsSecondaryProcessor;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.CanonicalBaseAdoption;
+import com.flowify.ettea.lyrics.session.CanonicalSourceCache;
+import com.flowify.ettea.lyrics.session.AIPaidArtifactCache;
+import com.flowify.ettea.lyrics.session.DetectionArtifact;
+import com.flowify.ettea.lyrics.session.LyricsDetectionSession;
+import com.flowify.ettea.lyrics.session.LyricsMemoryPressure;
+import com.flowify.ettea.lyrics.providers.LyricsResponseCache;
+import com.flowify.ettea.lyrics.cache.CacheClearKind;
+import com.flowify.ettea.lyrics.cache.LyricCaches;
+import com.flowify.ettea.lyrics.session.LyricPipelineMetrics;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerState;
+import com.flowify.ettea.lyrics.session.LayerStatus;
+import com.flowify.ettea.lyrics.session.LegacyDocumentComposer;
+import com.flowify.ettea.lyrics.session.LyricSession;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.providers.NativeLyricsSource;
+import com.flowify.ettea.lyrics.catalog.AcquisitionPlanner;
+import com.flowify.ettea.lyrics.catalog.AcquisitionScope;
+import com.flowify.ettea.lyrics.catalog.CatalogAdapters;
+import com.flowify.ettea.lyrics.catalog.CatalogDecisions;
+import com.flowify.ettea.lyrics.catalog.CatalogPickerModel;
+import com.flowify.ettea.lyrics.catalog.CatalogPolicy;
+import com.flowify.ettea.lyrics.catalog.CatalogResolver;
+import com.flowify.ettea.lyrics.catalog.CatalogSource;
+import com.flowify.ettea.lyrics.catalog.CatalogState;
+import com.flowify.ettea.lyrics.catalog.CatalogStore;
+import com.flowify.ettea.lyrics.catalog.LyricsCatalog;
+import com.flowify.ettea.lyrics.ai.AiRequestStartResult;
+import com.flowify.ettea.lyrics.ai.AiSettings;
 
 
 import java.util.ArrayList;
@@ -301,7 +301,7 @@ final class LyricsSessionManager {
     private void adoptTrack(SpotifyTrack next) {
         String uri = next == null || next.uri == null ? "" : next.uri;
         if (next != null) {
-            com.eza.spicyex.lyrics.processing.SongContext.remember(uri, next.title, next.artist);
+            com.flowify.ettea.lyrics.processing.SongContext.remember(uri, next.title, next.artist);
         }
         if (!policy.adoptTrack(uri)) {
             track = next;
@@ -374,7 +374,7 @@ final class LyricsSessionManager {
             if (nativeDoc != null && nativeDoc.lines != null && !nativeDoc.lines.isEmpty()) {
                 CatalogAdapters.recordSuccess(context, CatalogSource.SourceId.SPOTIFY_NATIVE,
                         track, nativeDoc, CatalogSource.MatchMethod.EXACT_SPOTIFY_ID,
-                        com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri(
+                        com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri(
                                 track == null ? "" : track.uri),
                         "", CatalogAdapters.SPOTIFY_NATIVE_ADAPTER_REVISION);
             } else {
@@ -806,7 +806,7 @@ final class LyricsSessionManager {
                 java.util.List<CatalogPickerModel.Row> displayed = new java.util.ArrayList<>();
                 for (CatalogPickerModel.Row row : rows) {
                     displayed.add(row.kind == CatalogPickerModel.RowKind.ACTION_DELETE_TRACK
-                            ? row.withSubtitle(com.eza.spicyex.lyrics.catalog.CatalogStorage
+                            ? row.withSubtitle(com.flowify.ettea.lyrics.catalog.CatalogStorage
                                     .formatBytes(trackBytes) + " stored on device")
                             : row);
                 }
@@ -1172,11 +1172,11 @@ final class LyricsSessionManager {
      * <p>Render surfaces call this instead of owning a provider run: the session is the only
      * scheduler, so a settings change costs one run no matter how many surfaces are open.
      */
-    void refreshLayer(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    void refreshLayer(com.flowify.ettea.lyrics.session.LayerKind layer) {
         if (track == null || document == null || policy.trackUri().isEmpty()) return;
         // A user-initiated refresh must not wait on detection; the completion only attaches rows.
         awaitingDetection = false;
-        if (layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING) {
+        if (layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING) {
             LyricsDocumentProcessor.resetMeaningLayer(context, document);
         } else {
             LyricsDocumentProcessor.resetSoundLayer(context, document);
@@ -1286,7 +1286,7 @@ final class LyricsSessionManager {
                 String currentUri = policy.trackUri();
                 if (!currentUri.isEmpty()) {
                     LyricsResponseCache.remove(context,
-                            com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri(currentUri));
+                            com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri(currentUri));
                 }
                 reloadCurrentSource();
                 break;
@@ -1366,15 +1366,15 @@ final class LyricsSessionManager {
     private static java.util.List<String> providerTextsOf(LyricsDocument doc) {
         java.util.List<String> out = new ArrayList<>();
         if (doc == null || doc.lines == null) return out;
-        for (com.eza.spicyex.lyrics.LyricsLine line : doc.lines) {
+        for (com.flowify.ettea.lyrics.LyricsLine line : doc.lines) {
             if (line == null) continue;
-            if (!com.eza.spicyex.lyrics.LyricUtils.isBlank(line.providerTranslatedText)) {
+            if (!com.flowify.ettea.lyrics.LyricUtils.isBlank(line.providerTranslatedText)) {
                 out.add(line.providerTranslatedText);
             }
             if (line.backgroundLines == null) continue;
-            for (com.eza.spicyex.lyrics.BackgroundLine background : line.backgroundLines) {
+            for (com.flowify.ettea.lyrics.BackgroundLine background : line.backgroundLines) {
                 if (background != null
-                        && !com.eza.spicyex.lyrics.LyricUtils.isBlank(background.providerTranslatedText)) {
+                        && !com.flowify.ettea.lyrics.LyricUtils.isBlank(background.providerTranslatedText)) {
                     out.add(background.providerTranslatedText);
                 }
             }
@@ -1386,9 +1386,9 @@ final class LyricsSessionManager {
     private static void applyDetection(CanonicalBase base, DetectionArtifact artifact,
                                        LyricsDocument target) {
         if (base == null || artifact == null || target == null) return;
-        for (com.eza.spicyex.lyrics.session.CanonicalRow row : base.rows) {
+        for (com.flowify.ettea.lyrics.session.CanonicalRow row : base.rows) {
             if (row == null || row.index < 0 || row.index >= target.lines.size()) continue;
-            com.eza.spicyex.lyrics.LyricsLine line = target.lines.get(row.index);
+            com.flowify.ettea.lyrics.LyricsLine line = target.lines.get(row.index);
             if (line != null) line.detection = artifact.result(row.rowId);
         }
     }
@@ -1411,9 +1411,9 @@ final class LyricsSessionManager {
             java.util.Set<LayerKind> explicitAiRequests,
             java.util.Set<LayerKind> requestedLayers) {
         LyricsRenderConfig config = renderConfig();
-        com.eza.spicyex.lyrics.session.SoundArtifact displayedSound = session != null
-                && session.sound.artifact instanceof com.eza.spicyex.lyrics.session.SoundArtifact
-                ? (com.eza.spicyex.lyrics.session.SoundArtifact) session.sound.artifact : null;
+        com.flowify.ettea.lyrics.session.SoundArtifact displayedSound = session != null
+                && session.sound.artifact instanceof com.flowify.ettea.lyrics.session.SoundArtifact
+                ? (com.flowify.ettea.lyrics.session.SoundArtifact) session.sound.artifact : null;
         java.util.Set<LayerKind> started = secondaryProcessing.start(snapshot.trackId, requestedGeneration, snapshot,
                 config.transliterationEnabled, romanizationOptions(config),
                 displayedSound,
@@ -1430,7 +1430,7 @@ final class LyricsSessionManager {
                     }
                     @Override public void progress(LyricsDocument processed, String message) {}
                     @Override public void complete(LayerKind layer, DerivedLayerArtifact artifact,
-                                                   com.eza.spicyex.lyrics.session.LayerFailure failure,
+                                                   com.flowify.ettea.lyrics.session.LayerFailure failure,
                                                    LyricsDocument processed, String message, int changed) {
                         adoptLayerArtifact(layer, artifact, failure, processed, requestedGeneration);
                         publishProcessed(processed, requestedGeneration);
@@ -1455,8 +1455,8 @@ final class LyricsSessionManager {
                                   LyricsRenderConfig config,
                                   java.util.Set<LayerKind> explicitAiRequests) {
         if (session == null || started.isEmpty()) return;
-        com.eza.spicyex.lyrics.ai.AiSettings aiSettings =
-                new com.eza.spicyex.lyrics.ai.AiSettings(context);
+        com.flowify.ettea.lyrics.ai.AiSettings aiSettings =
+                new com.flowify.ettea.lyrics.ai.AiSettings(context);
         for (LayerKind layer : started) {
             LayerState state = session.layer(layer);
             boolean explicitAi = explicitAiRequests != null && explicitAiRequests.contains(layer);
@@ -1483,7 +1483,7 @@ final class LyricsSessionManager {
      * reproduce what the lanes wrote, so the two are compared and any divergence is counted.
      */
     private void adoptLayerArtifact(LayerKind layer, DerivedLayerArtifact artifact,
-                                    com.eza.spicyex.lyrics.session.LayerFailure failure,
+                                    com.flowify.ettea.lyrics.session.LayerFailure failure,
                                     LyricsDocument processed, int requestedGeneration) {
         if (session == null || processed != document || requestedGeneration != policy.generation()) return;
         LayerState state = session.layer(layer);

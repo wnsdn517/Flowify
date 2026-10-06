@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** Pure routing policy for a long-press on one AI-capable lyric layer control. */
 public final class AiLayerPanelPolicy {

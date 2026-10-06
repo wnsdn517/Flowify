@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
-import com.eza.spicyex.lyrics.session.Digests;
+import com.flowify.ettea.lyrics.session.Digests;
 
 /** One row on the wire: id, class, voice hint, canonical source, and optional baseline. */
 public final class AiRequestItem {

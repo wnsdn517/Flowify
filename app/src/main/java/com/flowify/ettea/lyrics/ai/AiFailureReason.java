@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 /** Why a chunk did not produce accepted output. One token per distinct thing to tell the owner. */
 public enum AiFailureReason {

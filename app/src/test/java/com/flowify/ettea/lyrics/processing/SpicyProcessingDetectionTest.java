@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.LatinLanguageGate;
-import com.eza.spicyex.lyrics.language.ScriptClassifier;
+import com.flowify.ettea.lyrics.language.LatinLanguageGate;
+import com.flowify.ettea.lyrics.language.ScriptClassifier;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 
 import org.junit.Test;
 

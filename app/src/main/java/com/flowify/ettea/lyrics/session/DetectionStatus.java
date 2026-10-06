@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** How much a detection row knows, and whether the result is final. */
 public enum DetectionStatus {

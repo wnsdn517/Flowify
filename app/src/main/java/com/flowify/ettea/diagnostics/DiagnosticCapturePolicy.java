@@ -1,4 +1,4 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 /** Pure capture lifecycle policy kept separate from Android persistence for host tests. */
 public final class DiagnosticCapturePolicy {

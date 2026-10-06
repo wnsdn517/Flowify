@@ -1,8 +1,8 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.lyrics.ai.AiRequestStartResult;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.lyrics.ai.AiRequestStartResult;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 import java.io.File;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;

@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import android.content.Context;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LyricPipelineMetrics;
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LyricPipelineMetrics;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 /**
  * One derived-layer run's identity, and the gate that decides whether its result may still be

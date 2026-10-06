@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -7,12 +7,12 @@ import android.os.Build;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
-import com.eza.spicyex.FeatureAvailability;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.ambient.AmbientBackgroundLayer;
-import com.eza.spicyex.ambient.AmbientArtworkBackgroundView;
+import com.flowify.ettea.FeatureAvailability;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.ambient.AmbientBackgroundLayer;
+import com.flowify.ettea.ambient.AmbientArtworkBackgroundView;
 
 import java.io.IOException;
 import android.graphics.Bitmap;
@@ -20,19 +20,19 @@ import android.os.Handler;
 import android.os.Looper;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Future;
-import com.eza.spicyex.ambient.AmbientArtworkTexture;
-import com.eza.spicyex.ambient.AmbientArtworkProfile;
+import com.flowify.ettea.ambient.AmbientArtworkTexture;
+import com.flowify.ettea.ambient.AmbientArtworkProfile;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
-import com.eza.spicyex.lyrics.cache.SpotifyArtworkCache;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
+import com.flowify.ettea.lyrics.cache.SpotifyArtworkCache;
 
 /** Owns the native lyrics ambient gradient and optional animated album-art background. */
 public final class LyricsAmbientController {

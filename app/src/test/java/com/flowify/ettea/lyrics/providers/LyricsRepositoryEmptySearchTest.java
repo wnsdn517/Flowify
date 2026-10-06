@@ -1,12 +1,12 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import static org.junit.Assert.assertEquals;
 
-import com.eza.spicyex.lyrics.catalog.AcquisitionPlanner;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.ProviderStatus;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
-import com.eza.spicyex.lyrics.catalog.ProviderFailureClassifier;
-import com.eza.spicyex.lyrics.catalog.ProviderRecord;
+import com.flowify.ettea.lyrics.catalog.AcquisitionPlanner;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.ProviderStatus;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.ProviderFailureClassifier;
+import com.flowify.ettea.lyrics.catalog.ProviderRecord;
 import org.junit.Test;
 
 public class LyricsRepositoryEmptySearchTest {

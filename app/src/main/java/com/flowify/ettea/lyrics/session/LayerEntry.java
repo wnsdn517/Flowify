@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** One derived value addressed by a stable canonical row ID. */
 public interface LayerEntry {

@@ -1,21 +1,21 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.CanonicalRow;
-import com.eza.spicyex.lyrics.session.DerivedLayerArtifact;
-import com.eza.spicyex.lyrics.session.LayerFailure;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.SoundArtifact;
-import com.eza.spicyex.testsupport.FakeAndroidContext;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.CanonicalRow;
+import com.flowify.ettea.lyrics.session.DerivedLayerArtifact;
+import com.flowify.ettea.lyrics.session.LayerFailure;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.SoundArtifact;
+import com.flowify.ettea.testsupport.FakeAndroidContext;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -47,11 +47,11 @@ public class LyricsSoundLanePartialTest {
 
     @Before public void setUp() {
         context = new FakeAndroidContext();
-        com.eza.spicyex.SettingsStore settingsStore =
-                new com.eza.spicyex.SettingsStore(context);
+        com.flowify.ettea.SettingsStore settingsStore =
+                new com.flowify.ettea.SettingsStore(context);
         aiSettings = new AiSettings(settingsStore,
-                new com.eza.spicyex.lyrics.ai.AiCredentialStore(context,
-                        new com.eza.spicyex.lyrics.ai.AiCredentialStore.Cipher() {
+                new com.flowify.ettea.lyrics.ai.AiCredentialStore(context,
+                        new com.flowify.ettea.lyrics.ai.AiCredentialStore.Cipher() {
                             @Override public String encrypt(String plaintext) {
                                 return plaintext;
                             }

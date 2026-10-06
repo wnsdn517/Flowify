@@ -1,4 +1,4 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 /**
  * Locale-resolved string lookup for pure panel logic.

@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -8,10 +8,10 @@ import android.graphics.Paint;
 import android.graphics.Shader;
 import android.os.SystemClock;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 /**
  * Static preview content for the layout editor's Demo toggle - a synthetic track, artwork, and
@@ -35,7 +35,7 @@ final class DemoLyricsContent {
 
     /** Mixes short and long lines across every script this app has dedicated reading/romanization
      *  logic for (Japanese, Chinese, Korean, Cyrillic, Greek) plus one RTL line (Arabic), timed so
-     *  {@link com.eza.spicyex.lyrics.LyricTimeline#applySyncedRows} synthesizes intro/mid-song/
+     *  {@link com.flowify.ettea.lyrics.LyricTimeline#applySyncedRows} synthesizes intro/mid-song/
      *  outro gap rows purely from the timing, matching a real synced document's shape.
      *
      *  <p>{@code doc.type = "Syllable"} because most lines below carry real per-word timing

@@ -1,9 +1,9 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.catalog.CatalogResolver.Resolution;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.ProviderStatus;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SelectionMode;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogResolver.Resolution;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.ProviderStatus;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SelectionMode;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -201,9 +201,9 @@ public final class CatalogPickerModel {
         List<SourceId> on = new ArrayList<>();
         List<SourceId> off = new ArrayList<>();
         for (SourceId source : SOURCE_ORDER) {
-            com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source pref =
+            com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source pref =
                     CatalogPolicy.preferenceSource(source);
-            if (pref != null && com.eza.spicyex.lyrics.session.LyricsSourcePreferences.enabledByDefault(pref)) {
+            if (pref != null && com.flowify.ettea.lyrics.session.LyricsSourcePreferences.enabledByDefault(pref)) {
                 on.add(source);
             } else {
                 off.add(source);

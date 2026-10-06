@@ -1,9 +1,9 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.os.SystemClock;
 import android.widget.TextView;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.Locale;
 import java.util.Map;
@@ -172,7 +172,7 @@ public final class AdBreakInfo {
         adPlaying = playing;
         if (playing && labelHook == null) {
             try {
-                labelHook = com.eza.spicyex.xposed.XpHooks.findAfter(TextView.class, "setText",
+                labelHook = com.flowify.ettea.xposed.XpHooks.findAfter(TextView.class, "setText",
                         "adBreak:TextView#setText",
                         param -> {
                             if (adPlaying) offerLabel((CharSequence) param.args[0]);
@@ -256,7 +256,7 @@ public final class AdBreakInfo {
      */
     static void installHooks() {
         try {
-            com.eza.spicyex.xposed.XpHooks.findAfter(android.media.session.MediaSession.class,
+            com.flowify.ettea.xposed.XpHooks.findAfter(android.media.session.MediaSession.class,
                     "setMetadata", "adBreak:MediaSession#setMetadata",
                     param -> offerMetadata((android.media.MediaMetadata) param.args[0]),
                     android.media.MediaMetadata.class);
@@ -264,7 +264,7 @@ public final class AdBreakInfo {
             XpLog.log(TAG + " session hook unavailable: " + t.getClass().getSimpleName());
         }
         try {
-            com.eza.spicyex.xposed.XpHooks.findBefore(android.app.NotificationManager.class,
+            com.flowify.ettea.xposed.XpHooks.findBefore(android.app.NotificationManager.class,
                     "notify", "adBreak:NotificationManager#notify",
                     param -> offerNotification((android.app.Notification) param.args[2]),
                     String.class, int.class, android.app.Notification.class);

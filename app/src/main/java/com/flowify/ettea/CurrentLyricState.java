@@ -1,5 +1,5 @@
-package com.eza.spicyex;
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+package com.flowify.ettea;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 public final class CurrentLyricState {
     public final String trackUri;

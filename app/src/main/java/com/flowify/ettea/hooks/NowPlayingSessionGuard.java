@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 /** Pure stale-delivery guard for Now Playing session document commits. */
 final class NowPlayingSessionGuard {

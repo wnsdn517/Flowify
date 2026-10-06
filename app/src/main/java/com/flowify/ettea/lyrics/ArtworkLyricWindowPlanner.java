@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /** Pure row-window selection for the bounded album-art lyric surface. */
 public final class ArtworkLyricWindowPlanner {

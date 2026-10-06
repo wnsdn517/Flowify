@@ -1,16 +1,16 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
 import java.util.List;
 import java.util.Map;
 
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.LanguageContext;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedDocument;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ReadingAnnotation;
-import com.eza.spicyex.lyrics.reading.ReadingModels.RenderPlan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ScriptRun;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ValidationResult;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.LanguageContext;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedDocument;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ReadingAnnotation;
+import com.flowify.ettea.lyrics.reading.ReadingModels.RenderPlan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ScriptRun;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ValidationResult;
 
 public final class ReadingContracts {
     private ReadingContracts() {}

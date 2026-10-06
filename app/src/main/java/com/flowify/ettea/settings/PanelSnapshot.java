@@ -1,6 +1,6 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
-import com.eza.spicyex.Settings;
+import com.flowify.ettea.Settings;
 
 import java.util.Collections;
 import java.util.HashMap;

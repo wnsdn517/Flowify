@@ -1,16 +1,16 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.content.Context;
 import android.os.SystemClock;
 
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpReflect;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpReflect;
 
 import java.lang.ref.WeakReference;
 
 public final class ConnectMirror {
-    private static final String ENTRY = "com.eza.spicyex.spotifyconnect.ConnectEntry";
+    private static final String ENTRY = "com.flowify.ettea.spotifyconnect.ConnectEntry";
     private static final long PUSH_MIN_INTERVAL_MS = 3000;
 
     private static volatile WeakReference<Context> appRef = new WeakReference<>(null);

@@ -1,11 +1,11 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.KoreanDisplayMode;
-import com.eza.spicyex.lyrics.language.SpicyRomanizer;
+import com.flowify.ettea.lyrics.language.KoreanDisplayMode;
+import com.flowify.ettea.lyrics.language.SpicyRomanizer;
 
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.LyricsRenderConfig;
-import com.eza.spicyex.lyrics.LyricsShellSettings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.LyricsRenderConfig;
+import com.flowify.ettea.lyrics.LyricsShellSettings;
 
 /** Runtime transliteration toggle state, including per-document JP/CN cycle modes. */
 public final class LyricsTransliterationSession {

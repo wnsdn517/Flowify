@@ -1,4 +1,4 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 import com.google.gson.JsonObject;
 import org.junit.Test;

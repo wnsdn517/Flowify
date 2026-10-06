@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.LyricUtils;
+import com.flowify.ettea.lyrics.LyricUtils;
 
 import java.util.Locale;
 

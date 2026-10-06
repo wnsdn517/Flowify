@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.reading;
+package com.flowify.ettea.lyrics.reading;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -7,15 +7,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.eza.spicyex.lyrics.SyllableSegment;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.JoinRelation;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParagraphProvenance;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SourceSpan;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SpanJoinEvidence;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TextRange;
+import com.flowify.ettea.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.JoinRelation;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParagraphProvenance;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SourceSpan;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SpanJoinEvidence;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TextRange;
 
 /** Applies one canonical provider-boundary resolution to mutable adapter segments. */
 public final class SyllableCanonicalizer {

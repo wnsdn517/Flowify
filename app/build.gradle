@@ -3,32 +3,32 @@ plugins {
 }
 
 android {
-    namespace 'com.eza.spicyex'
+    namespace 'com.flowify.ettea'
     compileSdk providers.gradleProperty("SPICY_COMPILE_SDK").orElse("35").get().toInteger()
 
     // Keep focused JVM runs discoverable without moving the existing JUnit4 classes. Groups are
     // intentionally additive: the narrower lyrics-ai and lyrics-session groups sit inside the
     // broad lyrics group, while corpus names identify the golden language fixtures.
     def unitTestGroups = [
-            settings: ['com.eza.spicyex.Settings*', 'com.eza.spicyex.settings.*',
-                    'com.eza.spicyex.ui.SettingsUiStrings*'],
-            diagnostics: ['com.eza.spicyex.diagnostics.*'],
-            hooks: ['com.eza.spicyex.hooks.*'],
-            lyrics: ['com.eza.spicyex.lyrics.*'],
-            'lyrics-ai': ['com.eza.spicyex.lyrics.ai.*'],
-            'lyrics-session': ['com.eza.spicyex.lyrics.session.*'],
+            settings: ['com.flowify.ettea.Settings*', 'com.flowify.ettea.settings.*',
+                    'com.flowify.ettea.ui.SettingsUiStrings*'],
+            diagnostics: ['com.flowify.ettea.diagnostics.*'],
+            hooks: ['com.flowify.ettea.hooks.*'],
+            lyrics: ['com.flowify.ettea.lyrics.*'],
+            'lyrics-ai': ['com.flowify.ettea.lyrics.ai.*'],
+            'lyrics-session': ['com.flowify.ettea.lyrics.session.*'],
             corpus: [
-                    'com.eza.spicyex.lyrics.ChineseRomanizerTest',
-                    'com.eza.spicyex.lyrics.CyrillicRomanizerTest',
-                    'com.eza.spicyex.lyrics.GreekRomanizerTest',
-                    'com.eza.spicyex.lyrics.language.JapaneseReadingTest',
-                    'com.eza.spicyex.lyrics.language.JapaneseReadingPolicyConformanceTest',
-                    'com.eza.spicyex.lyrics.language.JapaneseRomajiProjectionConformanceTest',
-                    'com.eza.spicyex.lyrics.JapaneseRubyGeometryTest',
-                    'com.eza.spicyex.lyrics.language.JyutpingRomanizerTest',
-                    'com.eza.spicyex.lyrics.language.KoreanPronunciationTest',
-                    'com.eza.spicyex.lyrics.KoreanReadingProcessorTest',
-                    'com.eza.spicyex.lyrics.KoreanRomanizerTest'
+                    'com.flowify.ettea.lyrics.ChineseRomanizerTest',
+                    'com.flowify.ettea.lyrics.CyrillicRomanizerTest',
+                    'com.flowify.ettea.lyrics.GreekRomanizerTest',
+                    'com.flowify.ettea.lyrics.language.JapaneseReadingTest',
+                    'com.flowify.ettea.lyrics.language.JapaneseReadingPolicyConformanceTest',
+                    'com.flowify.ettea.lyrics.language.JapaneseRomajiProjectionConformanceTest',
+                    'com.flowify.ettea.lyrics.JapaneseRubyGeometryTest',
+                    'com.flowify.ettea.lyrics.language.JyutpingRomanizerTest',
+                    'com.flowify.ettea.lyrics.language.KoreanPronunciationTest',
+                    'com.flowify.ettea.lyrics.KoreanReadingProcessorTest',
+                    'com.flowify.ettea.lyrics.KoreanRomanizerTest'
             ]
     ]
     // Exporters and the billed model survey are evaluation tools, not regression tests: they
@@ -36,11 +36,11 @@ android {
     // default and grouped test run, and only execute with -PtestTools=<name>.
     def optInTestTools = [
             'jp-export': [
-                    'com.eza.spicyex.lyrics.language.JapaneseSnapshotExporterTest',
-                    'com.eza.spicyex.lyrics.language.JapaneseReadingPolicyResultExporterTest',
-                    'com.eza.spicyex.lyrics.language.JapaneseRomajiProjectionResultExporterTest'
+                    'com.flowify.ettea.lyrics.language.JapaneseSnapshotExporterTest',
+                    'com.flowify.ettea.lyrics.language.JapaneseReadingPolicyResultExporterTest',
+                    'com.flowify.ettea.lyrics.language.JapaneseRomajiProjectionResultExporterTest'
             ],
-            'model-survey': ['com.eza.spicyex.lyrics.ai.OpenRouterModelSurveyTest']
+            'model-survey': ['com.flowify.ettea.lyrics.ai.OpenRouterModelSurveyTest']
     ]
     def requestedTestGroup = providers.gradleProperty('testGroup').orNull
     if (requestedTestGroup != null && !unitTestGroups.containsKey(requestedTestGroup)) {
@@ -91,7 +91,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.eza.spicyex"
+        applicationId "com.flowify.ettea"
         minSdk 27
         targetSdk 35
         // Fork version: MAJOR (large refactor) . MINOR (features) . PATCH (bug fixes), set in
@@ -142,7 +142,7 @@ android {
                 .get()
         buildConfigField "String", "DIAGNOSTIC_INTAKE_URL", "\"${diagnosticIntakeUrl}\""
         def modelPackUrl = providers.gradleProperty("LANGUAGE_MODEL_PACK_URL")
-            .orElse("https://github.com/wnsdn517/spicy-ex/releases/download/v1/spicyex-language-models-v1.zip")
+            .orElse("https://github.com/wnsdn517/Flowify/releases/download/v1/spicyex-language-models-v1.zip")
             .get()
         def modelPackSha256 = providers.gradleProperty("LANGUAGE_MODEL_PACK_SHA256")
             .orElse("fab585db878657fb124e49722f4579aaeb994b902b1dbf288b4b17700f90eb37")

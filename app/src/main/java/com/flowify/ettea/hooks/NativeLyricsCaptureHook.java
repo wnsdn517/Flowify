@@ -1,10 +1,10 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.safe;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.safe;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.providers.NativeLyricsSource;
-import com.eza.spicyex.lyrics.providers.LyricsRepository;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.providers.NativeLyricsSource;
+import com.flowify.ettea.lyrics.providers.LyricsRepository;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -16,10 +16,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpReflect;
-import com.eza.spicyex.xposed.SpotifySymbolResolver;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpReflect;
+import com.flowify.ettea.xposed.SpotifySymbolResolver;
 import java.util.ArrayList;
 import java.util.List;
 import org.luckypray.dexkit.query.FindClass;
@@ -194,7 +194,7 @@ final class NativeLyricsCaptureHook {
             callback.onResult(null, "Spotify lyrics request unavailable");
             return;
         }
-        String id = com.eza.spicyex.lyrics.LyricUtils.trackIdFromUri(track.uri);
+        String id = com.flowify.ettea.lyrics.LyricUtils.trackIdFromUri(track.uri);
         if (id.isEmpty()) {
             callback.onResult(null, "Unsupported Spotify track");
             return;
@@ -223,7 +223,7 @@ final class NativeLyricsCaptureHook {
                             Object response = args == null || args.length == 0 ? null : args[0];
                             nativeLyricsSource.captureCandidate(track, response,
                                     new Object[]{track.uri}, "explicit:spotify-retrofit");
-                            com.eza.spicyex.lyrics.LyricsDocument doc =
+                            com.flowify.ettea.lyrics.LyricsDocument doc =
                                     nativeLyricsSource.getNativeLyricsDocument(track);
                             callback.onResult(doc, doc == null
                                     ? "Spotify lyrics response unavailable" : "");

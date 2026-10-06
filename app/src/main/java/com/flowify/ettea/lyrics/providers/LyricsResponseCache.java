@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.content.Context;
 
@@ -35,37 +35,37 @@ public final class LyricsResponseCache {
         // No age expiry: an unchanged compatible response stays reusable until an explicit clear.
         // The ":updated" stamps the preferences version kept beside every payload are gone - the
         // store's own updated_at_ms column is what eviction orders by now.
-        return com.eza.spicyex.lyrics.cache.SpicyCacheStore.get(context, PREFS_CACHE, key(trackId));
+        return com.flowify.ettea.lyrics.cache.SpicyCacheStore.get(context, PREFS_CACHE, key(trackId));
     }
 
     public static synchronized void put(Context context, String trackId, String response) {
         if (context == null || response == null || response.trim().isEmpty()) return;
         // Byte quota from the shared "Cache size" budget. Capacity may refuse a new write, but
         // never deletes a saved response to make room for one that does not fit.
-        long totalBudget = com.eza.spicyex.lyrics.cache.CacheStoragePolicy.totalBudget(context);
-        com.eza.spicyex.lyrics.cache.SpicyCacheStore.put(context, PREFS_CACHE, key(trackId), response,
-                com.eza.spicyex.lyrics.cache.CacheStoragePolicy.rawResponseQuota(totalBudget));
+        long totalBudget = com.flowify.ettea.lyrics.cache.CacheStoragePolicy.totalBudget(context);
+        com.flowify.ettea.lyrics.cache.SpicyCacheStore.put(context, PREFS_CACHE, key(trackId), response,
+                com.flowify.ettea.lyrics.cache.CacheStoragePolicy.rawResponseQuota(totalBudget));
     }
 
     public static synchronized void clear(Context context) {
-        com.eza.spicyex.lyrics.cache.SpicyCacheStore.clear(context, PREFS_CACHE);
+        com.flowify.ettea.lyrics.cache.SpicyCacheStore.clear(context, PREFS_CACHE);
     }
 
     /** Drops both raws one track stored (canonical and LRCLIB), keeping every other song. */
     public static synchronized void remove(Context context, String trackId) {
         if (context == null || trackId == null || trackId.isEmpty()) return;
-        com.eza.spicyex.lyrics.cache.SpicyCacheStore.remove(context, PREFS_CACHE, key(trackId));
-        com.eza.spicyex.lyrics.cache.SpicyCacheStore.remove(context, PREFS_CACHE,
+        com.flowify.ettea.lyrics.cache.SpicyCacheStore.remove(context, PREFS_CACHE, key(trackId));
+        com.flowify.ettea.lyrics.cache.SpicyCacheStore.remove(context, PREFS_CACHE,
                 LRCLIB_PREFIX + key(trackId));
     }
 
     /** Combined logical-payload usage of the raw response store, for the settings panel. */
     public static synchronized long usageBytes(Context context) {
-        return com.eza.spicyex.lyrics.cache.SpicyCacheStore.usageBytes(context, PREFS_CACHE);
+        return com.flowify.ettea.lyrics.cache.SpicyCacheStore.usageBytes(context, PREFS_CACHE);
     }
 
     public static synchronized int entryCount(Context context) {
-        return com.eza.spicyex.lyrics.cache.SpicyCacheStore.entryCount(context, PREFS_CACHE);
+        return com.flowify.ettea.lyrics.cache.SpicyCacheStore.entryCount(context, PREFS_CACHE);
     }
 
     private static String key(String trackId) {

@@ -1,10 +1,10 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeIconButtons.createRoundIconButton;
-import static com.eza.spicyex.hooks.NativeIconButtons.applyPressScale;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.sideSystemPadding;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.topSystemPadding;
+import static com.flowify.ettea.hooks.NativeIconButtons.createRoundIconButton;
+import static com.flowify.ettea.hooks.NativeIconButtons.applyPressScale;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.sideSystemPadding;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.topSystemPadding;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -16,12 +16,12 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.R;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.lyrics.ChipSpinnerDrawable;
-import com.eza.spicyex.lyrics.GlyphIconDrawable;
-import com.eza.spicyex.lyrics.LyricsTextFactory;
-import com.eza.spicyex.ui.ActionIconDrawable;
+import com.flowify.ettea.R;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.lyrics.ChipSpinnerDrawable;
+import com.flowify.ettea.lyrics.GlyphIconDrawable;
+import com.flowify.ettea.lyrics.LyricsTextFactory;
+import com.flowify.ettea.ui.ActionIconDrawable;
 
 /**
  * Builds the fullscreen shell's top chrome row.

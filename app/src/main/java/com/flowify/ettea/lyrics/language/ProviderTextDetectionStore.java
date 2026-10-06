@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.cache.ProcessedLyricsCache;
+import com.flowify.ettea.lyrics.cache.ProcessedLyricsCache;
 
 import android.content.Context;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionResult;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import android.view.MotionEvent;
 import android.view.View;
@@ -7,15 +7,15 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.ui.GlossyToggle;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.RankingMode;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source;
-import com.eza.spicyex.ui.ActionIconDrawable.Kind;
-import com.eza.spicyex.ui.PanelDialog;
+import com.flowify.ettea.ui.GlossyToggle;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences.RankingMode;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source;
+import com.flowify.ettea.ui.ActionIconDrawable.Kind;
+import com.flowify.ettea.ui.PanelDialog;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -56,7 +56,7 @@ public final class SourceOrderEditor {
         void onSourcesCommitted();
 
         /** Currently playing track, or null when the hook cannot see one. */
-        com.eza.spicyex.SpotifyTrack currentTrack();
+        com.flowify.ettea.SpotifyTrack currentTrack();
 
         /** Opens the lyrics manager scoped to the current song. */
         void manageCurrentTrackLyrics();
@@ -182,7 +182,7 @@ public final class SourceOrderEditor {
     private void trackRow(LinearLayout content) {
         PanelStyle style = host.style();
         SettingsUiStrings strings = host.strings();
-        com.eza.spicyex.SpotifyTrack current = null;
+        com.flowify.ettea.SpotifyTrack current = null;
         try {
             current = host.currentTrack();
         } catch (Throwable ignored) {

@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
-import com.eza.spicyex.SpotifyTrack;
+import com.flowify.ettea.SpotifyTrack;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

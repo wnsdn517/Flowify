@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 /**
  * Immutable bundle of the per-render romanization choices, threaded through the romanize +

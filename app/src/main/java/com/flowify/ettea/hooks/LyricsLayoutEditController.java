@@ -1,8 +1,8 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.sideSystemPadding;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.topSystemPadding;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.sideSystemPadding;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.topSystemPadding;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -19,14 +19,14 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.PanelDialog;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.PanelDialog;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.ui.UiLanguage;
-import com.eza.spicyex.settings.SettingsWriter;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.ui.UiLanguage;
+import com.flowify.ettea.settings.SettingsWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,7 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 /**
  * Direct-manipulation layout editor: tap/drag the *real* rendered artwork, track text, lyrics
@@ -117,7 +117,7 @@ final class LyricsLayoutEditController {
     /** The settings panel's accent (the current album's colour), so the editor and the panel it
      *  opens from read as one design rather than the editor alone staying Spotify green. */
     private static int accent() {
-        return com.eza.spicyex.settings.PanelStyle.COL_ACCENT;
+        return com.flowify.ettea.settings.PanelStyle.COL_ACCENT;
     }
     /** Outline color actually painted on an UNSELECTED capture. Every capturable element is
      *  outlined at all times so the editor reads as one visual language, but at full-strength
@@ -796,9 +796,9 @@ final class LyricsLayoutEditController {
             android.content.res.Configuration screen = activity.getResources().getConfiguration();
             sideSheet = landscape || screen.screenWidthDp >= 600;
             GradientDrawable panelBg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                    new int[]{com.eza.spicyex.settings.PanelStyle.COL_CARD_TOP | 0xF7000000,
-                            com.eza.spicyex.settings.PanelStyle.COL_CARD | 0xF7000000});
-            panelBg.setStroke(dp(1), com.eza.spicyex.settings.PanelStyle.COL_CARD_BORDER);
+                    new int[]{com.flowify.ettea.settings.PanelStyle.COL_CARD_TOP | 0xF7000000,
+                            com.flowify.ettea.settings.PanelStyle.COL_CARD | 0xF7000000});
+            panelBg.setStroke(dp(1), com.flowify.ettea.settings.PanelStyle.COL_CARD_BORDER);
             if (sideSheet) {
                 panelBg.setCornerRadius(dp(20));
             } else {
@@ -2108,10 +2108,10 @@ final class LyricsLayoutEditController {
         /** True while the editor shows the now-playing card instead of the lyrics screen. */
         private boolean cardMode;
         private FrameLayout cardLayer;
-        private com.eza.spicyex.lyrics.LiveLyricCardView cardPreview;
+        private com.flowify.ettea.lyrics.LiveLyricCardView cardPreview;
         private View cardCapture;
-        private com.eza.spicyex.lyrics.LyricsDocument cardDocument;
-        private com.eza.spicyex.lyrics.LyricsRenderConfig cardConfig;
+        private com.flowify.ettea.lyrics.LyricsDocument cardDocument;
+        private com.flowify.ettea.lyrics.LyricsRenderConfig cardConfig;
         private boolean cardConfigDirty = true;
         private long cardStartMs;
         private long cardLastFrameMs;
@@ -2157,7 +2157,7 @@ final class LyricsLayoutEditController {
         }
 
         /** A stand-in for Spotify's now-playing card: same dark rounded surface, the real
-         *  {@link com.eza.spicyex.lyrics.LiveLyricCardView} inside, driven by the demo lyrics. */
+         *  {@link com.flowify.ettea.lyrics.LiveLyricCardView} inside, driven by the demo lyrics. */
         private void buildCardPreview() {
             if (cardLayer != null) return;
             cardLayer = new FrameLayout(activity);
@@ -2174,7 +2174,7 @@ final class LyricsLayoutEditController {
             card.setBackground(bg);
             makeSelectableTarget(card, Element.CARD);
             card.setPadding(dp(16), dp(14), dp(16), dp(14));
-            cardPreview = new com.eza.spicyex.lyrics.LiveLyricCardView(activity);
+            cardPreview = new com.flowify.ettea.lyrics.LiveLyricCardView(activity);
             card.addView(cardPreview, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             // In the top part of the stage, under the editor's buttons, where the options panel
@@ -2209,7 +2209,7 @@ final class LyricsLayoutEditController {
             overlay.addView(cardLayer, overlay.indexOfChild(backLayer), new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             cardDocument = DemoLyricsContent.demoDocument();
-            com.eza.spicyex.lyrics.LyricTimeline.applySyncedRows(cardDocument);
+            com.flowify.ettea.lyrics.LyricTimeline.applySyncedRows(cardDocument);
         }
 
         private void stepCardPreview() {
@@ -2220,15 +2220,15 @@ final class LyricsLayoutEditController {
             try {
                 if (cardConfigDirty || cardConfig == null) {
                     cardConfigDirty = false;
-                    cardConfig = com.eza.spicyex.lyrics.LyricsRenderConfig.read(activity,
-                            com.eza.spicyex.SpotifyPlusConfig.from(activity));
+                    cardConfig = com.flowify.ettea.lyrics.LyricsRenderConfig.read(activity,
+                            com.flowify.ettea.SpotifyPlusConfig.from(activity));
                     cardPreview.applyConfig(cardConfig);
                     cardPreview.invalidateMountedContent();
                     cardLastIndex = -1;
                 }
                 long pos = (now - cardStartMs) % Math.max(1L, cardDocument.durationMs);
-                java.util.List<com.eza.spicyex.lyrics.AppliedLine> lines = cardDocument.appliedLines;
-                int index = com.eza.spicyex.lyrics.LyricTimeline.findPrimaryActiveRow(lines, pos);
+                java.util.List<com.flowify.ettea.lyrics.AppliedLine> lines = cardDocument.appliedLines;
+                int index = com.flowify.ettea.lyrics.LyricTimeline.findPrimaryActiveRow(lines, pos);
                 if (index < 0 || index >= lines.size()) {
                     if (cardLastIndex != -1) {
                         cardPreview.clear();
@@ -2241,7 +2241,7 @@ final class LyricsLayoutEditController {
                             cardDocument, (line, segment, full) -> "", changed);
                 }
             } catch (Throwable t) {
-                com.eza.spicyex.xposed.XpLog.log("[SpicyLayoutEditor] card preview failed: " + t);
+                com.flowify.ettea.xposed.XpLog.log("[SpicyLayoutEditor] card preview failed: " + t);
             }
             overlay.postOnAnimation(cardFrame);
         }
@@ -3427,7 +3427,7 @@ final class LyricsLayoutEditController {
                 }
             }
             if (typeface == null) typeface = android.graphics.Typeface.create(path, android.graphics.Typeface.NORMAL);
-            java.util.List<String> missing = com.eza.spicyex.lyrics.LyricsFontValidator.missingScripts(typeface);
+            java.util.List<String> missing = com.flowify.ettea.lyrics.LyricsFontValidator.missingScripts(typeface);
             return missing.isEmpty()
                     ? strings.get("settings_lyrics_font_check_all_covered", "Covers every supported language")
                     : strings.get("settings_lyrics_font_check_missing", "Falls back for") + ": "
@@ -3559,13 +3559,13 @@ final class LyricsLayoutEditController {
 
             endGroup();
             beginGroup(strings.setting(Settings.FULLSCREEN_CONTROLS));
-            int timeout = com.eza.spicyex.lyrics.LyricsShellSettings
+            int timeout = com.flowify.ettea.lyrics.LyricsShellSettings
                     .parseFullscreenControlsSeconds(store.get(Settings.FULLSCREEN_CONTROLS));
             // 1..30 are seconds; 31 is the final Always stop.
             addOption(dragRow(1, 31, timeout == 0 ? 31 : timeout, "", 31,
                     value -> value == 31 ? s("always", "Always")
                             : strings.format(value == 1 ? "layout_editor_second" : "layout_editor_seconds", value == 1 ? "%1$d second" : "%1$d seconds", value), value -> {
-                String stored = com.eza.spicyex.lyrics.LyricsShellSettings
+                String stored = com.flowify.ettea.lyrics.LyricsShellSettings
                         .fullscreenControlsValue(value == 31 ? 0 : value);
                 writer.put(Settings.FULLSCREEN_CONTROLS, stored);
                 if (applyPreferences != null) applyPreferences.run();
@@ -3846,7 +3846,7 @@ final class LyricsLayoutEditController {
             view.setTextSize(sp);
             view.setTextColor(color);
             // The panel's typeface (Spotify Mix), as the settings use.
-            java.lang.ref.WeakReference<android.graphics.Typeface> font = com.eza.spicyex.References.beautifulFont;
+            java.lang.ref.WeakReference<android.graphics.Typeface> font = com.flowify.ettea.References.beautifulFont;
             android.graphics.Typeface face = font == null ? null : font.get();
             if (bold) view.setTypeface(face == null ? android.graphics.Typeface.DEFAULT_BOLD
                     : android.graphics.Typeface.create(face, android.graphics.Typeface.BOLD));
@@ -3933,7 +3933,7 @@ final class LyricsLayoutEditController {
             String landscapeKey = Settings.landscapeKey(activity, Settings.LYRICS_TEXT_SIZE);
             if (landscapeKey != null && !activity.getSharedPreferences(SpotifyPlusConfig.PREFS_NAME,
                     android.content.Context.MODE_PRIVATE).contains(landscapeKey)) {
-                percent = Math.round(percent * com.eza.spicyex.lyrics.LyricsShellSettings.LANDSCAPE_FIT_SCALE);
+                percent = Math.round(percent * com.flowify.ettea.lyrics.LyricsShellSettings.LANDSCAPE_FIT_SCALE);
             }
             return percent;
         }

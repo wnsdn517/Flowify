@@ -1,4 +1,4 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 public final class FeatureAvailability {
     private FeatureAvailability() {

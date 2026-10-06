@@ -1,5 +1,5 @@
 // Double-tap like style "Watercolor" (Settings.DOUBLE_TAP_LIKE_EFFECT). See LikeBursts for the list.
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;

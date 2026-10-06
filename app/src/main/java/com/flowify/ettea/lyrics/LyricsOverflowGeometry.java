@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /** Pure geometry for live-card single-line overflow. */
 final class LyricsOverflowGeometry {

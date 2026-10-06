@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** The two independent derived layers over a canonical base. */
 public enum LayerKind {

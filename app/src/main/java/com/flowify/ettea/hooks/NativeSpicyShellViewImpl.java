@@ -1,30 +1,30 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.emptyFallback;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.formatMs;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.hasJapaneseReading;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.isBlank;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.safe;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.setTextIfChanged;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.shortTrackId;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.sideSystemPadding;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.sourceProviderLabel;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.trackIdFromUri;
-import static com.eza.spicyex.hooks.NativeRuntime.AI_WORKERS;
-import static com.eza.spicyex.hooks.NativeRuntime.GOOGLE_PROCESSING_VERSION;
-import static com.eza.spicyex.hooks.NativeRuntime.HTTP;
-import static com.eza.spicyex.hooks.NativeRuntime.LYRIC_ESTIMATED_ROW_HEIGHT_DP;
-import static com.eza.spicyex.hooks.NativeRuntime.LYRIC_FULL_RENDER_THRESHOLD;
-import static com.eza.spicyex.hooks.NativeRuntime.LYRIC_WINDOW_AFTER_ACTIVE;
-import static com.eza.spicyex.hooks.NativeRuntime.LYRIC_WINDOW_BEFORE_ACTIVE;
-import static com.eza.spicyex.hooks.NativeRuntime.MEANING_WORKERS;
-import static com.eza.spicyex.hooks.NativeRuntime.SOUND_PROCESSOR;
-import static com.eza.spicyex.hooks.NativeRuntime.SOUND_WORKERS;
-import static com.eza.spicyex.hooks.NativeRuntime.SCROLL_SETTLE_REMEASURE_DELAY_MS;
-import static com.eza.spicyex.hooks.NativeSpicyLyricsHook.TAG;
-import static com.eza.spicyex.hooks.NativeSpicyLyricsHook.dbg;
-import static com.eza.spicyex.hooks.NativeSpicyLyricsHook.dbgEnter;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.emptyFallback;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.formatMs;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.hasJapaneseReading;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.isBlank;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.safe;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.setTextIfChanged;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.shortTrackId;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.sideSystemPadding;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.sourceProviderLabel;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.trackIdFromUri;
+import static com.flowify.ettea.hooks.NativeRuntime.AI_WORKERS;
+import static com.flowify.ettea.hooks.NativeRuntime.GOOGLE_PROCESSING_VERSION;
+import static com.flowify.ettea.hooks.NativeRuntime.HTTP;
+import static com.flowify.ettea.hooks.NativeRuntime.LYRIC_ESTIMATED_ROW_HEIGHT_DP;
+import static com.flowify.ettea.hooks.NativeRuntime.LYRIC_FULL_RENDER_THRESHOLD;
+import static com.flowify.ettea.hooks.NativeRuntime.LYRIC_WINDOW_AFTER_ACTIVE;
+import static com.flowify.ettea.hooks.NativeRuntime.LYRIC_WINDOW_BEFORE_ACTIVE;
+import static com.flowify.ettea.hooks.NativeRuntime.MEANING_WORKERS;
+import static com.flowify.ettea.hooks.NativeRuntime.SOUND_PROCESSOR;
+import static com.flowify.ettea.hooks.NativeRuntime.SOUND_WORKERS;
+import static com.flowify.ettea.hooks.NativeRuntime.SCROLL_SETTLE_REMEASURE_DELAY_MS;
+import static com.flowify.ettea.hooks.NativeSpicyLyricsHook.TAG;
+import static com.flowify.ettea.hooks.NativeSpicyLyricsHook.dbg;
+import static com.flowify.ettea.hooks.NativeSpicyLyricsHook.dbgEnter;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -49,65 +49,65 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.eza.spicyex.sharecard.LyricsShareCardController;
+import com.flowify.ettea.sharecard.LyricsShareCardController;
 
-import com.eza.spicyex.CurrentLyricState;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.ui.SettingsUiStrings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.ui.VsyncFrameScheduler;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.ai.AiSettings;
-import com.eza.spicyex.lyrics.ChipSpinnerDrawable;
-import com.eza.spicyex.lyrics.FrameStyleBatcher;
-import com.eza.spicyex.lyrics.GlyphIconDrawable;
-import com.eza.spicyex.lyrics.LyricCascadeProfile;
-import com.eza.spicyex.lyrics.LyricTimeline;
-import com.eza.spicyex.lyrics.LyricsAmbientController;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.processing.LyricsDocumentProcessor;
-import com.eza.spicyex.lyrics.LyricsFrameRenderer;
-import com.eza.spicyex.lyrics.LyricsLineViewState;
-import com.eza.spicyex.lyrics.LyricsLineVisualController;
-import com.eza.spicyex.lyrics.LyricsLine;
-import com.eza.spicyex.lyrics.language.LyricsLocalRomanizer;
-import com.eza.spicyex.lyrics.LyricsPlaybackClock;
-import com.eza.spicyex.lyrics.LyricsRenderConfig;
-import com.eza.spicyex.lyrics.LyricsRenderMode;
-import com.eza.spicyex.lyrics.processing.LyricsLocalReprocessController;
-import com.eza.spicyex.lyrics.LyricsRowMountController;
-import com.eza.spicyex.lyrics.LyricsRowViewFactory;
-import com.eza.spicyex.lyrics.LyricsScrollController;
-import com.eza.spicyex.lyrics.processing.LyricsSecondaryProcessor;
-import com.eza.spicyex.lyrics.processing.LyricsSecondaryRowUpdater;
-import com.eza.spicyex.lyrics.LyricsShellLifecycle;
-import com.eza.spicyex.lyrics.session.LyricPipelineMetrics;
-import com.eza.spicyex.lyrics.LyricsShellSettings;
-import com.eza.spicyex.lyrics.SkipGapPolicy;
-import com.eza.spicyex.lyrics.LyricsSpaceView;
-import com.eza.spicyex.lyrics.LyricsSurfaceRowPlanner;
-import com.eza.spicyex.lyrics.LyricsTapSeekHandler;
-import com.eza.spicyex.lyrics.LyricsTextFactory;
-import com.eza.spicyex.lyrics.LyricsToggleSpinnerController;
-import com.eza.spicyex.lyrics.processing.LyricsTransliterationSession;
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.processing.SpicyProcessing;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
-import com.eza.spicyex.lyrics.cache.SpotifyArtworkCache;
-import com.eza.spicyex.lyrics.Spring;
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.CurrentLyricState;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.ui.SettingsUiStrings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.ui.VsyncFrameScheduler;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.ai.AiSettings;
+import com.flowify.ettea.lyrics.ChipSpinnerDrawable;
+import com.flowify.ettea.lyrics.FrameStyleBatcher;
+import com.flowify.ettea.lyrics.GlyphIconDrawable;
+import com.flowify.ettea.lyrics.LyricCascadeProfile;
+import com.flowify.ettea.lyrics.LyricTimeline;
+import com.flowify.ettea.lyrics.LyricsAmbientController;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.processing.LyricsDocumentProcessor;
+import com.flowify.ettea.lyrics.LyricsFrameRenderer;
+import com.flowify.ettea.lyrics.LyricsLineViewState;
+import com.flowify.ettea.lyrics.LyricsLineVisualController;
+import com.flowify.ettea.lyrics.LyricsLine;
+import com.flowify.ettea.lyrics.language.LyricsLocalRomanizer;
+import com.flowify.ettea.lyrics.LyricsPlaybackClock;
+import com.flowify.ettea.lyrics.LyricsRenderConfig;
+import com.flowify.ettea.lyrics.LyricsRenderMode;
+import com.flowify.ettea.lyrics.processing.LyricsLocalReprocessController;
+import com.flowify.ettea.lyrics.LyricsRowMountController;
+import com.flowify.ettea.lyrics.LyricsRowViewFactory;
+import com.flowify.ettea.lyrics.LyricsScrollController;
+import com.flowify.ettea.lyrics.processing.LyricsSecondaryProcessor;
+import com.flowify.ettea.lyrics.processing.LyricsSecondaryRowUpdater;
+import com.flowify.ettea.lyrics.LyricsShellLifecycle;
+import com.flowify.ettea.lyrics.session.LyricPipelineMetrics;
+import com.flowify.ettea.lyrics.LyricsShellSettings;
+import com.flowify.ettea.lyrics.SkipGapPolicy;
+import com.flowify.ettea.lyrics.LyricsSpaceView;
+import com.flowify.ettea.lyrics.LyricsSurfaceRowPlanner;
+import com.flowify.ettea.lyrics.LyricsTapSeekHandler;
+import com.flowify.ettea.lyrics.LyricsTextFactory;
+import com.flowify.ettea.lyrics.LyricsToggleSpinnerController;
+import com.flowify.ettea.lyrics.processing.LyricsTransliterationSession;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.processing.SpicyProcessing;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.cache.SpotifyArtworkCache;
+import com.flowify.ettea.lyrics.Spring;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
-import com.eza.spicyex.hooks.NativeSpicyLyricsHook.LyricsResultCallback;
+import com.flowify.ettea.hooks.NativeSpicyLyricsHook.LyricsResultCallback;
 
 final class NativeSpicyShellViewImpl extends FrameLayout {
     private final LyricsHost host;
@@ -128,7 +128,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     /** Settings.DOUBLE_TAP_LIKE_EFFECT, cached with likedMode. */
     private String doubleTapEffect;
     private Boolean lastLikedSaved;
-    private com.eza.spicyex.ui.ActionIconDrawable.Kind lastLikedKind;
+    private com.flowify.ettea.ui.ActionIconDrawable.Kind lastLikedKind;
     private String pendingLikedUri = "";
     private final LyricsJumpToCurrentController jumpToCurrentController;
     private final LyricsSkipGapController skipGapController;
@@ -294,7 +294,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      *  physical motion instead of an eased ValueAnimator running alongside the independent
      *  per-row cascade spring - two differently-timed animations of the same rows read as
      *  disjointed ("따로따로 움직이는 느낌"); one spring owning the actual scroll position doesn't. */
-    private com.eza.spicyex.lyrics.Spring scrollSpring;
+    private com.flowify.ettea.lyrics.Spring scrollSpring;
     private final Runnable scrollSettleRunnable = new Runnable() {
         @Override
         public void run() {
@@ -791,10 +791,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private final ChipSpinnerDrawable romanSpinner;
     private final ChipSpinnerDrawable translationSpinner;
     private final LyricsToggleSpinnerController toggleSpinnerController;
-    private final com.eza.spicyex.lyrics.ai.AiRequestFeedbackState soundAiFeedback =
-            new com.eza.spicyex.lyrics.ai.AiRequestFeedbackState();
-    private final com.eza.spicyex.lyrics.ai.AiRequestFeedbackState meaningAiFeedback =
-            new com.eza.spicyex.lyrics.ai.AiRequestFeedbackState();
+    private final com.flowify.ettea.lyrics.ai.AiRequestFeedbackState soundAiFeedback =
+            new com.flowify.ettea.lyrics.ai.AiRequestFeedbackState();
+    private final com.flowify.ettea.lyrics.ai.AiRequestFeedbackState meaningAiFeedback =
+            new com.flowify.ettea.lyrics.ai.AiRequestFeedbackState();
     private final GlyphIconDrawable romanGlyph = new GlyphIconDrawable(
             "A", android.graphics.Typeface.DEFAULT_BOLD);
     private int lyricsTopInsetPx;
@@ -964,12 +964,12 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         switch (action) {
             case "sound-cycle": cycleTransliterationMode(preferences); return true;
             case "meaning-toggle": onTranslationTapped(); return true;
-            case "ai-sound": openAiLayerPanel(com.eza.spicyex.lyrics.session.LayerKind.SOUND); return true;
-            case "ai-meaning": openAiLayerPanel(com.eza.spicyex.lyrics.session.LayerKind.MEANING); return true;
+            case "ai-sound": openAiLayerPanel(com.flowify.ettea.lyrics.session.LayerKind.SOUND); return true;
+            case "ai-meaning": openAiLayerPanel(com.flowify.ettea.lyrics.session.LayerKind.MEANING); return true;
             case "follow": resumeFollowCurrentLine(); return true;
             case "skip-gap": skipCurrentGap(); return true;
             case "sync-reset":
-                new com.eza.spicyex.settings.SettingsWriter(new SettingsStore(activity))
+                new com.flowify.ettea.settings.SettingsWriter(new SettingsStore(activity))
                         .put(Settings.SYNC_OFFSET_MS, 0);
                 resyncLyricsTiming();
                 return true;
@@ -1368,15 +1368,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      */
     private void applyRowSideInsets() {
         if (document == null || document.appliedLines == null) return;
-        for (com.eza.spicyex.lyrics.AppliedLine line : document.appliedLines) {
+        for (com.flowify.ettea.lyrics.AppliedLine line : document.appliedLines) {
             applyRowSideInset(LyricsLineViewState.rowView(line));
         }
     }
 
     /** Portrait keeps the reading margin on the row itself; the column and scroller carry none. */
     private void applyRowSideInset(View view) {
-        if (!(view instanceof com.eza.spicyex.lyrics.BlurredRowLayout)) return;
-        com.eza.spicyex.lyrics.BlurredRowLayout row = (com.eza.spicyex.lyrics.BlurredRowLayout) view;
+        if (!(view instanceof com.flowify.ettea.lyrics.BlurredRowLayout)) return;
+        com.flowify.ettea.lyrics.BlurredRowLayout row = (com.flowify.ettea.lyrics.BlurredRowLayout) view;
         int wanted = isLandscape() ? 0 : lyricsSideInsetPx;
         int delta = wanted - row.horizontalOffsetPx;
         if (delta == 0) return;
@@ -1583,7 +1583,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         this.host = host;
         this.activity = activity;
         this.pipLayout = pipLayout;
-        com.eza.spicyex.ui.Motion.initialize(activity);
+        com.flowify.ettea.ui.Motion.initialize(activity);
         this.romanSpinner = new ChipSpinnerDrawable(activity);
         this.translationSpinner = new ChipSpinnerDrawable(activity);
         this.toggleSpinnerController = new LyricsToggleSpinnerController(romanSpinner, translationSpinner);
@@ -1619,7 +1619,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (pipLayout != PIP_LAYOUT_NONE) ambientController.setRenderScaleFactor(0.5f);
         this.settingsDialogController = new LyricsSettingsDialogController(
                 activity, frameScheduler, ambientController, host, this::onSettingsClosed,
-                mode -> enterLayoutEditMode(mode == com.eza.spicyex.settings.SettingsPanel.EDITOR_CARD),
+                mode -> enterLayoutEditMode(mode == com.flowify.ettea.settings.SettingsPanel.EDITOR_CARD),
                 this::resyncLyricsTiming, TAG);
         deviceChangeBanner = new DeviceChangeBanner(this, activity, config);
         this.settingsDialogController.setOnTryDoubleTap(this::startDoubleTapTrialInSettings,
@@ -1637,11 +1637,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // lyrics can be mounted first (or restored from a warm Spotify process). Attach it here as
         // well so post-install model packs are visible to the tokenizer/detector on every entry
         // path, not only after the user has visited Settings.
-        com.eza.spicyex.lyrics.language.LanguageModelPack.attachContext(activity);
-        com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor.attachContext(activity);
+        com.flowify.ettea.lyrics.language.LanguageModelPack.attachContext(activity);
+        com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor.attachContext(activity);
         autoResumeFollow = config.get(Settings.AUTO_RESUME_FOLLOW);
         slideAnimationEnabled = readSlideEnabled();
-        com.eza.spicyex.lyrics.FuriganaText.applySettings(
+        com.flowify.ettea.lyrics.FuriganaText.applySettings(
                 config.get(Settings.FURIGANA_BRIGHTNESS), config.get(Settings.FURIGANA_POSITION_PERCENT));
         transliterationSession = new LyricsTransliterationSession(
                 config.get(Settings.NATIVE_SPICY_ROMANIZATION),
@@ -1731,7 +1731,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 this::onTranslationTapped,
                 () -> host.openLyricsPip(activity),
                 () -> settingsDialogController.show(),
-                com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(likedMode),
+                com.flowify.ettea.ui.ActionIconDrawable.likedSongsKind(likedMode),
                 this::onLikeTapped);
         chromeHeader = chrome.header;
         chromeViews = chrome;
@@ -1756,12 +1756,12 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         romanToggle.setOnLongClickListener(v -> {
             if (SoundToggleRouter.forGesture(true)
                     == SoundToggleRouter.Action.OPEN_AI_PANEL) {
-                openAiLayerPanel(com.eza.spicyex.lyrics.session.LayerKind.SOUND);
+                openAiLayerPanel(com.flowify.ettea.lyrics.session.LayerKind.SOUND);
             }
             return true;
         });
         translationToggle.setOnLongClickListener(v -> {
-            openAiLayerPanel(com.eza.spicyex.lyrics.session.LayerKind.MEANING);
+            openAiLayerPanel(com.flowify.ettea.lyrics.session.LayerKind.MEANING);
             return true;
         });
         updateToggleVisuals();
@@ -1786,7 +1786,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         subtitleLp.topMargin = dp(0);
         rowContainer().addView(subtitle, subtitleLp);
 
-        lyricsScroll = new com.eza.spicyex.lyrics.ElasticScrollView(activity);
+        lyricsScroll = new com.flowify.ettea.lyrics.ElasticScrollView(activity);
         // Rubber-banding and the shortened scroll end are Apple Music's; every other animation
         // style scrolls like the plain ScrollView it was before.
         setElasticScrollEnabled(appleStyle());
@@ -2057,7 +2057,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             TrackInfoReadoutController.ART_NETWORK_LISTENERS.add(artworkDownloadListener);
         }
         applyStatusBarPreference();
-        com.eza.spicyex.lyrics.language.LanguageModelPack.setReadyListener(languageModelReadyListener);
+        com.flowify.ettea.lyrics.language.LanguageModelPack.setReadyListener(languageModelReadyListener);
         if (!pipPresentation) watchContentScreenTop(true);
         ambientController.start();
         revealChrome();
@@ -2121,7 +2121,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             statusBarHiddenByUs = false;
             showStatusBar();
         }
-        com.eza.spicyex.lyrics.language.LanguageModelPack.clearReadyListener(languageModelReadyListener);
+        com.flowify.ettea.lyrics.language.LanguageModelPack.clearReadyListener(languageModelReadyListener);
         documentGate.stop();
         if (lyricRequest != null) lyricRequest.close();
         lyricRequest = null;
@@ -2183,7 +2183,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private int fullscreenControlsTimeoutSeconds() {
-        return new com.eza.spicyex.lyrics.LyricsShellSettings(activity, config)
+        return new com.flowify.ettea.lyrics.LyricsShellSettings(activity, config)
                 .fullscreenControlsTimeoutSeconds();
     }
 
@@ -2210,7 +2210,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         StringBuilder text = new StringBuilder();
         AdBreakInfo info = AdBreakInfo.current(track.uri);
         if (info != null && info.known()) {
-            text.append(com.eza.spicyex.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
+            text.append(com.flowify.ettea.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
                     .get("lyrics_ad_position", "%1$d of %2$d")
                     .replace("%1$d", String.valueOf(info.index))
                     .replace("%2$d", String.valueOf(info.count)));
@@ -2224,7 +2224,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             String clock = (left / 60) + ":" + (left % 60 < 10 ? "0" : "") + (left % 60);
             if (text.length() > 0) text.append("  ·  ");
             text.append(wholeBreak
-                    ? com.eza.spicyex.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
+                    ? com.flowify.ettea.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
                             .get("lyrics_ad_break_left", "%1$s left in the break").replace("%1$s", clock)
                     : clock);
         }
@@ -2343,7 +2343,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         String color = track.color == null ? "" : track.color;
         if (!color.equals(lastAccentColor) && (track.uri == null || !track.uri.contains("spicyexlayoutpreview"))) {
             lastAccentColor = color;
-            com.eza.spicyex.settings.PanelStyle.useAlbumAccent(color);
+            com.flowify.ettea.settings.PanelStyle.useAlbumAccent(color);
         }
         long displayedSecond = Math.max(0L, pos) / 1000L;
         if (displayedSecond != lastDisplayedProgressSecond) {
@@ -2493,7 +2493,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private String koreanMode() {
-        if (demoModeActive) return com.eza.spicyex.lyrics.language.KoreanDisplayMode.RR_STANDARD.value;
+        if (demoModeActive) return com.flowify.ettea.lyrics.language.KoreanDisplayMode.RR_STANDARD.value;
         return transliterationSession == null ? "" : transliterationSession.koreanMode();
     }
 
@@ -2505,7 +2505,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private void applyRenderConfigChanges(String reason, boolean fromPanelClose) {
         autoResumeFollow = config.get(Settings.AUTO_RESUME_FOLLOW);
         slideAnimationEnabled = readSlideEnabled();
-        com.eza.spicyex.lyrics.FuriganaText.applySettings(
+        com.flowify.ettea.lyrics.FuriganaText.applySettings(
                 config.get(Settings.FURIGANA_BRIGHTNESS), config.get(Settings.FURIGANA_POSITION_PERCENT));
         if (scrollController != null) {
             float nextAnchor = resolveFocusAnchorFraction();
@@ -2735,8 +2735,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         lyricsScroll.animate()
                 .alpha(1f)
                 .translationY(0f)
-                .setDuration(com.eza.spicyex.ui.Motion.dur(com.eza.spicyex.ui.Motion.SWAP))
-                .setInterpolator(com.eza.spicyex.ui.Motion.decel())
+                .setDuration(com.flowify.ettea.ui.Motion.dur(com.flowify.ettea.ui.Motion.SWAP))
+                .setInterpolator(com.flowify.ettea.ui.Motion.decel())
                 .withLayer()
                 .start();
     }
@@ -2758,7 +2758,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         followState.resetActive();
         // An instrumental track has no lyrics to show and never will, so it gets its own note
         // rather than a lookup error.
-        if (com.eza.spicyex.lyrics.providers.InstrumentalTracks.isInstrumental(host.getCurrentTrackSafely())) {
+        if (com.flowify.ettea.lyrics.providers.InstrumentalTracks.isInstrumental(host.getCurrentTrackSafely())) {
             emptyStateController.showInstrumental(lyricsColumn);
             status.setText(uiText("lyrics_instrumental", "Instrumental"));
             return;
@@ -2802,12 +2802,12 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             return;
         }
         sourceFooter.setText("Source: " + sourceProviderLabel(document.provider)
-                + " · " + com.eza.spicyex.lyrics.catalog.CatalogPickerModel.displayTypeTiming(document.type) + " ›"
+                + " · " + com.flowify.ettea.lyrics.catalog.CatalogPickerModel.displayTypeTiming(document.type) + " ›"
                 + "\n" + (!isBlank(document.songWriters)
                 ? "Written by " + document.songWriters
                 : "lyrics provided by " + sourceProviderLabel(document.provider)));
         sourceFooter.setContentDescription("Lyrics source: " + sourceProviderLabel(document.provider)
-                + ", " + com.eza.spicyex.lyrics.catalog.CatalogPickerModel.displayTypeTiming(document.type)
+                + ", " + com.flowify.ettea.lyrics.catalog.CatalogPickerModel.displayTypeTiming(document.type)
                 + ". Activate to change source.");
         rowMountController.markDirty();
         // A fresh document doesn't necessarily start at line 0: playback can already be mid-song
@@ -2837,7 +2837,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (pendingLoadEntrance) {
             pendingLoadEntrance = false;
             if (!shouldEnter && config != null && Boolean.TRUE.equals(config.get(Settings.LOAD_LIFT_ANIMATION))
-                    && appleStyle() && com.eza.spicyex.ui.Motion.animationsEnabled()) {
+                    && appleStyle() && com.flowify.ettea.ui.Motion.animationsEnabled()) {
                 // Hide now, synchronously, before this mount is ever measured or drawn. The reveal
                 // itself can only start once the rows have a height, i.e. one layout pass later -
                 // by which point they have already been painted at full brightness for a frame,
@@ -2864,7 +2864,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         hasRenderedDocument = true;
 
         if (!appleEntranceStarted) styleRowsNow();
-        if (shouldEnter && !appleEntranceStarted && com.eza.spicyex.ui.Motion.animationsEnabled()) {
+        if (shouldEnter && !appleEntranceStarted && com.flowify.ettea.ui.Motion.animationsEnabled()) {
             startSongChangeEnterAnimation();
         } else if (lyricsScroll != null && !appleEntranceStarted) {
             lyricsScroll.animate().cancel();
@@ -3341,11 +3341,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (Math.abs(target - edgeFadePx) < 0.5f) edgeFadePx = target;
         // Keep frames coming until the speed has died down and the fade has settled.
         if (s > 0f || edgeFadePx != target) edgeScaleSettling = true;
-        if (lyricsScroll instanceof com.eza.spicyex.lyrics.ElasticScrollView) {
+        if (lyricsScroll instanceof com.flowify.ettea.lyrics.ElasticScrollView) {
             int px = Math.round(edgeFadePx);
             // Below the song info the area's own top fade (lyricsTopFade) already dissolves the
             // top edge; a second one there would double it.
-            ((com.eza.spicyex.lyrics.ElasticScrollView) lyricsScroll).setEdgeFade(
+            ((com.flowify.ettea.lyrics.ElasticScrollView) lyricsScroll).setEdgeFade(
                     lyricsTopFade != null ? 0 : px, px);
         }
         // Rows keep their own size; only the long-press feedback scales them.
@@ -3400,7 +3400,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private boolean isJapaneseLine(AppliedLine line) {
-        return com.eza.spicyex.lyrics.LyricsDisplayMode.isJapaneseLine(line);
+        return com.flowify.ettea.lyrics.LyricsDisplayMode.isJapaneseLine(line);
     }
 
     // -- translation / reading reflow ------------------------------------------------------
@@ -3745,10 +3745,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      */
     /** Tells the scroll view where the content ends: the last lyric line resting on the focus
      *  position, not the source credit and bottom padding below it scrolling on past. Apple Music
-     *  only - {@link com.eza.spicyex.lyrics.ElasticScrollView} ignores the limit otherwise. */
+     *  only - {@link com.flowify.ettea.lyrics.ElasticScrollView} ignores the limit otherwise. */
     private void updateScrollEndLimit() {
         if (!appleStyle()) return;
-        com.eza.spicyex.lyrics.ElasticScrollView scroll = elasticScroll();
+        com.flowify.ettea.lyrics.ElasticScrollView scroll = elasticScroll();
         if (scroll == null) return;
         int limit = Integer.MAX_VALUE;
         if (document != null && document.appliedLines != null && !document.appliedLines.isEmpty()
@@ -3921,7 +3921,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     /** Keeps the old secondary text visible while the rebuild closes its space. */
     private boolean fadeOutAsGhosts(List<View> leaving) {
-        if (lyricsFrame == null || !com.eza.spicyex.ui.Motion.animationsEnabled()) return false;
+        if (lyricsFrame == null || !com.flowify.ettea.ui.Motion.animationsEnabled()) return false;
         FrameLayout frame = lyricsFrame;
         int[] frameLoc = new int[2];
         frame.getLocationInWindow(frameLoc);
@@ -4376,25 +4376,25 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     /**
      * Animation style is "Apple Music" - the single switch every Apple-only motion path in this
      * shell is gated on. {@link LyricsRenderConfig#appleStyle} is read straight from
-     * {@link com.eza.spicyex.lyrics.LyricsShellSettings#appleAnimation()}, so the shell reuses the
+     * {@link com.flowify.ettea.lyrics.LyricsShellSettings#appleAnimation()}, so the shell reuses the
      * already-resolved config rather than resolving the style a second way; before the config
      * exists (construction order) it asks the settings wrapper directly.
      */
     private boolean appleStyle() {
         if (renderConfig != null) return renderConfig.appleStyle;
-        return new com.eza.spicyex.lyrics.LyricsShellSettings(activity, config).appleAnimation();
+        return new com.flowify.ettea.lyrics.LyricsShellSettings(activity, config).appleAnimation();
     }
 
-    /** The fullscreen scroll view as an {@link com.eza.spicyex.lyrics.ElasticScrollView}, or null
+    /** The fullscreen scroll view as an {@link com.flowify.ettea.lyrics.ElasticScrollView}, or null
      *  if it is not one. Its rubber band and end limit are Apple Music's, so both are set through
      *  here rather than assuming the concrete type. */
-    private com.eza.spicyex.lyrics.ElasticScrollView elasticScroll() {
-        return lyricsScroll instanceof com.eza.spicyex.lyrics.ElasticScrollView
-                ? (com.eza.spicyex.lyrics.ElasticScrollView) lyricsScroll : null;
+    private com.flowify.ettea.lyrics.ElasticScrollView elasticScroll() {
+        return lyricsScroll instanceof com.flowify.ettea.lyrics.ElasticScrollView
+                ? (com.flowify.ettea.lyrics.ElasticScrollView) lyricsScroll : null;
     }
 
     private void setElasticScrollEnabled(boolean enabled) {
-        com.eza.spicyex.lyrics.ElasticScrollView scroll = elasticScroll();
+        com.flowify.ettea.lyrics.ElasticScrollView scroll = elasticScroll();
         if (scroll != null) scroll.setElasticEnabled(enabled);
     }
 
@@ -4527,7 +4527,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float damping = returning
                 ? elasticDamping(RETURN_SPRING_DAMPING)
                 : scrollSpringDamping();
-        scrollSpring = new com.eza.spicyex.lyrics.Spring(start, frequency, damping);
+        scrollSpring = new com.flowify.ettea.lyrics.Spring(start, frequency, damping);
         scrollSpring.setGoal(target);
         if (returning) {
             // Leaving with real speed rather than from a standstill is what makes the return read
@@ -4970,10 +4970,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             return;
         }
         boolean wasVisible = showTranslation();
-        boolean hasDisplayedMeaning = hasLayerOutput(com.eza.spicyex.lyrics.session.LayerKind.MEANING);
-        boolean requestedOutput = shouldGenerateAi(com.eza.spicyex.lyrics.session.LayerKind.MEANING);
+        boolean hasDisplayedMeaning = hasLayerOutput(com.flowify.ettea.lyrics.session.LayerKind.MEANING);
+        boolean requestedOutput = shouldGenerateAi(com.flowify.ettea.lyrics.session.LayerKind.MEANING);
         boolean requestStarted = !requestedOutput
-                || requestAiLayerWithFeedback(com.eza.spicyex.lyrics.session.LayerKind.MEANING);
+                || requestAiLayerWithFeedback(com.flowify.ettea.lyrics.session.LayerKind.MEANING);
         boolean keepVisible = transliterationSession.keepVisibleForRequestedOutput(
                 requestedOutput, wasVisible, hasDisplayedMeaning);
         if (TranslationVisibilityPolicy.onTap(requestedOutput, requestStarted, keepVisible)
@@ -5038,17 +5038,17 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // replaces it. Gated on chip visibility like the other states; details stay available via
         // the review panel, not a persistent notice.
         boolean romanAiFailed = !romanAiPending
-                && !aiFailureToken(com.eza.spicyex.lyrics.session.LayerKind.SOUND).isEmpty()
+                && !aiFailureToken(com.flowify.ettea.lyrics.session.LayerKind.SOUND).isEmpty()
                 && romanToggle.getVisibility() == View.VISIBLE;
         boolean translationAiFailed = !translationAiPending
-                && !aiFailureToken(com.eza.spicyex.lyrics.session.LayerKind.MEANING).isEmpty()
+                && !aiFailureToken(com.flowify.ettea.lyrics.session.LayerKind.MEANING).isEmpty()
                 && translationToggle.getVisibility() == View.VISIBLE;
         toggleSpinnerController.setFailed(false, translationFailedNow());
         toggleSpinnerController.update(renderConfig.toggleSpinnerEnabled, romanPending,
                 translationPending,
-                hasAiLayerOutput(com.eza.spicyex.lyrics.session.LayerKind.SOUND)
+                hasAiLayerOutput(com.flowify.ettea.lyrics.session.LayerKind.SOUND)
                         && showRomanization(),
-                hasAiLayerOutput(com.eza.spicyex.lyrics.session.LayerKind.MEANING)
+                hasAiLayerOutput(com.flowify.ettea.lyrics.session.LayerKind.MEANING)
                         && showTranslation(),
                 romanAiPending, translationAiPending, romanAiFailed, translationAiFailed);
     }
@@ -5060,15 +5060,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private boolean translationFailedNow() {
         return document != null && document.translationFailed && !document.translationPending
                 && showTranslation() && translationToggle.getVisibility() == View.VISIBLE
-                && aiFailureToken(com.eza.spicyex.lyrics.session.LayerKind.MEANING).isEmpty()
-                && !hasLayerOutput(com.eza.spicyex.lyrics.session.LayerKind.MEANING);
+                && aiFailureToken(com.flowify.ettea.lyrics.session.LayerKind.MEANING).isEmpty()
+                && !hasLayerOutput(com.flowify.ettea.lyrics.session.LayerKind.MEANING);
     }
 
     private void retryTranslation() {
         // Shown as running at once; the session republishes when the retry settles.
         document.translationFailed = false;
         document.translationPending = true;
-        host.refreshLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind.MEANING);
+        host.refreshLyricsLayer(com.flowify.ettea.lyrics.session.LayerKind.MEANING);
         updateToggleSpinners();
         android.widget.Toast.makeText(activity,
                 uiText("lyrics_translation_retrying", "Retrying translation…"),
@@ -5076,7 +5076,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     /** Desktop's primary-click policy, applied before the normal visibility toggle. */
-    private boolean shouldGenerateAi(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private boolean shouldGenerateAi(com.flowify.ettea.lyrics.session.LayerKind layer) {
         if (document == null || isLayerBusy(layer)) return false;
         AiSettings settings = aiSettings;
         if (!settings.generateThenToggle() || !settings.canRequest()) return false;
@@ -5084,25 +5084,25 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     /** Desktop parity: secondary click opens review when AI output exists, otherwise the composer. */
-    private void openAiLayerPanel(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private void openAiLayerPanel(com.flowify.ettea.lyrics.session.LayerKind layer) {
         String failureToken = aiFailureToken(layer);
         boolean hasAi = hasAiLayerOutput(layer);
-        com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot monitor =
+        com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot monitor =
                 aiRequestMonitor(layer);
         // A settled failure is not a run in progress, whatever the document's pending flag still
         // says. Letting "busy" win routed a terminal truncation to the running-status dialog, which
         // has no retry and no failed-attempt payload — the two things that failure needs.
         boolean running = isLayerBusy(layer) && !monitor.current.isFailure();
-        com.eza.spicyex.lyrics.ai.AiLayerPanelPolicy.Destination destination =
-                com.eza.spicyex.lyrics.ai.AiLayerPanelPolicy.destination(
+        com.flowify.ettea.lyrics.ai.AiLayerPanelPolicy.Destination destination =
+                com.flowify.ettea.lyrics.ai.AiLayerPanelPolicy.destination(
                         running, failureToken, hasAi);
-        if (destination == com.eza.spicyex.lyrics.ai.AiLayerPanelPolicy.Destination.RUNNING_STATUS) {
+        if (destination == com.flowify.ettea.lyrics.ai.AiLayerPanelPolicy.Destination.RUNNING_STATUS) {
             showLayerRunningStatus(layer, monitor);
             return;
         }
         if (document == null) return;
-        if (destination == com.eza.spicyex.lyrics.ai.AiLayerPanelPolicy.Destination.FAILURE) {
-            com.eza.spicyex.ui.PanelDialog failed = new com.eza.spicyex.ui.PanelDialog(activity,
+        if (destination == com.flowify.ettea.lyrics.ai.AiLayerPanelPolicy.Destination.FAILURE) {
+            com.flowify.ettea.ui.PanelDialog failed = new com.flowify.ettea.ui.PanelDialog(activity,
                     aiLayerLabel(layer));
             failed.paragraph(aiFailureInlineText(layer, failureToken));
             appendAttemptMonitor(failed, monitor.current,
@@ -5120,8 +5120,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             failed.show();
             return;
         }
-        if (destination == com.eza.spicyex.lyrics.ai.AiLayerPanelPolicy.Destination.REVIEW) {
-            com.eza.spicyex.ui.PanelDialog review = new com.eza.spicyex.ui.PanelDialog(activity,
+        if (destination == com.flowify.ettea.lyrics.ai.AiLayerPanelPolicy.Destination.REVIEW) {
+            com.flowify.ettea.ui.PanelDialog review = new com.flowify.ettea.ui.PanelDialog(activity,
                     aiLayerLabel(layer))
                     .closeIcon(uiText("lyrics_ai_close", "Close"));
             String lead = reviewLeadText(layer);
@@ -5141,23 +5141,23 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         openAiComposer(layer);
     }
 
-    private boolean isLayerBusy(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private boolean isLayerBusy(com.flowify.ettea.lyrics.session.LayerKind layer) {
         if (!loadingTrackId.isEmpty()) return true;
-        if (layer == com.eza.spicyex.lyrics.session.LayerKind.SOUND) {
+        if (layer == com.flowify.ettea.lyrics.session.LayerKind.SOUND) {
             return localReprocessController.isProcessing()
                     || document != null && document.romanizationPending;
         }
         return document != null && document.translationPending;
     }
 
-    private void showLayerRunningStatus(com.eza.spicyex.lyrics.session.LayerKind layer,
-                                        com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot initial) {
+    private void showLayerRunningStatus(com.flowify.ettea.lyrics.session.LayerKind layer,
+                                        com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot initial) {
         boolean aiRunning = document != null && (layer
-                == com.eza.spicyex.lyrics.session.LayerKind.SOUND
+                == com.flowify.ettea.lyrics.session.LayerKind.SOUND
                 ? document.readingAiPending : document.translationAiPending);
         String message;
         if (aiRunning) {
-            message = layer == com.eza.spicyex.lyrics.session.LayerKind.SOUND
+            message = layer == com.flowify.ettea.lyrics.session.LayerKind.SOUND
                     ? uiText("lyrics_ai_pronunciation_running",
                     "AI pronunciation request is running for this song.")
                     : uiText("lyrics_ai_translation_running",
@@ -5166,13 +5166,13 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             message = uiText("lyrics_ai_song_loading",
                     "Lyrics for the current song are loading. AI controls will be available when ready.");
         } else {
-            message = layer == com.eza.spicyex.lyrics.session.LayerKind.SOUND
+            message = layer == com.flowify.ettea.lyrics.session.LayerKind.SOUND
                     ? uiText("lyrics_ai_pronunciation_processing",
                     "Pronunciation is still processing for this song.")
                     : uiText("lyrics_ai_translation_processing",
                     "Translation is still processing for this song.");
         }
-        final com.eza.spicyex.ui.PanelDialog status = new com.eza.spicyex.ui.PanelDialog(activity,
+        final com.flowify.ettea.ui.PanelDialog status = new com.flowify.ettea.ui.PanelDialog(activity,
                 uiText("lyrics_ai_current_status", "Current status"));
         status.paragraph(message);
         final android.widget.TextView payload = aiRunning ? status.readOnlyBlock(
@@ -5186,7 +5186,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         final String[] rendered = { payload == null ? null : payload.getText().toString() };
         refresh[0] = () -> {
             if (payload == null) return;
-            com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot latest =
+            com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot latest =
                     aiRequestMonitor(layer);
             String next = monitorText(latest.current);
             if (!next.equals(rendered[0])) {
@@ -5203,22 +5203,22 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         handler.post(refresh[0]);
     }
 
-    private com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot aiRequestMonitor(
-            com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot aiRequestMonitor(
+            com.flowify.ettea.lyrics.session.LayerKind layer) {
         String digest = document == null ? ""
                 : LyricsDocumentProcessor.canonicalBaseOf(document).digest;
-        return com.eza.spicyex.lyrics.ai.AiRequestLiveState.snapshot(layer, digest);
+        return com.flowify.ettea.lyrics.ai.AiRequestLiveState.snapshot(layer, digest);
     }
 
-    private String monitorText(com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt attempt) {
+    private String monitorText(com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt attempt) {
         if (attempt == null || !attempt.hasPayload()) {
             return uiText("lyrics_ai_preparing_payload", "Preparing request payload…");
         }
         return attempt.payload;
     }
 
-    private void appendAttemptMonitor(com.eza.spicyex.ui.PanelDialog dialog,
-                                      com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt attempt,
+    private void appendAttemptMonitor(com.flowify.ettea.ui.PanelDialog dialog,
+                                      com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt attempt,
                                       String heading) {
         if (dialog == null || attempt == null || !attempt.isFailure()) return;
         StringBuilder summary = new StringBuilder(heading);
@@ -5237,8 +5237,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      * output on screen has finished, and a later run may already have reset {@code current} to a
      * preparing attempt with nothing in it yet.
      */
-    private com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt settledAttempt(
-            com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot monitor) {
+    private com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt settledAttempt(
+            com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot monitor) {
         if (monitor == null) return null;
         return monitor.lastSettled.hasReasoning() ? monitor.lastSettled : monitor.current;
     }
@@ -5250,17 +5250,17 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      * is longer than everything else in this dialog put together and is read only when an answer
      * looks wrong, so opening the panel on it would bury the output the panel exists to review.
      */
-    private void appendReasoningTrace(com.eza.spicyex.ui.PanelDialog dialog,
-                                      com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt attempt) {
+    private void appendReasoningTrace(com.flowify.ettea.ui.PanelDialog dialog,
+                                      com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt attempt) {
         if (dialog == null || attempt == null || !attempt.hasReasoning()) return;
         dialog.collapsible(uiText("lyrics_ai_reasoning_trace", "Reasoning trace"),
                 attempt.reasoning);
     }
 
     /** Makes the model row itself the disclosure control for a successful run's reasoning. */
-    private void appendModelReasoning(com.eza.spicyex.ui.PanelDialog dialog,
-                                      com.eza.spicyex.lyrics.session.LayerKind layer,
-                                      com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt attempt) {
+    private void appendModelReasoning(com.flowify.ettea.ui.PanelDialog dialog,
+                                      com.flowify.ettea.lyrics.session.LayerKind layer,
+                                      com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt attempt) {
         if (dialog == null) return;
         String model = aiModel(layer);
         if (model.isEmpty()) return;
@@ -5272,25 +5272,25 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
     }
 
-    private void openAiComposer(com.eza.spicyex.lyrics.session.LayerKind layer) {
-        com.eza.spicyex.lyrics.ai.AiSettings settings =
-                new com.eza.spicyex.lyrics.ai.AiSettings(activity);
+    private void openAiComposer(com.flowify.ettea.lyrics.session.LayerKind layer) {
+        com.flowify.ettea.lyrics.ai.AiSettings settings =
+                new com.flowify.ettea.lyrics.ai.AiSettings(activity);
         if (!settings.canRequest()) return;
-        com.eza.spicyex.ui.PanelDialog composer = new com.eza.spicyex.ui.PanelDialog(activity,
+        com.flowify.ettea.ui.PanelDialog composer = new com.flowify.ettea.ui.PanelDialog(activity,
                 aiLayerLabel(layer)).closeIcon(uiText("lyrics_ai_close", "Close"));
-        composer.paragraph(layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING
+        composer.paragraph(layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING
                 ? uiText("lyrics_ai_translation_prompt_help",
                 "Choose a preset or edit a custom prompt describing what the model should preserve, fix, or emphasize.")
                 : uiText("lyrics_ai_pronunciation_prompt_help",
                 "Choose a preset or edit a custom prompt for pronunciation, dialect, spelling, or mixed-language guidance."));
 
         String activePrompt = settings.instructions(layer);
-        String matchingPreset = com.eza.spicyex.lyrics.ai.AiPresets.matchingName(layer, activePrompt);
+        String matchingPreset = com.flowify.ettea.lyrics.ai.AiPresets.matchingName(layer, activePrompt);
         String customPrompt = settings.customInstructions(layer);
         if (customPrompt.isEmpty() && matchingPreset == null && !activePrompt.isEmpty()) {
             customPrompt = activePrompt;
         }
-        String[] presets = com.eza.spicyex.lyrics.ai.AiPresets.names(layer);
+        String[] presets = com.flowify.ettea.lyrics.ai.AiPresets.names(layer);
         final String customLabel = uiText("lyrics_ai_custom_prompt", "Custom");
         final String[] selected = new String[]{matchingPreset != null
                 ? matchingPreset : (!customPrompt.isEmpty() ? customLabel : presets[0])};
@@ -5315,11 +5315,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 }));
         field[0] = composer.multilineField(savedCustom[0]);
         editAction[0] = composer.selectorAction(selectedView[0],
-                com.eza.spicyex.ui.ActionIconDrawable.Kind.EDIT,
+                com.flowify.ettea.ui.ActionIconDrawable.Kind.EDIT,
                 uiText("lyrics_ai_edit_prompt", "Edit prompt"), () -> {
                     String base = customLabel.equals(selected[0])
                             ? savedCustom[0]
-                            : com.eza.spicyex.lyrics.ai.AiPresets.instructions(layer, selected[0]);
+                            : com.flowify.ettea.lyrics.ai.AiPresets.instructions(layer, selected[0]);
                     selected[0] = customLabel;
                     selectedView[0].setText(customLabel);
                     field[0].setText(base);
@@ -5329,7 +5329,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                     field[0].requestFocus();
                 });
         saveAction[0] = composer.selectorAction(selectedView[0],
-                com.eza.spicyex.ui.ActionIconDrawable.Kind.SAVE,
+                com.flowify.ettea.ui.ActionIconDrawable.Kind.SAVE,
                 uiText("lyrics_ai_save_custom_prompt", "Save custom prompt"), () -> {
                     savedCustom[0] = field[0].getText().toString();
                     settings.setCustomInstructions(layer, savedCustom[0]);
@@ -5346,9 +5346,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // Three Meaning flows share one stored key, so the composer edits the stored value
         // directly instead of a boolean that can only express two of them. Reading goes through
         // the store's schema coercion, so legacy installs keep their migrated choice.
-        final boolean meaningLayer = layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING;
-        final com.eza.spicyex.SettingsStore flowStore =
-                meaningLayer ? new com.eza.spicyex.SettingsStore(activity) : null;
+        final boolean meaningLayer = layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING;
+        final com.flowify.ettea.SettingsStore flowStore =
+                meaningLayer ? new com.flowify.ettea.SettingsStore(activity) : null;
         final java.util.List<String> flowValues = meaningLayer
                 ? Settings.AI_TRANSLATION_PIPELINE.allowedValues
                 : java.util.Collections.<String>emptyList();
@@ -5373,7 +5373,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 prompt = field[0].getText().toString();
                 settings.setCustomInstructions(layer, prompt);
             } else {
-                prompt = com.eza.spicyex.lyrics.ai.AiPresets.instructions(layer, selected[0]);
+                prompt = com.flowify.ettea.lyrics.ai.AiPresets.instructions(layer, selected[0]);
             }
             settings.setInstructions(layer, prompt);
             if (meaningLayer) {
@@ -5391,7 +5391,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      * language change made in the settings panel never reached this surface until a remount.
      */
     private SettingsUiStrings uiStrings() {
-        return com.eza.spicyex.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE));
+        return com.flowify.ettea.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE));
     }
 
     private String aiPipelineLabel(String value) {
@@ -5403,7 +5403,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                                       java.util.function.Consumer<String> onPick) {
         java.util.List<String> labels = new java.util.ArrayList<>();
         for (String value : values) labels.add(aiPipelineLabel(value));
-        com.eza.spicyex.ui.PanelPickerPopup.show(activity, anchor, labels,
+        com.flowify.ettea.ui.PanelPickerPopup.show(activity, anchor, labels,
                 aiPipelineLabel(selected), pickedLabel -> {
                     for (String value : values) {
                         if (aiPipelineLabel(value).equals(pickedLabel)) {
@@ -5415,43 +5415,43 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private void showAiPresetPicker(android.view.View anchor,
-                                    com.eza.spicyex.lyrics.session.LayerKind layer,
+                                    com.flowify.ettea.lyrics.session.LayerKind layer,
                                     String selected, String customLabel,
                                     java.util.function.Consumer<String> onPick) {
         java.util.List<String> choices = new java.util.ArrayList<>();
         java.util.Collections.addAll(choices,
-                com.eza.spicyex.lyrics.ai.AiPresets.names(layer));
+                com.flowify.ettea.lyrics.ai.AiPresets.names(layer));
         choices.add(customLabel);
-        com.eza.spicyex.ui.PanelPickerPopup.show(activity, anchor, choices, selected, onPick);
+        com.flowify.ettea.ui.PanelPickerPopup.show(activity, anchor, choices, selected, onPick);
     }
 
-    private String aiFailureToken(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private String aiFailureToken(com.flowify.ettea.lyrics.session.LayerKind layer) {
         if (document == null) return "";
-        return safe(layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING
+        return safe(layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING
                 ? document.translationAiFailureToken : document.readingAiFailureToken);
     }
 
-    private String aiLayerLabel(com.eza.spicyex.lyrics.session.LayerKind layer) {
-        return layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING
+    private String aiLayerLabel(com.flowify.ettea.lyrics.session.LayerKind layer) {
+        return layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING
                 ? uiText("lyrics_ai_translation", "AI translation")
                 : uiText("lyrics_ai_pronunciation", "AI pronunciation");
     }
 
     /** An AI authority flag without any displayed row is stale state, not accepted output. */
-    private boolean hasAiLayerOutput(com.eza.spicyex.lyrics.session.LayerKind layer) {
-        boolean marked = layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING
+    private boolean hasAiLayerOutput(com.flowify.ettea.lyrics.session.LayerKind layer) {
+        boolean marked = layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING
                 ? document != null && document.translationFromAi
                 : document != null && document.readingFromAi;
         return marked && hasLayerOutput(layer);
     }
 
-    private boolean hasLayerOutput(com.eza.spicyex.lyrics.session.LayerKind layer) {
-        return layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING
+    private boolean hasLayerOutput(com.flowify.ettea.lyrics.session.LayerKind layer) {
+        return layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING
                 ? LyricsDocumentProcessor.hasDisplayedMeaning(document)
                 : LyricsDocumentProcessor.hasDisplayedSound(document);
     }
 
-    private String aiFailureInlineText(com.eza.spicyex.lyrics.session.LayerKind layer,
+    private String aiFailureInlineText(com.flowify.ettea.lyrics.session.LayerKind layer,
                                        String token) {
         String label = aiLayerLabel(layer);
         if ("delivery_unknown".equals(token)) {
@@ -5482,12 +5482,12 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
     }
 
-    private void requestAiRetry(com.eza.spicyex.lyrics.session.LayerKind layer, String token) {
+    private void requestAiRetry(com.flowify.ettea.lyrics.session.LayerKind layer, String token) {
         if (!"delivery_unknown".equals(token)) {
             requestAiLayerWithFeedback(layer);
             return;
         }
-        com.eza.spicyex.ui.PanelDialog warning = new com.eza.spicyex.ui.PanelDialog(activity,
+        com.flowify.ettea.ui.PanelDialog warning = new com.flowify.ettea.ui.PanelDialog(activity,
                 uiText("lyrics_ai_retry_warning_title", "Retry may duplicate a billed request"));
         warning.paragraph(uiText("lyrics_ai_retry_warning",
                 "The previous request did not confirm delivery. It may already have been billed. Retry only if you accept that risk."));
@@ -5498,7 +5498,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private boolean requestAiLayerWithFeedback(
-            com.eza.spicyex.lyrics.session.LayerKind layer) {
+            com.flowify.ettea.lyrics.session.LayerKind layer) {
         TranslationVisibilityPolicy.RevealAction reveal =
                 TranslationVisibilityPolicy.revealFor(layer, showRomanization(), showTranslation());
         if (reveal == TranslationVisibilityPolicy.RevealAction.REVEAL_ROMANIZATION) {
@@ -5514,7 +5514,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                     .apply();
             refreshSecondaryRows("");
         }
-        com.eza.spicyex.lyrics.ai.AiRequestStartResult result =
+        com.flowify.ettea.lyrics.ai.AiRequestStartResult result =
                 host.requestAiLyricsLayer(layer);
         String label = aiLayerLabel(layer);
         if (!result.started()) {
@@ -5527,7 +5527,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         aiFeedback(layer).started();
         updateToggleVisuals();
         android.widget.Toast.makeText(activity,
-                layer == com.eza.spicyex.lyrics.session.LayerKind.SOUND
+                layer == com.flowify.ettea.lyrics.session.LayerKind.SOUND
                         ? uiText("lyrics_ai_pronunciation_running",
                         "AI pronunciation request is running for this song.")
                         : uiText("lyrics_ai_translation_running",
@@ -5537,7 +5537,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private String aiRequestRefusalMessage(
-            com.eza.spicyex.lyrics.ai.AiRequestStartResult result, String label) {
+            com.flowify.ettea.lyrics.ai.AiRequestStartResult result, String label) {
         switch (result) {
             case NOT_CONFIGURED:
                 return uiFormat("lyrics_ai_request_not_configured",
@@ -5554,39 +5554,39 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
     }
 
-    private com.eza.spicyex.lyrics.ai.AiRequestFeedbackState aiFeedback(
-            com.eza.spicyex.lyrics.session.LayerKind layer) {
-        return layer == com.eza.spicyex.lyrics.session.LayerKind.SOUND
+    private com.flowify.ettea.lyrics.ai.AiRequestFeedbackState aiFeedback(
+            com.flowify.ettea.lyrics.session.LayerKind layer) {
+        return layer == com.flowify.ettea.lyrics.session.LayerKind.SOUND
                 ? soundAiFeedback : meaningAiFeedback;
     }
 
     private void observeAiRequestFeedback(LyricsDocument value) {
         if (value == null) return;
         observeAiRequestFeedback(
-                com.eza.spicyex.lyrics.session.LayerKind.SOUND,
+                com.flowify.ettea.lyrics.session.LayerKind.SOUND,
                 value.readingAiPending,
                 value.readingFromAi && LyricsDocumentProcessor.hasDisplayedSound(value),
                 safe(value.readingAiFailureToken));
         observeAiRequestFeedback(
-                com.eza.spicyex.lyrics.session.LayerKind.MEANING,
+                com.flowify.ettea.lyrics.session.LayerKind.MEANING,
                 value.translationAiPending,
                 value.translationFromAi && LyricsDocumentProcessor.hasDisplayedMeaning(value),
                 safe(value.translationAiFailureToken));
     }
 
     private void observeAiRequestFeedback(
-            com.eza.spicyex.lyrics.session.LayerKind layer,
+            com.flowify.ettea.lyrics.session.LayerKind layer,
             boolean pending,
             boolean hasAiOutput,
             String failureToken) {
-        com.eza.spicyex.lyrics.ai.AiRequestFeedbackState.Outcome outcome =
+        com.flowify.ettea.lyrics.ai.AiRequestFeedbackState.Outcome outcome =
                 aiFeedback(layer).observe(pending, hasAiOutput, failureToken);
-        if (outcome == com.eza.spicyex.lyrics.ai.AiRequestFeedbackState.Outcome.FAILED) {
+        if (outcome == com.flowify.ettea.lyrics.ai.AiRequestFeedbackState.Outcome.FAILED) {
             android.widget.Toast.makeText(activity,
                     aiFailureInlineText(layer, failureToken),
                     android.widget.Toast.LENGTH_LONG).show();
         } else if (outcome
-                == com.eza.spicyex.lyrics.ai.AiRequestFeedbackState.Outcome.NO_OUTPUT) {
+                == com.flowify.ettea.lyrics.ai.AiRequestFeedbackState.Outcome.NO_OUTPUT) {
             android.widget.Toast.makeText(activity,
                     uiFormat("lyrics_ai_request_no_output",
                             "%1$s finished without usable output. Tap for status or retry.",
@@ -5603,15 +5603,15 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return uiStrings().format(name, fallback, args);
     }
 
-    private String restoreBaselineLabel(com.eza.spicyex.lyrics.session.LayerKind layer) {
-        if (layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING
+    private String restoreBaselineLabel(com.flowify.ettea.lyrics.session.LayerKind layer) {
+        if (layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING
                 && document != null && document.translationAiRefinedFromGoogle) {
             return uiText("lyrics_ai_restore_google", "Restore Google Translate");
         }
         return uiText("lyrics_ai_restore_baseline", "Restore baseline");
     }
 
-    private String reviewText(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private String reviewText(com.flowify.ettea.lyrics.session.LayerKind layer) {
         StringBuilder text = new StringBuilder();
         appendReviewSection(text, reviewLeadText(layer));
         String model = aiModel(layer);
@@ -5623,26 +5623,26 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return text.toString();
     }
 
-    private String reviewLeadText(com.eza.spicyex.lyrics.session.LayerKind layer) {
-        if (document == null || layer != com.eza.spicyex.lyrics.session.LayerKind.MEANING) return "";
+    private String reviewLeadText(com.flowify.ettea.lyrics.session.LayerKind layer) {
+        if (document == null || layer != com.flowify.ettea.lyrics.session.LayerKind.MEANING) return "";
         return document.translationAiRefinedFromGoogle
                 ? uiText("lyrics_ai_refined_google", "AI refined the Google Translate version.")
                 : uiText("lyrics_ai_from_source", "AI translated from the original lyrics.");
     }
 
-    private String aiModel(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private String aiModel(com.flowify.ettea.lyrics.session.LayerKind layer) {
         if (document == null) return "";
-        String model = layer == com.eza.spicyex.lyrics.session.LayerKind.SOUND
+        String model = layer == com.flowify.ettea.lyrics.session.LayerKind.SOUND
                 ? document.readingAiModel : document.translationAiModel;
         return model == null ? "" : model.trim();
     }
 
-    private String reviewOutputText(com.eza.spicyex.lyrics.session.LayerKind layer) {
+    private String reviewOutputText(com.flowify.ettea.lyrics.session.LayerKind layer) {
         if (document == null || document.lines == null) return "";
         StringBuilder text = new StringBuilder();
-        for (com.eza.spicyex.lyrics.LyricsLine line : document.lines) {
+        for (com.flowify.ettea.lyrics.LyricsLine line : document.lines) {
             if (line == null || line.text == null || line.text.trim().isEmpty()) continue;
-            String output = layer == com.eza.spicyex.lyrics.session.LayerKind.MEANING
+            String output = layer == com.flowify.ettea.lyrics.session.LayerKind.MEANING
                     ? line.translatedText
                     : line.readingRenderPlan != null
                     ? line.readingRenderPlan.joinedDisplayText : line.romanizedText;
@@ -5684,8 +5684,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // The countdown starts once the list is at rest: not while it is still gliding or
         // springing back from an end, and not while paused (it starts over on resume rather
         // than jumping ahead by the time spent paused).
-        boolean settling = scrollInProgress || (lyricsScroll instanceof com.eza.spicyex.lyrics.ElasticScrollView
-                && ((com.eza.spicyex.lyrics.ElasticScrollView) lyricsScroll).isStretched());
+        boolean settling = scrollInProgress || (lyricsScroll instanceof com.flowify.ettea.lyrics.ElasticScrollView
+                && ((com.flowify.ettea.lyrics.ElasticScrollView) lyricsScroll).isStretched());
         if (show && (settling || !host.isPlayerActuallyPlaying())) followState.markManualScroll();
         if (show && autoResumeFollow && host.isPlayerActuallyPlaying()) {
             int delaySeconds = config == null ? Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS.defaultValue
@@ -5821,7 +5821,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                         // to the same mode instead of leaving them on the previous one until the
                         // next track. A visibility toggle is fullscreen-only, so it stays local.
                         if (changed > 0) {
-                            host.refreshLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind.SOUND);
+                            host.refreshLyricsLayer(com.flowify.ettea.lyrics.session.LayerKind.SOUND);
                         }
                         XpLog.log(TAG + " local mode reprocess complete changed=" + changed + " reason=" + completedReason);
                     }
@@ -5866,20 +5866,20 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         LyricsDocumentProcessor.resetMeaningLayer(activity.getApplicationContext(), snapshot);
         rerenderKeepingPosition(reason + " ready");
         if (snapshot.translationPending) {
-            host.refreshLyricsLayer(com.eza.spicyex.lyrics.session.LayerKind.MEANING);
+            host.refreshLyricsLayer(com.flowify.ettea.lyrics.session.LayerKind.MEANING);
         }
     }
 
     private boolean activeLineHasJapanese() {
         AppliedLine line = activeLine();
         return line == null ? documentHasJapanese()
-                : "ja".equals(com.eza.spicyex.lyrics.language.ReadingLanguagePolicy.layoutLanguage(line));
+                : "ja".equals(com.flowify.ettea.lyrics.language.ReadingLanguagePolicy.layoutLanguage(line));
     }
 
     private boolean activeLineHasChinese() {
         AppliedLine line = activeLine();
         return line == null ? documentHasChinese()
-                : "zh".equals(com.eza.spicyex.lyrics.language.ReadingLanguagePolicy.layoutLanguage(line));
+                : "zh".equals(com.flowify.ettea.lyrics.language.ReadingLanguagePolicy.layoutLanguage(line));
     }
 
     private boolean activeLineHasKorean() {
@@ -5916,7 +5916,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private boolean documentHasReadingLanguage(String language) {
         if (document == null) return false;
         for (AppliedLine line : document.appliedLines) {
-            if (language.equals(com.eza.spicyex.lyrics.language.ReadingLanguagePolicy.layoutLanguage(line))) return true;
+            if (language.equals(com.flowify.ettea.lyrics.language.ReadingLanguagePolicy.layoutLanguage(line))) return true;
         }
         return false;
     }
@@ -5970,7 +5970,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     // Preserve script detection in the reading chip: あ / 拼·粤 / 한 / Я / Ω.
     private void updateRomanizationGlyph() {
         romanGlyph.setGlowing(showRomanization()
-                && hasLayerOutput(com.eza.spicyex.lyrics.session.LayerKind.SOUND));
+                && hasLayerOutput(com.flowify.ettea.lyrics.session.LayerKind.SOUND));
         if (!showRomanization()) {
             romanGlyph.setGlyph("A");
             return;
@@ -6043,7 +6043,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         endDoubleTapTrial();
         doubleTapTrial = true;
         if (tapSeekHandler != null) tapSeekHandler.setDoubleTapForced(true);
-        String[] styles = com.eza.spicyex.ui.LikeBursts.STYLES;
+        String[] styles = com.flowify.ettea.ui.LikeBursts.STYLES;
         String[] labels = new String[styles.length];
         for (int i = 0; i < styles.length; i++) {
             String full = uiText("settings_option_lyrics_double_tap_like_effect_"
@@ -6051,14 +6051,14 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             int dash = full.indexOf(" - ");
             labels[i] = dash > 0 ? full.substring(0, dash) : full;
         }
-        View bar = new com.eza.spicyex.ui.DoubleTapTrialBar(activity,
+        View bar = new com.flowify.ettea.ui.DoubleTapTrialBar(activity,
                 uiText("lyrics_double_tap_try_hint", "Double-tap anywhere to try it"),
                 uiText("lyrics_double_tap_trial_exit", "Exit"), styles, labels,
                 doubleTapEffect == null ? styles[0] : doubleTapEffect,
-                new com.eza.spicyex.ui.DoubleTapTrialBar.Listener() {
+                new com.flowify.ettea.ui.DoubleTapTrialBar.Listener() {
                     @Override public void onStyle(String style) {
                         doubleTapEffect = style;
-                        new com.eza.spicyex.settings.SettingsWriter(new SettingsStore(activity))
+                        new com.flowify.ettea.settings.SettingsWriter(new SettingsStore(activity))
                                 .put(Settings.DOUBLE_TAP_LIKE_EFFECT, style);
                         // Shown once right away, over the middle of the lyrics.
                         playTrialBurst(getWidth() / 2f, getHeight() * 0.4f);
@@ -6203,8 +6203,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private void playTrialBurst(float x, float y) {
         String mode = SpotifyCollectionAction.enabled(likedMode) ? likedMode : "Heart";
         String mark = "Heart".equals(doubleTapMark) || "Star".equals(doubleTapMark) ? doubleTapMark : mode;
-        playLikeBurst(com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(mark)
-                == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR, x, y);
+        playLikeBurst(com.flowify.ettea.ui.ActionIconDrawable.likedSongsKind(mark)
+                == com.flowify.ettea.ui.ActionIconDrawable.Kind.STAR, x, y);
         performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
     }
 
@@ -6228,8 +6228,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         String mode = SpotifyCollectionAction.enabled(likedMode) ? likedMode : "Heart";
         // The mark is looks only; the action is Liked Songs either way.
         String mark = "Heart".equals(doubleTapMark) || "Star".equals(doubleTapMark) ? doubleTapMark : mode;
-        boolean star = com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(mark)
-                == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR;
+        boolean star = com.flowify.ettea.ui.ActionIconDrawable.likedSongsKind(mark)
+                == com.flowify.ettea.ui.ActionIconDrawable.Kind.STAR;
         int[] here = new int[2];
         int[] from = new int[2];
         getLocationInWindow(here);
@@ -6259,7 +6259,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     void playLikeBurst(String style, boolean star, float x, float y) {
-        com.eza.spicyex.ui.LikeBursts.create(style, activity, star, true, x, y, dp(92))
+        com.flowify.ettea.ui.LikeBursts.create(style, activity, star, true, x, y, dp(92))
                 .play(this, ambientController == null ? null : ambientController.backgroundView(),
                         lyricsFrame);
     }
@@ -6286,8 +6286,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 .withEndAction(() -> likeButton.animate().scaleX(1f).scaleY(1f).setDuration(380)
                         .setInterpolator(new android.view.animation.OvershootInterpolator(1.4f)).start())
                 .start();
-        boolean star = com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(likedMode)
-                == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR;
+        boolean star = com.flowify.ettea.ui.ActionIconDrawable.likedSongsKind(likedMode)
+                == com.flowify.ettea.ui.ActionIconDrawable.Kind.STAR;
         int[] here = new int[2];
         int[] button = new int[2];
         getLocationInWindow(here);
@@ -6295,7 +6295,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         float cx = button[0] - here[0] + likeButton.getWidth() / 2f;
         float cy = button[1] - here[1] + likeButton.getHeight() / 2f;
         // Starts as the button springs back out, not while it is pressed.
-        postDelayed(() -> com.eza.spicyex.ui.LikeBursts.create(doubleTapEffect, activity, star,
+        postDelayed(() -> com.flowify.ettea.ui.LikeBursts.create(doubleTapEffect, activity, star,
                 false, cx, cy, Math.max(likeButton.getWidth(), dp(36)) * 1.2f)
                 .play(this, null, null), 90);
     }
@@ -6350,8 +6350,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void refreshLikedButton(SpotifyTrack track) {
         if (likeButton == null) return;
-        com.eza.spicyex.ui.ActionIconDrawable.Kind kind =
-                com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(likedMode);
+        com.flowify.ettea.ui.ActionIconDrawable.Kind kind =
+                com.flowify.ettea.ui.ActionIconDrawable.likedSongsKind(likedMode);
         // An ad (or any non-song, e.g. a podcast episode) can never be saved - showing the button
         // there just invites a tap that does nothing but pop the "unavailable" toast.
         if (kind == null || (track != null && !SpotifyCollectionAction.isSong(track))) {
@@ -6385,8 +6385,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private void applyLikedIconState(boolean saved) {
         if (likeButton == null) return;
-        com.eza.spicyex.ui.ActionIconDrawable.Kind kind =
-                com.eza.spicyex.ui.ActionIconDrawable.likedSongsKind(likedMode);
+        com.flowify.ettea.ui.ActionIconDrawable.Kind kind =
+                com.flowify.ettea.ui.ActionIconDrawable.likedSongsKind(likedMode);
         if (kind == null) {
             likeButton.setVisibility(View.GONE);
             lastLikedSaved = null;
@@ -6398,9 +6398,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         lastLikedSaved = saved;
         lastLikedKind = kind;
         float density = activity.getResources().getDisplayMetrics().density;
-        boolean star = kind == com.eza.spicyex.ui.ActionIconDrawable.Kind.STAR;
+        boolean star = kind == com.flowify.ettea.ui.ActionIconDrawable.Kind.STAR;
         int savedColor = star ? Color.rgb(255, 214, 10) : Color.rgb(255, 55, 95);
-        likeButton.setImageDrawable(new com.eza.spicyex.ui.ActionIconDrawable(
+        likeButton.setImageDrawable(new com.flowify.ettea.ui.ActionIconDrawable(
                 kind, saved ? savedColor : Color.rgb(232, 232, 238), density, saved));
         likeButton.setContentDescription(saved
                 ? uiText("lyrics_like_remove", "Remove from Liked Songs")
@@ -6432,10 +6432,10 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         updateRomanizationGlyph();
         romanToggle.setContentDescription(jp ? "Toggle Japanese reading" : cn ? "Toggle Chinese transliteration" : "Toggle transliteration");
         textFactory.styleIconChip(romanToggle, showRomanization()
-                && hasLayerOutput(com.eza.spicyex.lyrics.session.LayerKind.SOUND));
+                && hasLayerOutput(com.flowify.ettea.lyrics.session.LayerKind.SOUND));
         setToggleVisibility(translationToggle, renderConfig.translationEnabled && documentHasTranslationCandidate() ? View.VISIBLE : View.GONE);
         textFactory.styleIconChip(translationToggle, showTranslation()
-                && hasLayerOutput(com.eza.spicyex.lyrics.session.LayerKind.MEANING));
+                && hasLayerOutput(com.flowify.ettea.lyrics.session.LayerKind.MEANING));
         // A new track may settle while the frame scheduler sleeps. Sync authority badges here so
         // the previous track's AI mark never survives on an empty current layer.
         updateToggleSpinners();

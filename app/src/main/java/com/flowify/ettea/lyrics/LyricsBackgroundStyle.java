@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
 
 /** Stored background modes plus one-time compatibility with the removed boolean toggle. */
 public final class LyricsBackgroundStyle {

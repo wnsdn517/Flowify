@@ -1,9 +1,9 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.isBlank;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.safe;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.trackIdFromUri;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.isBlank;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.safe;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.trackIdFromUri;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -23,12 +23,12 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.R;
-import com.eza.spicyex.References;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.R;
+import com.flowify.ettea.References;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayDeque;
@@ -38,9 +38,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-import com.eza.spicyex.xposed.XpHooks;
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpReflect;
+import com.flowify.ettea.xposed.XpHooks;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpReflect;
 
 /** Owns Spotify activity takeover, entry injection, keepalive, and native shell root mount. */
 final class LyricsActivityTakeoverHook {

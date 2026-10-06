@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import android.net.Uri;
 
@@ -33,7 +33,7 @@ import okhttp3.Response;
  */
 public final class AppleTtmlMirrorAdapter {
     static final int ADAPTER_REVISION = 1;
-    private static final String USER_AGENT = "SpicyEX (https://github.com/wnsdn517/spicy-ex)";
+    private static final String USER_AGENT = "Flowify (https://github.com/wnsdn517/Flowify)";
     private static final String BETTER_LYRICS = "https://lyrics-api.boidu.dev/getLyrics";
     private static final String BINI_LYRICS = "https://lyrics-api.binimum.org/";
 

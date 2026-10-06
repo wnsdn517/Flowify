@@ -1,12 +1,12 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.LyricsLayoutEditController.SheetPlacement.BOTTOM;
-import static com.eza.spicyex.hooks.LyricsLayoutEditController.SheetPlacement.END;
-import static com.eza.spicyex.hooks.LyricsLayoutEditController.SheetPlacement.START;
-import static com.eza.spicyex.hooks.LyricsLayoutEditController.SheetPlacement.TOP;
+import static com.flowify.ettea.hooks.LyricsLayoutEditController.SheetPlacement.BOTTOM;
+import static com.flowify.ettea.hooks.LyricsLayoutEditController.SheetPlacement.END;
+import static com.flowify.ettea.hooks.LyricsLayoutEditController.SheetPlacement.START;
+import static com.flowify.ettea.hooks.LyricsLayoutEditController.SheetPlacement.TOP;
 import static org.junit.Assert.assertEquals;
 
-import com.eza.spicyex.hooks.LyricsLayoutEditController.SheetPlacement;
+import com.flowify.ettea.hooks.LyricsLayoutEditController.SheetPlacement;
 
 import org.junit.Test;
 

@@ -1,4 +1,4 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 import android.app.Activity;
 import android.content.Context;
@@ -8,9 +8,9 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Pair;
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.SpotifySymbolResolver;
-import com.eza.spicyex.xposed.XpReflect;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.SpotifySymbolResolver;
+import com.flowify.ettea.xposed.XpReflect;
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindField;
 import org.luckypray.dexkit.query.matchers.FieldMatcher;
@@ -40,7 +40,7 @@ public class References {
      * Legacy compatibility mirror of the currently captured Spotify access token. Never
      * authoritative: the process-wide token lifecycle state (token text, captured timestamp,
      * observed expiry, generation, tombstoning) is owned by the package-private
-     * SpotifyTokenStore/SpotifyTokenState seam in com.eza.spicyex.hooks, and this mirror is
+     * SpotifyTokenStore/SpotifyTokenState seam in com.flowify.ettea.hooks, and this mirror is
      * refreshed from it after every capture, restore, and invalidation. It is blank whenever no
      * usable (present, non-tombstoned, fresh) token exists. Read-only consumers must keep deciding
      * via their own settings (SEND_TOKEN) whether this value may be sent; capture itself never
@@ -116,7 +116,7 @@ public class References {
                     @SuppressWarnings("unchecked")
                     Map<String, String> md = (Map<String, String>) XpReflect.callMethod(track, "metadata");
                     if (uri != null && uri.startsWith("spotify:ad:")) {
-                        com.eza.spicyex.hooks.AdBreakInfo.noteMetadata(uri, md);
+                        com.flowify.ettea.hooks.AdBreakInfo.noteMetadata(uri, md);
                     }
 
                     String artistUri = firstNonBlankMeta(md, "artist_uri", "artist_uri:0");

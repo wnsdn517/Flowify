@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Activity;
 import android.animation.ArgbEvaluator;
@@ -28,14 +28,14 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.motion.MotionArtworkFinder;
-import com.eza.spicyex.motion.MotionArtworkView;
-import com.eza.spicyex.ui.ApplePlayerBackdrop;
-import com.eza.spicyex.ui.RollingTimeDrawable;
-import com.eza.spicyex.ui.ThinPlaybackBar;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.motion.MotionArtworkFinder;
+import com.flowify.ettea.motion.MotionArtworkView;
+import com.flowify.ettea.ui.ApplePlayerBackdrop;
+import com.flowify.ettea.ui.RollingTimeDrawable;
+import com.flowify.ettea.ui.ThinPlaybackBar;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.ArrayDeque;
 import java.util.WeakHashMap;
@@ -430,8 +430,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         float density = activity.getResources().getDisplayMetrics().density;
         int size = Math.round(ACTION_BUTTON_SIZE_DP * density);
         android.widget.ImageButton more = new android.widget.ImageButton(activity);
-        more.setImageDrawable(new com.eza.spicyex.ui.ActionIconDrawable(
-                com.eza.spicyex.ui.ActionIconDrawable.Kind.ELLIPSIS, Color.WHITE, density,
+        more.setImageDrawable(new com.flowify.ettea.ui.ActionIconDrawable(
+                com.flowify.ettea.ui.ActionIconDrawable.Kind.ELLIPSIS, Color.WHITE, density,
                 ACTION_ICON_SIZE_DP));
         more.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         int inset = Math.round((ACTION_BUTTON_SIZE_DP - ACTION_ICON_SIZE_DP) * 0.5f * density);
@@ -466,8 +466,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         float density = activity.getResources().getDisplayMetrics().density;
         int size = Math.round(ACTION_BUTTON_SIZE_DP * density);
         android.widget.ImageButton download = new android.widget.ImageButton(activity);
-        download.setImageDrawable(new com.eza.spicyex.ui.ActionIconDrawable(
-                com.eza.spicyex.ui.ActionIconDrawable.Kind.DOWNLOAD, Color.WHITE, density,
+        download.setImageDrawable(new com.flowify.ettea.ui.ActionIconDrawable(
+                com.flowify.ettea.ui.ActionIconDrawable.Kind.DOWNLOAD, Color.WHITE, density,
                 ACTION_ICON_SIZE_DP));
         download.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         int inset = Math.round((ACTION_BUTTON_SIZE_DP - ACTION_ICON_SIZE_DP) * 0.5f * density);
@@ -479,8 +479,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         download.setContentDescription("Download from YouTube Music");
         download.setOnClickListener(v -> {
             if (hook != null) {
-                com.eza.spicyex.hooks.YoutubeDownloader downloader =
-                        new com.eza.spicyex.hooks.YoutubeDownloader(activity, hook);
+                com.flowify.ettea.hooks.YoutubeDownloader downloader =
+                        new com.flowify.ettea.hooks.YoutubeDownloader(activity, hook);
                 downloader.downloadCurrentTrack();
             }
         });
@@ -679,8 +679,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             }
             if (icon.getDrawable() == null) {
                 if (state.fallbackDrawable == null) {
-                    state.fallbackDrawable = new com.eza.spicyex.ui.ActionIconDrawable(
-                            com.eza.spicyex.ui.ActionIconDrawable.Kind.PLUS, Color.WHITE,
+                    state.fallbackDrawable = new com.flowify.ettea.ui.ActionIconDrawable(
+                            com.flowify.ettea.ui.ActionIconDrawable.Kind.PLUS, Color.WHITE,
                             density, ACTION_ICON_SIZE_DP);
                 }
                 icon.setImageDrawable(state.fallbackDrawable);
@@ -877,7 +877,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
         long now = android.os.SystemClock.elapsedRealtime();
         if (!likeStateKnown || now - likeStateReadAt >= 500L) {
-            com.eza.spicyex.SpotifyTrack track = hook == null ? null : hook.getCurrentTrackSafely();
+            com.flowify.ettea.SpotifyTrack track = hook == null ? null : hook.getCurrentTrackSafely();
             liked = track != null && track.saved;
             likeStateReadAt = now;
             likeStateKnown = true;
@@ -916,8 +916,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         void apply(ImageView button, boolean liked, float density) {
             int color = liked ? 0xFF1ED760 : Color.WHITE;
             if (styledDrawable == null || styledColor != color) {
-                styledDrawable = new com.eza.spicyex.ui.ActionIconDrawable(
-                        com.eza.spicyex.ui.ActionIconDrawable.Kind.HEART, color, density,
+                styledDrawable = new com.flowify.ettea.ui.ActionIconDrawable(
+                        com.flowify.ettea.ui.ActionIconDrawable.Kind.HEART, color, density,
                         ACTION_ICON_SIZE_DP);
                 styledColor = color;
             }
@@ -1021,7 +1021,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         long now = android.os.SystemClock.elapsedRealtime();
         if (now - motionSyncAt < 250L) return;
         motionSyncAt = now;
-        com.eza.spicyex.SpotifyTrack track = hook.getCurrentTrackSafely();
+        com.flowify.ettea.SpotifyTrack track = hook.getCurrentTrackSafely();
         String uri = track == null || track.uri == null ? "" : track.uri;
         if (uri.equals(motionTrackUri)) return;
         motionTrackUri = uri;
@@ -1517,7 +1517,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             // Retry promptly during player startup; once available, refresh once a second.
             long now = android.os.SystemClock.elapsedRealtime();
             if (albumName == null || now - albumReadAt >= 250L) {
-                com.eza.spicyex.SpotifyTrack track = hook == null ? null : hook.getCurrentTrackSafely();
+                com.flowify.ettea.SpotifyTrack track = hook == null ? null : hook.getCurrentTrackSafely();
                 String nextUri = track == null || track.uri == null ? "" : track.uri;
                 if (!nextUri.equals(albumTrackUri)) {
                     albumTrackUri = nextUri;
@@ -1598,7 +1598,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         ViewGroup footer = (ViewGroup) feedback.getParent();
         for (int i = 0; i < footer.getChildCount(); i++) {
             View child = footer.getChildAt(i);
-            if (!(child instanceof com.eza.spicyex.lyrics.LiveLyricCardView)) continue;
+            if (!(child instanceof com.flowify.ettea.lyrics.LiveLyricCardView)) continue;
             if (i < footer.indexOfChild(feedback)) {
                 ViewGroup.LayoutParams params = child.getLayoutParams();
                 footer.removeView(child);
@@ -1824,7 +1824,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
         if (now - playbackReadAt < 50L) return;
         playbackReadAt = now;
-        com.eza.spicyex.SpotifyTrack track = hook.getCurrentTrackSafely();
+        com.flowify.ettea.SpotifyTrack track = hook.getCurrentTrackSafely();
         if (track == null || track.duration <= 0L) {
             playbackDurationMs = 0L;
             playbackBar.setProgress(0f);

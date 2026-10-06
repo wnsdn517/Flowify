@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 /** Derived enrichment the catalog keeps per lyric body. */
 public enum ArtifactKind {

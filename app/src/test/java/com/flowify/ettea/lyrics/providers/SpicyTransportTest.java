@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;

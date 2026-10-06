@@ -1,8 +1,8 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.sideSystemPadding;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.topSystemPadding;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.sideSystemPadding;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.topSystemPadding;
 
 import android.app.Activity;
 import android.content.Context;
@@ -33,15 +33,15 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.lyrics.ArtGestureArbiter;
-import com.eza.spicyex.lyrics.LyricsTextFactory;
-import com.eza.spicyex.lyrics.PanelMediaMode;
-import com.eza.spicyex.lyrics.cache.SpotifyArtworkCache;
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.Motion;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.lyrics.ArtGestureArbiter;
+import com.flowify.ettea.lyrics.LyricsTextFactory;
+import com.flowify.ettea.lyrics.PanelMediaMode;
+import com.flowify.ettea.lyrics.cache.SpotifyArtworkCache;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.Motion;
 
 import java.io.IOException;
 
@@ -219,7 +219,7 @@ final class TrackInfoReadoutController {
     private final LyricsHost host;
     private final SpotifyPlusConfig config;
     /** Frame fit the loaded cover was prepared with (Labs); a change re-prepares it. */
-    private String artFrameFit = com.eza.spicyex.ui.ArtworkFrameFit.MODE_OFF;
+    private String artFrameFit = com.flowify.ettea.ui.ArtworkFrameFit.MODE_OFF;
     private final LyricsJumpToCurrentController jumpController;
     private LyricsSkipGapController skipGapController;
     /** Room to keep free beside the top controls; null keeps the rail default. */
@@ -1075,9 +1075,9 @@ final class TrackInfoReadoutController {
     private String readArtFrameFit() {
         try {
             String mode = config.get(Settings.ARTWORK_FRAME_FIT);
-            return mode == null ? com.eza.spicyex.ui.ArtworkFrameFit.MODE_OFF : mode;
+            return mode == null ? com.flowify.ettea.ui.ArtworkFrameFit.MODE_OFF : mode;
         } catch (Throwable ignored) {
-            return com.eza.spicyex.ui.ArtworkFrameFit.MODE_OFF;
+            return com.flowify.ettea.ui.ArtworkFrameFit.MODE_OFF;
         }
     }
 
@@ -1777,7 +1777,7 @@ final class TrackInfoReadoutController {
             int targetPx = large ? (fromNetworkCache ? size : raw.getWidth()) : size;
             Bitmap scaled = roundBitmap(raw, targetPx, 0f);
             // The clip's radius is in view pixels; the fit works in the view's proportions.
-            Bitmap fitted = com.eza.spicyex.ui.ArtworkFrameFit.apply(scaled, frameFit,
+            Bitmap fitted = com.flowify.ettea.ui.ArtworkFrameFit.apply(scaled, frameFit,
                     size <= 0 ? 0f : radiusPx / size);
             if (fitted != scaled) scaled.recycle();
             return fitted;
@@ -1872,7 +1872,7 @@ final class TrackInfoReadoutController {
             ART_NETWORK_CACHE.clear();
         }
         ART_NETWORK_FETCH_IN_FLIGHT.clear();
-        com.eza.spicyex.lyrics.GlowFlexbox.clearBlurCache();
+        com.flowify.ettea.lyrics.GlowFlexbox.clearBlurCache();
     }
 
     private static void fadeInArt(ImageView view, Bitmap bitmap) {

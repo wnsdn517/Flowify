@@ -1,10 +1,10 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
-import com.eza.spicyex.lyrics.catalog.CatalogLegacyImport.LegacyPick;
-import com.eza.spicyex.lyrics.catalog.CatalogResolver.Resolution;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.ProviderStatus;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SelectionMode;
-import com.eza.spicyex.lyrics.catalog.CatalogSource.SourceId;
+import com.flowify.ettea.lyrics.catalog.CatalogLegacyImport.LegacyPick;
+import com.flowify.ettea.lyrics.catalog.CatalogResolver.Resolution;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.ProviderStatus;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SelectionMode;
+import com.flowify.ettea.lyrics.catalog.CatalogSource.SourceId;
 
 import java.util.ArrayList;
 import java.util.Collections;

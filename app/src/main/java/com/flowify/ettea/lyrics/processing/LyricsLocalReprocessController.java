@@ -1,7 +1,7 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.RomanizationOptions;
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.language.RomanizationOptions;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 /** Serializes local romanization reprocess requests and coalesces one pending retry. */
 public final class LyricsLocalReprocessController {

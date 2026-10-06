@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.language.MappedKuromojiDictionaries;
+import com.flowify.ettea.lyrics.language.MappedKuromojiDictionaries;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

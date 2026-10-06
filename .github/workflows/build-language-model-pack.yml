@@ -19,7 +19,7 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout spicy-ex
+      - name: Checkout Flowify
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
@@ -52,7 +52,7 @@ jobs:
           tag_name: ${{ github.event.inputs.version }}
           name: ${{ github.event.inputs.release_name }} ${{ github.event.inputs.version }}
           body: |
-            Language model pack for SpicyEX.
+            Language model pack for Flowify.
 
             **Files included:**
             - jmdict/JmdictFurigana.txt.gz

@@ -1,4 +1,4 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 import android.app.Application;
 import android.content.Context;
@@ -6,15 +6,15 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
-import com.eza.spicyex.BuildConfig;
-import com.eza.spicyex.BuildStamp;
-import com.eza.spicyex.CurrentLyricState;
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SettingsStore;
-import com.eza.spicyex.lyrics.providers.LyricsFetchDiagnosticsState;
-import com.eza.spicyex.lyrics.ai.AiEndpoint;
-import com.eza.spicyex.lyrics.session.LayerKind;
+import com.flowify.ettea.BuildConfig;
+import com.flowify.ettea.BuildStamp;
+import com.flowify.ettea.CurrentLyricState;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SettingsStore;
+import com.flowify.ettea.lyrics.providers.LyricsFetchDiagnosticsState;
+import com.flowify.ettea.lyrics.ai.AiEndpoint;
+import com.flowify.ettea.lyrics.session.LayerKind;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -24,7 +24,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonElement;
 
 import java.time.Instant;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 /** Maps allowlisted Spotify-process state to the shared product-neutral intake envelope. */
 public final class SpicyDiagnosticReportFactory {
@@ -239,9 +239,9 @@ public final class SpicyDiagnosticReportFactory {
      */
     static JsonObject aiBlock(String providerChoice, boolean usesOpenAiWire, String endpointHost,
                                String model, String readiness, String probeResultToken,
-                               com.eza.spicyex.lyrics.ai.AiModelProbe.Trace trace,
-                               com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot meaningState,
-                               com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot soundState) {
+                               com.flowify.ettea.lyrics.ai.AiModelProbe.Trace trace,
+                               com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot meaningState,
+                               com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot soundState) {
         JsonObject ai = new JsonObject();
         ai.addProperty("enabled", !"disabled".equals(readiness));
         ai.addProperty("provider", boundedToken(providerChoice, 32));
@@ -253,7 +253,7 @@ public final class SpicyDiagnosticReportFactory {
         if (!probeResultToken.isEmpty()) {
             ai.addProperty("probe", boundedToken(probeResultToken, 96));
         }
-        if (trace != null && trace != com.eza.spicyex.lyrics.ai.AiModelProbe.Trace.EMPTY
+        if (trace != null && trace != com.flowify.ettea.lyrics.ai.AiModelProbe.Trace.EMPTY
                 && (trace.hasRequest() || trace.hasResponse())) {
             JsonObject exchange = new JsonObject();
             exchange.addProperty("request",
@@ -278,7 +278,7 @@ public final class SpicyDiagnosticReportFactory {
     }
 
     private static JsonArray attemptsJson(
-            com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot state) {
+            com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot state) {
         JsonArray attempts = new JsonArray();
         if (state == null) return attempts;
         addAttempt(attempts, "current", state.current, null, null);
@@ -289,9 +289,9 @@ public final class SpicyDiagnosticReportFactory {
     }
 
     private static void addAttempt(JsonArray attempts, String role,
-                                   com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt attempt,
-                                   com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt duplicateA,
-                                   com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt duplicateB) {
+                                   com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt attempt,
+                                   com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt duplicateA,
+                                   com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt duplicateB) {
         if (attempt == null || !attempt.hasPayload()
                 || attempt == duplicateA || attempt == duplicateB) return;
         JsonObject json = new JsonObject();
@@ -305,14 +305,14 @@ public final class SpicyDiagnosticReportFactory {
         attempts.add(json);
     }
 
-    private static com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt lastFailure(
-            com.eza.spicyex.lyrics.ai.AiRequestLiveState.Snapshot state) {
+    private static com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt lastFailure(
+            com.flowify.ettea.lyrics.ai.AiRequestLiveState.Snapshot state) {
         if (state == null) return null;
         return state.current.isFailure() ? state.current : state.previousFailure;
     }
 
     private static JsonObject failureJson(
-            com.eza.spicyex.lyrics.ai.AiRequestLiveState.Attempt failure) {
+            com.flowify.ettea.lyrics.ai.AiRequestLiveState.Attempt failure) {
         if (failure == null || !failure.isFailure()) return null;
         JsonObject json = new JsonObject();
         json.addProperty("reason", boundedToken(failure.failureToken, 96));
@@ -322,10 +322,10 @@ public final class SpicyDiagnosticReportFactory {
 
     /** Gathers the live AI state for {@link #aiBlock}; thin on purpose and untestable off-device. */
     private static JsonObject aiDiagnostics(Context context, SettingsStore settings) {
-        com.eza.spicyex.lyrics.ai.AiSettings ai = new com.eza.spicyex.lyrics.ai.AiSettings(
-                settings, com.eza.spicyex.lyrics.ai.AiCredentialStore.create(context));
-        com.eza.spicyex.lyrics.ai.AiModelProbe.Result lastProbe =
-                com.eza.spicyex.lyrics.ai.AiLastProbe.get();
+        com.flowify.ettea.lyrics.ai.AiSettings ai = new com.flowify.ettea.lyrics.ai.AiSettings(
+                settings, com.flowify.ettea.lyrics.ai.AiCredentialStore.create(context));
+        com.flowify.ettea.lyrics.ai.AiModelProbe.Result lastProbe =
+                com.flowify.ettea.lyrics.ai.AiLastProbe.get();
         String durableToken = ai.lastProbeFailureToken();
         String probeToken = !durableToken.isEmpty() ? durableToken
                 : lastProbe != null && lastProbe.ok ? "ok" : "";
@@ -333,8 +333,8 @@ public final class SpicyDiagnosticReportFactory {
                 AiEndpoint.hostOf(ai.endpoint()), ai.modelName(),
                 ai.readiness().name().toLowerCase(java.util.Locale.ROOT), probeToken,
                 lastProbe == null ? null : lastProbe.trace,
-                com.eza.spicyex.lyrics.ai.AiRequestLiveState.diagnosticSnapshot(LayerKind.MEANING),
-                com.eza.spicyex.lyrics.ai.AiRequestLiveState.diagnosticSnapshot(LayerKind.SOUND));
+                com.flowify.ettea.lyrics.ai.AiRequestLiveState.diagnosticSnapshot(LayerKind.MEANING),
+                com.flowify.ettea.lyrics.ai.AiRequestLiveState.diagnosticSnapshot(LayerKind.SOUND));
     }
 
     /**

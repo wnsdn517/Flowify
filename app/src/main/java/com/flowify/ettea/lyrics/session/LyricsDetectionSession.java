@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.eza.spicyex.lyrics.language.LatinLanguageGate;
-import com.eza.spicyex.lyrics.cache.ProcessedLyricsCache;
+import com.flowify.ettea.lyrics.language.LatinLanguageGate;
+import com.flowify.ettea.lyrics.cache.ProcessedLyricsCache;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -277,7 +277,7 @@ public final class LyricsDetectionSession {
         StringBuilder text = new StringBuilder();
         boolean unresolved = false;
         for (DetectionResult row : rows) {
-            if (row.scriptClass != com.eza.spicyex.lyrics.language.ScriptClassifier.ScriptClass.LATIN) continue;
+            if (row.scriptClass != com.flowify.ettea.lyrics.language.ScriptClassifier.ScriptClass.LATIN) continue;
             if (!row.hasLanguage() && row.status != DetectionStatus.ERROR) unresolved = true;
             if (row.sourceText.trim().isEmpty() || !seen.add(row.sourceText)) continue;
             if (text.length() > 0) text.append('\n');
@@ -408,12 +408,12 @@ public final class LyricsDetectionSession {
 
         @Override
         public DetectionResult restoreText(Context context, String text) {
-            return com.eza.spicyex.lyrics.language.ProviderTextDetectionStore.get(context, text);
+            return com.flowify.ettea.lyrics.language.ProviderTextDetectionStore.get(context, text);
         }
 
         @Override
         public boolean saveText(Context context, String text, DetectionResult result) {
-            com.eza.spicyex.lyrics.language.ProviderTextDetectionStore.put(context, text, result);
+            com.flowify.ettea.lyrics.language.ProviderTextDetectionStore.put(context, text, result);
             return true;
         }
     }

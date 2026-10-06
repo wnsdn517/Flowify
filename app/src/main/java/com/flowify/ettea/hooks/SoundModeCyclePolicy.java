@@ -1,8 +1,8 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
-import static com.eza.spicyex.lyrics.LyricUtils.safe;
+import static com.flowify.ettea.lyrics.LyricUtils.safe;
 
 /**
  * What a transliteration tap may do to the Sound layer, decided without a view.

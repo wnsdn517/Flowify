@@ -1,6 +1,6 @@
 // Double-tap like style "Classic" (Settings.DOUBLE_TAP_LIKE_EFFECT), kept as it was
 // designed at 763dd7f9. See LikeBursts for the list.
-package com.eza.spicyex.ui;
+package com.flowify.ettea.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;

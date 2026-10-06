@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.session.DetectionResult;
-import com.eza.spicyex.lyrics.session.DetectionEvidence;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.lyrics.session.DetectionResult;
+import com.flowify.ettea.lyrics.session.DetectionEvidence;
+import com.flowify.ettea.xposed.XpLog;
 import org.apache.tika.langdetect.charsoup.core.CharSoupModel;
 import org.apache.tika.langdetect.charsoup.core.FeatureExtractor;
 import java.util.HashMap;

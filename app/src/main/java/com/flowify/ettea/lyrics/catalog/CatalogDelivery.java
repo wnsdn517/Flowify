@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.catalog;
+package com.flowify.ettea.lyrics.catalog;
 
 /** Exact provider provenance and the outcome of its one catalog write attempt. */
 public final class CatalogDelivery {

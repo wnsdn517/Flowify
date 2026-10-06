@@ -1,4 +1,4 @@
-package com.eza.spicyex;
+package com.flowify.ettea;
 
 /**
  * The fork's version as shown and reported: {@code nightly 2.0.0 (versionCode) [C172B918_20261004]} -

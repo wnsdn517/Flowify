@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
 /**
  * Pure breakpoint planner for adaptive word-row wrapping. Given the measured outer widths of the

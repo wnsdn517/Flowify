@@ -1,4 +1,4 @@
-package com.eza.spicyex.spotifyconnect;
+package com.flowify.ettea.spotifyconnect;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -14,9 +14,9 @@ import android.os.ResultReceiver;
  * loaded reflectively by the common (lite/full) source set.
  */
 public final class ConnectEntry {
-    private static final String PACKAGE = "com.eza.spicyex";
-    private static final String RECEIVER = "com.eza.spicyex.player.PlayerWarmReceiver";
-    private static final String LOGIN_ACTIVITY = "com.eza.spicyex.player.WebLoginActivity";
+    private static final String PACKAGE = "com.flowify.ettea";
+    private static final String RECEIVER = "com.flowify.ettea.player.PlayerWarmReceiver";
+    private static final String LOGIN_ACTIVITY = "com.flowify.ettea.player.WebLoginActivity";
     private static final String EXTRA_WARM_REPLY = "warm_reply";
     private static final String EXTRA_UI_LANGUAGE = "ui_language";
     private static final String EXTRA_AD_MODE = "ad_mode";
@@ -34,7 +34,7 @@ public final class ConnectEntry {
         // launches WebPlayerService; without this, flipping the switch did nothing observable
         // and the only ways to ever start it were the settings "Play test track" row or hitting
         // the injected picker button inside an already-open Spotify Connect dialog.
-        if (enabled) warmUp(context, null); else send(context, "com.eza.spicyex.player.STOP", null);
+        if (enabled) warmUp(context, null); else send(context, "com.flowify.ettea.player.STOP", null);
     }
 
     public static void warmUp(Context context, ResultReceiver reply) {
@@ -49,7 +49,7 @@ public final class ConnectEntry {
     /** networkRecovery mirrors Settings.CONNECT_NETWORK_RECOVERY for the player. */
     public static void warmUp(Context context, ResultReceiver reply, boolean needDeviceId,
                               boolean networkRecovery) {
-        Intent command = new Intent("com.eza.spicyex.player.WARMUP");
+        Intent command = new Intent("com.flowify.ettea.player.WARMUP");
         if (reply != null) command.putExtra(EXTRA_WARM_REPLY, reply);
         // Whose process the reply lives in: the player follows Spotify's own lifetime through
         // it (WebPlayerService.watchSpotify), and only Spotify's.
@@ -79,7 +79,7 @@ public final class ConnectEntry {
             } catch (Throwable ignored) {
             }
         }
-        Intent command = new Intent("com.eza.spicyex.player.LOGIN");
+        Intent command = new Intent("com.flowify.ettea.player.LOGIN");
         if (reply != null) command.putExtra(EXTRA_WARM_REPLY, reply);
         send(context, command);
     }
@@ -116,9 +116,9 @@ public final class ConnectEntry {
     /** The Spicy EX interface language (a module setting, not the system locale). */
     private static String uiLanguage(Context context) {
         try {
-            String stored = com.eza.spicyex.SpotifyPlusConfig.from(context)
-                    .get(com.eza.spicyex.Settings.UI_LANGUAGE);
-            return com.eza.spicyex.ui.UiLanguage.strings(context, stored).selectedLanguage();
+            String stored = com.flowify.ettea.SpotifyPlusConfig.from(context)
+                    .get(com.flowify.ettea.Settings.UI_LANGUAGE);
+            return com.flowify.ettea.ui.UiLanguage.strings(context, stored).selectedLanguage();
         } catch (Throwable t) {
             return null;
         }
@@ -128,9 +128,9 @@ public final class ConnectEntry {
      *  AudioTracks), so it gets the same ad settings with every command. */
     private static void putAdSettings(Context context, Intent command) {
         try {
-            com.eza.spicyex.SpotifyPlusConfig config = com.eza.spicyex.SpotifyPlusConfig.from(context);
-            command.putExtra(EXTRA_AD_MODE, config.get(com.eza.spicyex.Settings.AD_MODE));
-            command.putExtra(EXTRA_AD_MUSIC_THEME, config.get(com.eza.spicyex.Settings.AD_MUSIC_THEME));
+            com.flowify.ettea.SpotifyPlusConfig config = com.flowify.ettea.SpotifyPlusConfig.from(context);
+            command.putExtra(EXTRA_AD_MODE, config.get(com.flowify.ettea.Settings.AD_MODE));
+            command.putExtra(EXTRA_AD_MUSIC_THEME, config.get(com.flowify.ettea.Settings.AD_MUSIC_THEME));
         } catch (Throwable ignored) {
         }
     }

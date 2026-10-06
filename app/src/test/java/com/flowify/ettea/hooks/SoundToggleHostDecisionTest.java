@@ -1,10 +1,10 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 import org.junit.Test;
 

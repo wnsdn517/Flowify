@@ -1,6 +1,6 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -13,8 +13,8 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 
 
-import com.eza.spicyex.xposed.XpLog;
-import com.eza.spicyex.xposed.XpRes;
+import com.flowify.ettea.xposed.XpLog;
+import com.flowify.ettea.xposed.XpRes;
 
 final class NativeIconButtons {
     private NativeIconButtons() {

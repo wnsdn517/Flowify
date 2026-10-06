@@ -1,4 +1,4 @@
-package com.eza.spicyex.diagnostics;
+package com.flowify.ettea.diagnostics;
 
 import org.junit.Test;
 
@@ -60,7 +60,7 @@ public class SpicySetupCheckPolicyTest {
     public void genericXposedOrModuleLoaderEvidenceRemainsUnknown() {
         assertEquals("xposed_unknown", SpicySetupCheckPolicy.installationMode(
                 false, false, 82,
-                "dalvik.system.PathClassLoader", "/data/app/com.eza.spicyex/base.apk"));
+                "dalvik.system.PathClassLoader", "/data/app/com.flowify.ettea/base.apk"));
         assertEquals("xposed_unknown", SpicySetupCheckPolicy.installationMode(
                 false, false, 82, "/data/app/org.lsposed.manager/base.apk"));
     }

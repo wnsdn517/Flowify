@@ -1,4 +1,4 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -15,10 +15,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.lyrics.GlyphIconDrawable;
-import com.eza.spicyex.ui.ActionIconDrawable;
-import com.eza.spicyex.ui.ActionIconDrawable.Kind;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.lyrics.GlyphIconDrawable;
+import com.flowify.ettea.ui.ActionIconDrawable;
+import com.flowify.ettea.ui.ActionIconDrawable.Kind;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -51,10 +51,10 @@ public final class PanelStyle {
      */
     public static void useAlbumAccent(String extractedColor) {
         COL_ACCENT = COL_ACCENT_NEUTRAL;
-        com.eza.spicyex.ui.PanelDialog.COL_ACCENT = COL_ACCENT;
+        com.flowify.ettea.ui.PanelDialog.COL_ACCENT = COL_ACCENT;
         if (extractedColor == null || extractedColor.trim().isEmpty()) return;
         try {
-            int seed = com.eza.spicyex.lyrics.LyricVisuals.parseSpotifyExtractedColor(extractedColor);
+            int seed = com.flowify.ettea.lyrics.LyricVisuals.parseSpotifyExtractedColor(extractedColor);
             float[] hsv = new float[3];
             Color.colorToHSV(seed, hsv);
             if (hsv[1] < 0.12f) return; // grey art: no colour to take, keep the default
@@ -63,7 +63,7 @@ public final class PanelStyle {
             COL_ACCENT = Color.HSVToColor(hsv);
         } catch (Throwable ignored) {
         } finally {
-            com.eza.spicyex.ui.PanelDialog.COL_ACCENT = COL_ACCENT;
+            com.flowify.ettea.ui.PanelDialog.COL_ACCENT = COL_ACCENT;
         }
     }
 
@@ -142,7 +142,7 @@ public final class PanelStyle {
 
     /** Spotify Mix, the typeface the lyrics screen is set in; null before it has loaded. */
     private static Typeface panelTypeface() {
-        java.lang.ref.WeakReference<Typeface> ref = com.eza.spicyex.References.beautifulFont;
+        java.lang.ref.WeakReference<Typeface> ref = com.flowify.ettea.References.beautifulFont;
         return ref == null ? null : ref.get();
     }
 

@@ -1,4 +1,4 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -11,8 +11,8 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
-import com.eza.spicyex.SpotifyTrack;
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.SpotifyTrack;
+import com.flowify.ettea.xposed.XpLog;
 
 import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.ServiceList;

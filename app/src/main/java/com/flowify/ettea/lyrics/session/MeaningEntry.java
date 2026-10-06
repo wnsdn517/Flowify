@@ -1,4 +1,4 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 /** Translation output for one canonical row. Never carries reading text. */
 public final class MeaningEntry implements LayerEntry {

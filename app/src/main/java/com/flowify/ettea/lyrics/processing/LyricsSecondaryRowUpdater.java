@@ -1,12 +1,12 @@
-package com.eza.spicyex.lyrics.processing;
+package com.flowify.ettea.lyrics.processing;
 
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
 import android.view.ViewGroup;
-import com.eza.spicyex.lyrics.AppliedLine;
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.LyricsLineViewState;
-import com.eza.spicyex.lyrics.LyricsShellSettings;
+import com.flowify.ettea.lyrics.AppliedLine;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.LyricsLineViewState;
+import com.flowify.ettea.lyrics.LyricsShellSettings;
 
 /**
  * Applies line-level secondary romanization/translation results to already parsed rows.

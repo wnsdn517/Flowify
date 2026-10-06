@@ -1,10 +1,10 @@
-package com.eza.spicyex.settings;
+package com.flowify.ettea.settings;
 
 import static org.junit.Assert.assertEquals;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.RankingMode;
-import com.eza.spicyex.lyrics.session.LyricsSourcePreferences.Source;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences.RankingMode;
+import com.flowify.ettea.lyrics.session.LyricsSourcePreferences.Source;
 
 import org.junit.Test;
 

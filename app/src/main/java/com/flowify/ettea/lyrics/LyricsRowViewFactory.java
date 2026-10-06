@@ -1,8 +1,8 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.CjkLineBreak;
-import com.eza.spicyex.lyrics.language.ReadingLanguagePolicy;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.CjkLineBreak;
+import com.flowify.ettea.lyrics.language.ReadingLanguagePolicy;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -30,8 +30,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
-import com.eza.spicyex.lyrics.reading.ReadingModels.TimedReadingUnit;
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import com.flowify.ettea.lyrics.reading.ReadingModels.TimedReadingUnit;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 /** Builds mounted Android views for applied lyric rows. */
 public final class LyricsRowViewFactory {
@@ -577,11 +577,11 @@ public final class LyricsRowViewFactory {
                 LyricsSyllableViewState.setRomanizedTextView(seg, romanWord);
                 if (adaptiveRomanRanges != null) {
                     int start = seg.canonicalStartCp >= 0
-                            ? com.eza.spicyex.lyrics.reading.CodePointRanges
+                            ? com.flowify.ettea.lyrics.reading.CodePointRanges
                             .codePointOffsetToUtf16Index(line.text, seg.canonicalStartCp)
                             : sourceCursorUtf16;
                     int end = seg.canonicalEndCp > seg.canonicalStartCp
-                            ? com.eza.spicyex.lyrics.reading.CodePointRanges
+                            ? com.flowify.ettea.lyrics.reading.CodePointRanges
                             .codePointOffsetToUtf16Index(line.text, seg.canonicalEndCp)
                             : Math.min(line.text == null ? 0 : line.text.length(),
                             start + (seg.text == null ? 0 : seg.text.length()));

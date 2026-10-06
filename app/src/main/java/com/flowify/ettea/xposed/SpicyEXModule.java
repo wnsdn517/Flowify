@@ -1,4 +1,4 @@
-package com.eza.spicyex.xposed;
+package com.flowify.ettea.xposed;
 
 import android.app.Activity;
 import android.app.Application;
@@ -8,11 +8,11 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.References;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.hooks.NativeSpicyLyricsHook;
-import com.eza.spicyex.lyrics.session.LyricsMemoryPressure;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.References;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.hooks.NativeSpicyLyricsHook;
+import com.flowify.ettea.lyrics.session.LyricsMemoryPressure;
 
 import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface;
@@ -103,7 +103,7 @@ public final class SpicyEXModule extends XposedModule {
                     Context context = (Context) p.args[0];
                     Diagnostics.initialize(context);
                     LyricsMemoryPressure.install(context);
-                    com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor.attachContext(context);
+                    com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor.attachContext(context);
                     Diagnostics.event("bootstrap", "application_attach",
                             Diagnostics.context("process", Application.getProcessName()));
                     cleanUpCache(context);

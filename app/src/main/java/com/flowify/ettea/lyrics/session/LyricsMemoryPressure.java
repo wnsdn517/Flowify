@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
 import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.res.Configuration;
 
-import com.eza.spicyex.lyrics.language.LatinLanguageGate;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.LatinLanguageGate;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
 
-import com.eza.spicyex.xposed.XpLog;
+import com.flowify.ettea.xposed.XpLog;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -81,7 +81,7 @@ public final class LyricsMemoryPressure {
         } catch (Throwable ignored) {
         }
         try {
-            com.eza.spicyex.lyrics.language.ProviderTextDetectionStore.trimMemory();
+            com.flowify.ettea.lyrics.language.ProviderTextDetectionStore.trimMemory();
         } catch (Throwable ignored) {
         }
         for (Reclaimer reclaimer : RECLAIMERS) {

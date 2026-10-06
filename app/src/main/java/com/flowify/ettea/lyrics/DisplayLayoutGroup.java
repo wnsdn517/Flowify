@@ -1,11 +1,11 @@
-package com.eza.spicyex.lyrics;
+package com.flowify.ettea.lyrics;
 
-import com.eza.spicyex.lyrics.language.JapaneseReadingPolicyModels;
-import com.eza.spicyex.lyrics.language.JapaneseScriptRunGrouping;
-import com.eza.spicyex.lyrics.language.SpicyJapaneseChineseProcessor;
-import com.eza.spicyex.lyrics.language.SpicyTextDetection;
+import com.flowify.ettea.lyrics.language.JapaneseReadingPolicyModels;
+import com.flowify.ettea.lyrics.language.JapaneseScriptRunGrouping;
+import com.flowify.ettea.lyrics.language.SpicyJapaneseChineseProcessor;
+import com.flowify.ettea.lyrics.language.SpicyTextDetection;
 
-import com.eza.spicyex.lyrics.reading.CodePointRanges;
+import com.flowify.ettea.lyrics.reading.CodePointRanges;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

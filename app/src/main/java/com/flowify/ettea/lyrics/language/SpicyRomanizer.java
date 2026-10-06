@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.language;
+package com.flowify.ettea.lyrics.language;
 
-import com.eza.spicyex.lyrics.SyllableSegment;
+import com.flowify.ettea.lyrics.SyllableSegment;
 
 
 import java.text.Normalizer;
@@ -11,12 +11,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 
-import com.eza.spicyex.lyrics.reading.DefaultCanonicalLineBuilder;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.CanonicalSpanMapping;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParagraphProvenance;
-import com.eza.spicyex.lyrics.reading.ReadingModels.ParsedLine;
-import com.eza.spicyex.lyrics.reading.ReadingModels.SourceSpan;
+import com.flowify.ettea.lyrics.reading.DefaultCanonicalLineBuilder;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.CanonicalSpanMapping;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParagraphProvenance;
+import com.flowify.ettea.lyrics.reading.ReadingModels.ParsedLine;
+import com.flowify.ettea.lyrics.reading.ReadingModels.SourceSpan;
 
 /**
  * Android port of Spicy fork romanization behavior.

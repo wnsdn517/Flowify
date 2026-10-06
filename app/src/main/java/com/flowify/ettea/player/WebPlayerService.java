@@ -1,4 +1,4 @@
-package com.eza.spicyex.player;
+package com.flowify.ettea.player;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -38,7 +38,7 @@ import java.util.Map;
 
 /**
  * Headless Spotify web player on a plain system WebView. The Spotify-side bridge, the warm
- * receiver and the settings UI all reach it through the com.eza.spicyex.player.* broadcast
+ * receiver and the settings UI all reach it through the com.flowify.ettea.player.* broadcast
  * actions below plus the warm-reply codes.
  *
  * <p>Why WebView rather than GeckoView, which an earlier revision used: Chromium never
@@ -61,22 +61,22 @@ public final class WebPlayerService extends Service {
 
     // The wire protocol. PlayerWarmReceiver and ConnectEntry send these verbatim, so any
     // rename has to land in all three files at once.
-    public static final String ACTION_PLAY = "com.eza.spicyex.player.PLAY";
-    public static final String ACTION_PAUSE = "com.eza.spicyex.player.PAUSE";
-    public static final String ACTION_TOGGLE = "com.eza.spicyex.player.TOGGLE";
-    public static final String ACTION_NEXT = "com.eza.spicyex.player.NEXT";
-    public static final String ACTION_PREVIOUS = "com.eza.spicyex.player.PREVIOUS";
-    public static final String ACTION_SEEK = "com.eza.spicyex.player.SEEK";
-    public static final String ACTION_VOLUME = "com.eza.spicyex.player.VOLUME";
-    public static final String ACTION_OPEN = "com.eza.spicyex.player.OPEN";
-    public static final String ACTION_SEARCH = "com.eza.spicyex.player.SEARCH";
-    public static final String ACTION_WARMUP = "com.eza.spicyex.player.WARMUP";
-    public static final String ACTION_LOGIN = "com.eza.spicyex.player.LOGIN";
-    public static final String ACTION_STOP = "com.eza.spicyex.player.STOP";
-    public static final String ACTION_RECONNECT = "com.eza.spicyex.player.RECONNECT";
+    public static final String ACTION_PLAY = "com.flowify.ettea.player.PLAY";
+    public static final String ACTION_PAUSE = "com.flowify.ettea.player.PAUSE";
+    public static final String ACTION_TOGGLE = "com.flowify.ettea.player.TOGGLE";
+    public static final String ACTION_NEXT = "com.flowify.ettea.player.NEXT";
+    public static final String ACTION_PREVIOUS = "com.flowify.ettea.player.PREVIOUS";
+    public static final String ACTION_SEEK = "com.flowify.ettea.player.SEEK";
+    public static final String ACTION_VOLUME = "com.flowify.ettea.player.VOLUME";
+    public static final String ACTION_OPEN = "com.flowify.ettea.player.OPEN";
+    public static final String ACTION_SEARCH = "com.flowify.ettea.player.SEARCH";
+    public static final String ACTION_WARMUP = "com.flowify.ettea.player.WARMUP";
+    public static final String ACTION_LOGIN = "com.flowify.ettea.player.LOGIN";
+    public static final String ACTION_STOP = "com.flowify.ettea.player.STOP";
+    public static final String ACTION_RECONNECT = "com.flowify.ettea.player.RECONNECT";
     /** Sent by WebLoginActivity once a sign-in completed: the parked player page is still the
      *  anonymous one it loaded before, so it has to reload into the new session. */
-    static final String ACTION_LOGIN_DONE = "com.eza.spicyex.player.LOGIN_DONE";
+    static final String ACTION_LOGIN_DONE = "com.flowify.ettea.player.LOGIN_DONE";
     public static final String EXTRA_WARM_REPLY = "warm_reply";
     /** READY replies carry what is known of the device: its Connect id, the account's active
      *  device and whether audio is playing here. */
@@ -95,7 +95,7 @@ public final class WebPlayerService extends Service {
     public static final int EVENT_SHUFFLE_OFF = 7;
 
     /** The sign-in screen signed the web session out ("sign in with another account"). */
-    static final String ACTION_SIGNED_OUT = "com.eza.spicyex.player.SIGNED_OUT";
+    static final String ACTION_SIGNED_OUT = "com.flowify.ettea.player.SIGNED_OUT";
     public static final int WARM_RESULT_READY = 1;
     public static final int WARM_RESULT_STARTING = 2;
     public static final int WARM_RESULT_FAILED = 3;
@@ -460,7 +460,7 @@ public final class WebPlayerService extends Service {
      *  starts for an ad that is still current after it, so a blocked ad doesn't blip it. */
     private static final long AD_MUSIC_DELAY_MS = 1500L;
     private boolean adActive;
-    private com.eza.spicyex.hooks.AdMusicPlayer adMusic;
+    private com.flowify.ettea.hooks.AdMusicPlayer adMusic;
     private final Runnable adMusicStart = this::startAdMusic;
     private final java.util.List<LoginCheck> loginWaiters = new java.util.ArrayList<>();
 
@@ -720,7 +720,7 @@ public final class WebPlayerService extends Service {
         super.onCreate();
         createChannel();
         PlayerSession.loggedIn = hasSessionCookie();
-        if (!com.eza.spicyex.ForegroundServiceGuard.promote(
+        if (!com.flowify.ettea.ForegroundServiceGuard.promote(
                 this, NOTIFICATION_ID, buildNotification(statusText()), TAG)) {
             // Nothing else in here is worth setting up if we can't be a foreground service -
             // and staying alive without reaching the foreground just earns a kill from the
@@ -1144,7 +1144,7 @@ public final class WebPlayerService extends Service {
 
     private void startAdMusic() {
         if (!adActive || !AD_MODE_MUSIC.equals(PlayerSession.adMode(this))) return;
-        if (adMusic == null) adMusic = new com.eza.spicyex.hooks.AdMusicPlayer();
+        if (adMusic == null) adMusic = new com.flowify.ettea.hooks.AdMusicPlayer();
         adMusic.setTheme(PlayerSession.adMusicTheme(this));
         if (playing) adMusic.fadeIn();
     }
@@ -1673,7 +1673,7 @@ public final class WebPlayerService extends Service {
         try {
             if (Build.VERSION.SDK_INT >= 26) {
                 NotificationChannel ch = new NotificationChannel(CHANNEL_ID,
-                        text(com.eza.spicyex.R.string.connect_player_channel),
+                        text(com.flowify.ettea.R.string.connect_player_channel),
                         NotificationManager.IMPORTANCE_LOW);
                 ch.setShowBadge(false);
                 NotificationManager m = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -1688,9 +1688,9 @@ public final class WebPlayerService extends Service {
     }
 
     private String statusText() {
-        if (!PlayerSession.loggedIn) return text(com.eza.spicyex.R.string.connect_player_status_login);
-        if (playing) return text(com.eza.spicyex.R.string.connect_player_status_playing);
-        return text(com.eza.spicyex.R.string.connect_player_status_ready);
+        if (!PlayerSession.loggedIn) return text(com.flowify.ettea.R.string.connect_player_status_login);
+        if (playing) return text(com.flowify.ettea.R.string.connect_player_status_playing);
+        return text(com.flowify.ettea.R.string.connect_player_status_ready);
     }
 
     private Notification buildNotification(String text) {
@@ -1698,7 +1698,7 @@ public final class WebPlayerService extends Service {
         if (Build.VERSION.SDK_INT >= 26) b = new Notification.Builder(this, CHANNEL_ID);
         else b = new Notification.Builder(this);
         b.setSmallIcon(android.R.drawable.ic_media_play);
-        b.setContentTitle(text(com.eza.spicyex.R.string.connect_player_title));
+        b.setContentTitle(text(com.flowify.ettea.R.string.connect_player_title));
         b.setContentText(text);
         b.setOngoing(false);
         b.setOnlyAlertOnce(true);
@@ -1717,13 +1717,13 @@ public final class WebPlayerService extends Service {
                 Intent pause = new Intent(this, WebPlayerService.class).setAction(ACTION_PAUSE);
                 b.addAction(new Notification.Action.Builder(
                         android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_media_pause),
-                        text(com.eza.spicyex.R.string.connect_player_pause),
+                        text(com.flowify.ettea.R.string.connect_player_pause),
                         PendingIntent.getService(this, 11, pause, piFlags)).build());
             }
             Intent stop = new Intent(this, WebPlayerService.class).setAction(ACTION_STOP);
             b.addAction(new Notification.Action.Builder(
                     android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    text(com.eza.spicyex.R.string.connect_player_stop),
+                    text(com.flowify.ettea.R.string.connect_player_stop),
                     PendingIntent.getService(this, 12, stop, piFlags)).build());
         } catch (Throwable ignored) {
         }

@@ -1,14 +1,14 @@
-package com.eza.spicyex.lyrics.ai;
+package com.flowify.ettea.lyrics.ai;
 
 import android.content.Context;
 
-import com.eza.spicyex.lyrics.LyricsDocument;
-import com.eza.spicyex.lyrics.session.CanonicalBase;
-import com.eza.spicyex.lyrics.session.LayerAuthority;
-import com.eza.spicyex.lyrics.session.LayerKind;
-import com.eza.spicyex.lyrics.session.LayerProvenance;
-import com.eza.spicyex.lyrics.session.MeaningArtifact;
-import com.eza.spicyex.lyrics.session.MeaningEntry;
+import com.flowify.ettea.lyrics.LyricsDocument;
+import com.flowify.ettea.lyrics.session.CanonicalBase;
+import com.flowify.ettea.lyrics.session.LayerAuthority;
+import com.flowify.ettea.lyrics.session.LayerKind;
+import com.flowify.ettea.lyrics.session.LayerProvenance;
+import com.flowify.ettea.lyrics.session.MeaningArtifact;
+import com.flowify.ettea.lyrics.session.MeaningEntry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -136,7 +136,7 @@ public final class AiMeaningRun {
             String rowId = item.getKey();
             String text = AiText.nz(item.getValue());
             if (text.isEmpty()) continue;
-            com.eza.spicyex.lyrics.session.CanonicalRow row = base.row(rowId);
+            com.flowify.ettea.lyrics.session.CanonicalRow row = base.row(rowId);
             if (row == null) continue;
             if (text.equals(row.text)) continue;
             entries.add(new MeaningEntry(rowId, text, config.targetLang));

@@ -1,13 +1,13 @@
-package com.eza.spicyex.lyrics.providers;
+package com.flowify.ettea.lyrics.providers;
 
-import com.eza.spicyex.Diagnostics;
-import com.eza.spicyex.lyrics.LyricsDocument;
+import com.flowify.ettea.Diagnostics;
+import com.flowify.ettea.lyrics.LyricsDocument;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import static com.eza.spicyex.lyrics.LyricUtils.isBlank;
+import static com.flowify.ettea.lyrics.LyricUtils.isBlank;
 
 /** Session-local, privacy-safe snapshot of last lyric fetch arbitration. */
 public final class LyricsFetchDiagnosticsState {

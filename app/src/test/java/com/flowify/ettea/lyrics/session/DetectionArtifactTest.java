@@ -1,6 +1,6 @@
-package com.eza.spicyex.lyrics.session;
+package com.flowify.ettea.lyrics.session;
 
-import com.eza.spicyex.lyrics.language.ScriptClassifier;
+import com.flowify.ettea.lyrics.language.ScriptClassifier;
 
 import org.junit.Test;
 

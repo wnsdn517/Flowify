@@ -1,11 +1,11 @@
-# Spicy EX Feature Guide
+# Flowify Feature Guide
 
-This is the feature list of this fork ([wnsdn517/spicy-ex](https://github.com/wnsdn517/spicy-ex)).
+This is the feature list of this fork ([wnsdn517/Flowify](https://github.com/wnsdn517/Flowify)).
 It tracks the upstream project ([amarinne/spicy-ex](https://github.com/amarinne/spicy-ex)) and adds
 its own features on top; items marked **Fork** were built in this fork (several were later
 merged upstream through pull requests).
 
-Spicy EX is an Xposed/LSPosed module that replaces Spotify's basic lyric surface with a fullscreen
+Flowify is an Xposed/LSPosed module that replaces Spotify's basic lyric surface with a fullscreen
 Spicy Lyrics / Apple Music-style lyric screen, a live now-playing lyric card, reading aids,
 translation, and a lot of visual customization. Everything is configured from a settings panel
 inside Spotify.
@@ -134,7 +134,7 @@ from Settings when you want readings.
 ## Installation
 
 - Rooted: LSPosed, scoped to Spotify. Non-root: the LSPatch flow in the [readme](readme.md#install).
-- APKs are published on this fork's [Releases](https://github.com/wnsdn517/spicy-ex/releases).
+- APKs are published on this fork's [Releases](https://github.com/wnsdn517/Flowify/releases).
 
 ## Current Limits
 

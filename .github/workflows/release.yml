@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v1.58.182)'
-        required: true
+        description: 'Release tag (e.g. v2.0.0)'
+        required: false
       prerelease:
         description: 'Mark as beta/pre-release'
         type: boolean

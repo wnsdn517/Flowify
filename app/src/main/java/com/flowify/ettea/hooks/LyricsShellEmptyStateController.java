@@ -1,7 +1,7 @@
-package com.eza.spicyex.hooks;
+package com.flowify.ettea.hooks;
 
-import static com.eza.spicyex.hooks.NativeLyricsUtils.dp;
-import static com.eza.spicyex.hooks.NativeLyricsUtils.safe;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.dp;
+import static com.flowify.ettea.hooks.NativeLyricsUtils.safe;
 
 import android.animation.ValueAnimator;
 import android.app.Activity;
@@ -16,11 +16,11 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.eza.spicyex.Settings;
-import com.eza.spicyex.SpotifyPlusConfig;
-import com.eza.spicyex.lyrics.LyricsSkeletonView;
-import com.eza.spicyex.lyrics.LyricsTextFactory;
-import com.eza.spicyex.ui.ActionIconDrawable;
+import com.flowify.ettea.Settings;
+import com.flowify.ettea.SpotifyPlusConfig;
+import com.flowify.ettea.lyrics.LyricsSkeletonView;
+import com.flowify.ettea.lyrics.LyricsTextFactory;
+import com.flowify.ettea.ui.ActionIconDrawable;
 
 /** Builds transient loading and error rows for the fullscreen lyric surface. */
 final class LyricsShellEmptyStateController {
@@ -59,7 +59,7 @@ final class LyricsShellEmptyStateController {
     void showAdState(ScrollView lyricsScroll, LinearLayout lyricsColumn) {
         stateToken++;
         lyricsColumn.removeAllViews();
-        com.eza.spicyex.ui.SettingsUiStrings strings = com.eza.spicyex.ui.UiLanguage.strings(activity,
+        com.flowify.ettea.ui.SettingsUiStrings strings = com.flowify.ettea.ui.UiLanguage.strings(activity,
                 config.get(Settings.UI_LANGUAGE));
 
         LinearLayout card = new LinearLayout(activity);
@@ -238,7 +238,7 @@ final class LyricsShellEmptyStateController {
     void showInstrumental(LinearLayout lyricsColumn) {
         ++stateToken;
         lyricsColumn.removeAllViews();
-        com.eza.spicyex.ui.SettingsUiStrings strings = com.eza.spicyex.ui.UiLanguage.strings(activity,
+        com.flowify.ettea.ui.SettingsUiStrings strings = com.flowify.ettea.ui.UiLanguage.strings(activity,
                 config.get(Settings.UI_LANGUAGE));
 
         LinearLayout box = new LinearLayout(activity);

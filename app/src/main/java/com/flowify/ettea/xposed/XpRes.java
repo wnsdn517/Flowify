@@ -1,4 +1,4 @@
-package com.eza.spicyex.xposed;
+package com.flowify.ettea.xposed;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -21,7 +21,7 @@ import java.util.Locale;
  * available, a package context is preferred for theme-correct resources.
  */
 public final class XpRes {
-    static final String MODULE_PACKAGE = "com.eza.spicyex";
+    static final String MODULE_PACKAGE = "com.flowify.ettea";
 
     private static volatile String moduleSourceDir;
     private static volatile Resources cached;
