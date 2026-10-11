@@ -319,8 +319,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     /**
      * Everything searchable, built once per search session. Every panel setting is in it, not
      * only the ones on screen now: a setting hidden until another is switched on (ad music
-     * style, the AI options, Connect's auto-switch) is exactly the one people search for. So
-     * are the rows that are not settings - the AI key and model, Connect sign-in, the language
+     * style, the AI options) is exactly the one people search for. So
+     * are the rows that are not settings - the AI key and model, the language
      * models, the current song's lyrics - which open the page they live on.
      */
     private synchronized com.eza.spicyex.settings.SettingsSearch searchIndex() {
@@ -370,8 +370,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         addExtra(entries, Settings.AI, "settings_ai_api_key", "API key", "api key gemini openai deepseek openrouter token");
         addExtra(entries, Settings.AI, "settings_ai_model", "Model", "ai model gemini gpt");
         addExtra(entries, Settings.AI, "settings_action_clear_ai_cache", "Clear AI results", "ai cache delete");
-        addExtra(entries, Settings.AD_FREE, "settings_connect_login", "Sign in to Spotify", "connect web player login account");
-        addExtra(entries, Settings.AD_FREE, "settings_connect_status_label", "Player", "connect web player status running");
         addExtra(entries, Settings.TRANSLITERATION, "settings_language_models_delete", "Delete language models", "language model delete storage");
         addExtra(entries, Settings.LYRICS_SOURCES, "settings_source_track_title", "Current song lyrics", "pick lyrics wrong lyrics candidate source picker");
         addExtra(entries, Settings.LYRICS_SOURCES, "settings_cache_browser_title", "Stored lyrics", "cache stored lyrics delete search songs");
@@ -726,7 +724,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         appendHubGroup(content, "settings_hub_group_lyrics", "Lyrics content", grouped,
                 Settings.LYRICS_SOURCES, Settings.TRANSLATION, Settings.TRANSLITERATION, Settings.AI);
         appendHubGroup(content, "settings_hub_group_use", "Playback & controls", grouped,
-                Settings.LYRICS, Settings.GESTURES, Settings.PIP, Settings.AD_FREE);
+                Settings.LYRICS, Settings.GESTURES, Settings.PIP);
         appendHubGroup(content, "settings_hub_group_about", "About & Labs", grouped,
                 Settings.LABS, Settings.DEBUG);
     }
@@ -763,10 +761,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         }
         if (section == Settings.TRANSLITERATION) {
             return Boolean.TRUE.equals(store.get(Settings.TRANSLITERATION_ENABLED));
-        }
-        if (section == Settings.AD_FREE) {
-            return !Settings.AD_MODE_OFF.equals(store.get(Settings.AD_MODE))
-                    || Boolean.TRUE.equals(store.get(Settings.CONNECT_ENABLED));
         }
         return false;
     }
@@ -811,10 +805,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         snapshot.put(Settings.AI_ENABLED, store.get(Settings.AI_ENABLED));
         snapshot.put(Settings.PIP_ENABLED, store.get(Settings.PIP_ENABLED));
         snapshot.put(Settings.PIP_ON_CLOSE, store.get(Settings.PIP_ON_CLOSE));
-        snapshot.put(Settings.AD_MODE, store.get(Settings.AD_MODE));
         snapshot.put(Settings.DOUBLE_TAP_LIKE, store.get(Settings.DOUBLE_TAP_LIKE));
         snapshot.put(Settings.TAP_SEEK_MODE, store.get(Settings.TAP_SEEK_MODE));
-        snapshot.put(Settings.CONNECT_ENABLED, store.get(Settings.CONNECT_ENABLED));
         snapshot.put(Settings.AI_PROVIDER, store.get(Settings.AI_PROVIDER));
         snapshot.put(Settings.TRANSLATION_ENABLED, store.get(Settings.TRANSLATION_ENABLED));
         snapshot.put(Settings.TRANSLITERATION_ENABLED, store.get(Settings.TRANSLITERATION_ENABLED));
@@ -832,7 +824,7 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     /**
      * A page's settings as small captioned cards, one per group (see
      * {@link SettingsUiSchema#groupOf}). The rows that are not settings - the editor launchers,
-     * the AI model list, Connect's sign-in - go in the last card, where they always sat.
+     * the AI model list - go in the last card, where they always sat.
      */
     private void appendSectionCard(LinearLayout parent, Settings.Section section,
                                    List<Settings.Setting<?>> items, int at) {
@@ -888,14 +880,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             dynamic.setOrientation(LinearLayout.VERTICAL);
             dynamic.setTag(PanelTags.AI_DYNAMIC);
             aiRows().render(dynamic);
-            card.addView(dynamic, new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        }
-        if (section == Settings.AD_FREE) {
-            LinearLayout dynamic = new LinearLayout(context);
-            dynamic.setOrientation(LinearLayout.VERTICAL);
-            dynamic.setTag(PanelTags.CONNECT_DYNAMIC);
-            if (Boolean.TRUE.equals(store.get(Settings.CONNECT_ENABLED))) renderConnectLogin(dynamic);
             card.addView(dynamic, new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
@@ -1448,10 +1432,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                     com.eza.spicyex.lyrics.session.LyricsSourcePreferences.RankingMode.parse(
                             String.valueOf(store.get(setting))));
         }
-        if (setting == Settings.CONNECT_ENABLED) {
-            com.eza.spicyex.hooks.SpotifyConnectHook.onSettingsChanged(context,
-                    Boolean.TRUE.equals(store.get(Settings.CONNECT_ENABLED)));
-        }
         if (setting == Settings.UI_LANGUAGE) {
             rebuildSections();
         } else if (setting == Settings.ANIMATION_STYLE) {
@@ -1622,54 +1602,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                         })))
                 .secondary(uiStrings.get("settings_ai_cancel", "Cancel"), null)
                 .show();
-    }
-
-    // --- Connect rows ---
-
-    private void renderConnectLogin(LinearLayout card) {
-        // Labels follow the player's own answer (session cookie confirmed by the live page).
-        // The sign-in row always opens the sign-in screen, which shows "signed in" and closes
-        // itself when there is nothing to do.
-        TextView login = rows.actionRow(card, Kind.GLOBE,
-                uiStrings.get("settings_connect_checking", "Checking Spotify sign-in…"),
-                v -> com.eza.spicyex.hooks.SpotifyConnectHook.openLogin(context));
-        TextView player = rows.infoRow(card,
-                uiStrings.get("settings_connect_status_label", "Player"),
-                uiStrings.get("settings_connect_status_starting", "Starting…"));
-        TextView device = rows.infoRow(card,
-                uiStrings.get("settings_connect_device_label", "Device"),
-                "—");
-        java.lang.ref.WeakReference<TextView> loginRef = new java.lang.ref.WeakReference<>(login);
-        java.lang.ref.WeakReference<TextView> playerRef = new java.lang.ref.WeakReference<>(player);
-        java.lang.ref.WeakReference<TextView> deviceRef = new java.lang.ref.WeakReference<>(device);
-        com.eza.spicyex.hooks.SpotifyConnectHook.queryStatus(context, (code, deviceId, activeId, playing) -> {
-            TextView loginLabel = loginRef.get();
-            TextView playerValue = playerRef.get();
-            TextView deviceValue = deviceRef.get();
-            if (loginLabel == null || playerValue == null || deviceValue == null) return;
-            if (code == com.eza.spicyex.hooks.SpotifyConnectHook.WARM_STARTING) return;
-            if (code != com.eza.spicyex.hooks.SpotifyConnectHook.WARM_READY) {
-                loginLabel.setText(uiStrings.get("settings_connect_login", "Login required · Sign in to Spotify"));
-                playerValue.setText(code == com.eza.spicyex.hooks.SpotifyConnectHook.WARM_LOGIN_REQUIRED
-                        ? uiStrings.get("settings_connect_status_login", "Sign-in required")
-                        : uiStrings.get("settings_connect_status_failed", "Not running"));
-                deviceValue.setText("—");
-                return;
-            }
-            loginLabel.setText(uiStrings.get("settings_connect_signed_in", "Signed in to Spotify · Manage account"));
-            playerValue.setText(uiStrings.get("settings_connect_status_running", "Running"));
-            String state;
-            if (deviceId == null) {
-                state = uiStrings.get("settings_connect_device_registering", "Registering…");
-            } else if (playing) {
-                state = uiStrings.get("settings_connect_device_playing", "Playing on the web player");
-            } else if (deviceId.equals(activeId)) {
-                state = uiStrings.get("settings_connect_device_active", "Selected · paused");
-            } else {
-                state = uiStrings.get("settings_connect_device_idle", "Available");
-            }
-            deviceValue.setText("Web Player · " + state);
-        });
     }
 
     // --- Diagnostics card ---

@@ -384,7 +384,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
         if (skipGapController != null) skipGapController.hide();
         if (jumpToCurrentController != null) jumpToCurrentController.update(false);
-        if (deviceChangeBanner != null) deviceChangeBanner.setSuppressed(true);
         fitPipArtColumn();
     }
 
@@ -948,10 +947,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     boolean agentEditorAction(String action, String argument) {
         return layoutEditorHandle != null && layoutEditorHandle.agentAction(action, argument);
-    }
-
-    void agentDeviceBanner(String device) {
-        if (deviceChangeBanner != null) deviceChangeBanner.preview(device);
     }
 
     boolean agentSettings(String action) {
@@ -1588,12 +1583,11 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         this.translationSpinner = new ChipSpinnerDrawable(activity);
         this.toggleSpinnerController = new LyricsToggleSpinnerController(romanSpinner, translationSpinner);
         this.playbackClock = new LyricsPlaybackClock(host::readBestMeasuredProgressMs);
-        // Seeks on a remote player (Spicy Connect, a Connect speaker) restart the audio late;
+        // Seeks on a remote player (a Connect speaker) restart the audio late;
         // the clock models that gap only there.
         this.playbackClock.setRemotePlayback(() -> {
             PlaybackBridge bridge = PlaybackBridge.current;
-            return SpotifyConnectHook.webPlayerCarrying()
-                    || (bridge != null && bridge.playbackIsRemote());
+            return bridge != null && bridge.playbackIsRemote();
         });
         this.config = SpotifyPlusConfig.from(activity);
         // Construction-time layout decision: rotation remounts the shell, and the adaptive
@@ -1621,7 +1615,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 activity, frameScheduler, ambientController, host, this::onSettingsClosed,
                 mode -> enterLayoutEditMode(mode == com.eza.spicyex.settings.SettingsPanel.EDITOR_CARD),
                 this::resyncLyricsTiming, TAG);
-        deviceChangeBanner = new DeviceChangeBanner(this, activity, config);
         this.settingsDialogController.setOnTryDoubleTap(this::startDoubleTapTrialInSettings,
                 this::endDoubleTapTrial, this::previewDoubleTapEffect);
         this.emptyStateController = new LyricsShellEmptyStateController(activity, config, textFactory);
@@ -2199,36 +2192,9 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return throttledTrack;
     }
 
-    // Matches AdMuteController's own detection - Spotify's ad tracks use this URI scheme.
+    // Spotify's ad tracks use this URI scheme.
     private static boolean isAdTrack(SpotifyTrack track) {
         return track != null && track.uri != null && track.uri.startsWith("spotify:ad:");
-    }
-
-    /** "1 of 3 · 0:37" under the ad card: where this ad sits in the break and how long the
-     *  whole break has left (this ad's own time left when Spotify has not said). */
-    private void updateAdCard(SpotifyTrack track, long positionMs) {
-        StringBuilder text = new StringBuilder();
-        AdBreakInfo info = AdBreakInfo.current(track.uri);
-        if (info != null && info.known()) {
-            text.append(com.eza.spicyex.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
-                    .get("lyrics_ad_position", "%1$d of %2$d")
-                    .replace("%1$d", String.valueOf(info.index))
-                    .replace("%2$d", String.valueOf(info.count)));
-        }
-        long breakLeftMs = AdBreakInfo.breakRemainingMs();
-        long adLeftMs = track.duration > 0 && positionMs >= 0 ? track.duration - positionMs : -1L;
-        boolean wholeBreak = breakLeftMs >= 0 || (info != null && info.isLast());
-        long leftMs = breakLeftMs >= 0 ? Math.max(breakLeftMs, adLeftMs) : adLeftMs;
-        if (leftMs >= 0) {
-            long left = Math.max(0L, (leftMs + 999L) / 1000L);
-            String clock = (left / 60) + ":" + (left % 60 < 10 ? "0" : "") + (left % 60);
-            if (text.length() > 0) text.append("  ·  ");
-            text.append(wholeBreak
-                    ? com.eza.spicyex.ui.UiLanguage.strings(activity, config.get(Settings.UI_LANGUAGE))
-                            .get("lyrics_ad_break_left", "%1$s left in the break").replace("%1$s", clock)
-                    : clock);
-        }
-        emptyStateController.updateAdProgress(text.toString());
     }
 
     /** Both session publications and polling adopt the track before mounting its document. */
@@ -2293,7 +2259,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         // Ad break: Spotify models it as an ordinary track under a spotify:ad: URI. Its own title
         // and artwork (whatever the ad creative provides) still show through the per-track update
         // below; in place of lyrics it gets the ad card, and the skip-gap chip stays hidden since
-        // seeking within an ad means nothing (AdMuteController mutes it on the same signal).
+        // seeking within an ad means nothing.
         boolean adTrack = isAdTrack(track);
         if (adTrack) skipGapController.hide();
         String uri = safe(track.uri);
@@ -2312,12 +2278,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             }
         }
         long pos = playbackClock.getPosition(track, playingNow);
-        if (adTrack) {
-            AdBreakInfo.notePaused(!playingNow);
-            updateAdCard(track, pos);
-        } else {
-            AdBreakInfo.noteBreakOver();
-        }
 
         String trackTitle = emptyFallback(track.title, "Unknown title");
         String trackArtist = emptyFallback(track.artist, "Unknown artist");
@@ -6100,7 +6060,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
 
     private View doubleTapFingerHint;
     private String lastAccentColor;
-    private DeviceChangeBanner deviceChangeBanner;
 
     /**
      * The gesture shown, as on the share panel: a finger dot over the lyrics that taps twice -

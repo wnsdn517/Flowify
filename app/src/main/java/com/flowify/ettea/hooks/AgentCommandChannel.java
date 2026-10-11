@@ -232,15 +232,6 @@ final class AgentCommandChannel {
                 case "fullscreen":
                     fullscreen(argument, correlation);
                     return;
-                case "banner":
-                    String bannerDevice = argument;
-                    onMain(verb, correlation, () -> {
-                        NativeSpicyShellView shell = requireShell(verb, correlation);
-                        if (shell == null) return;
-                        shell.agentDeviceBanner(bannerDevice);
-                        reply("ok", verb, "banner=" + bannerDevice, correlation);
-                    });
-                    return;
                 case "settings":
                     String settingsAction = argument;
                     onMain(verb, correlation, () -> {

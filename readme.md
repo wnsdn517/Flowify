@@ -31,8 +31,6 @@ Have an idea, found a bug, or just want to talk? Pick a channel.
 - **Double-tap like:** 14 effect styles, heart/star/like-button mark, and a Try it trial bar.
 - **Share cards:** 7 designs, artist-photo backdrop, multi-line picking, Instagram / Facebook Stories.
 - **Picture-in-Picture:** floating lyrics with song info, landscape layout and several window shapes.
-- **Seamless Listening:** mute ads or replace them with generated music, plus an ad card on the lyrics screen.
-- **Spicy Connect:** a web player with Seamless Listening built in that appears as a Spotify Connect device.
 - **Settings:** bottom sheet with search, About page, fork versioning; Korean and Japanese translations completed.
 
 ## Features
@@ -77,7 +75,7 @@ JAVA_HOME=/path/to/jdk21 ./gradlew :app:assembleDebug
 JAVA_HOME=/path/to/jdk21 ./gradlew :app:testDebugUnitTest
 ```
 
-The single APK includes transliteration, translation, language dictionaries, extra fonts, and Spotify Connect support.
+The single APK includes transliteration, translation, language dictionaries, and extra fonts.
 
 Language models (kuromoji, CharSoup, JMdict) are not in the APK; they are
 delivered as a separate pack that the app downloads from Settings. Create the

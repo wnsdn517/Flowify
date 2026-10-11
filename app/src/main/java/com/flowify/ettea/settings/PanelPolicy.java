@@ -16,8 +16,6 @@ public final class PanelPolicy {
     }
 
     public static boolean shouldRender(Settings.Setting<?> setting, PanelSnapshot snapshot) {
-        // Ad music style only matters when ads are replaced with music; Connect's options only
-        // while the receiver is on.
         if (setting == Settings.DOUBLE_TAP_LIKE_MARK || setting == Settings.DOUBLE_TAP_LIKE_EFFECT) {
             return Boolean.TRUE.equals(snapshot.get(Settings.DOUBLE_TAP_LIKE));
         }
@@ -25,12 +23,6 @@ public final class PanelPolicy {
         // while long-press-to-share is off.
         if (setting == Settings.SHARE_GESTURE_HINT) {
             return Boolean.TRUE.equals(snapshot.get(Settings.LONG_PRESS_SHARE));
-        }
-        if (setting == Settings.AD_MUSIC_THEME) {
-            return Settings.AD_MODE_MUSIC.equals(snapshot.get(Settings.AD_MODE));
-        }
-        if (setting == Settings.CONNECT_AUTO_SWITCH || setting == Settings.CONNECT_NETWORK_RECOVERY) {
-            return Boolean.TRUE.equals(snapshot.get(Settings.CONNECT_ENABLED));
         }
         // The rest of the PiP section only matters while PiP can open: its button, or leaving
         // the lyrics screen.
@@ -231,8 +223,6 @@ public final class PanelPolicy {
     public static boolean shouldRebuildSectionAfterChange(Settings.Setting<?> setting) {
         return setting == Settings.PIP_ENABLED
                 || setting == Settings.PIP_ON_CLOSE
-                || setting == Settings.AD_MODE
-                || setting == Settings.CONNECT_ENABLED
                 || setting == Settings.DOUBLE_TAP_LIKE
                 || setting == Settings.AI_ENABLED
                 || setting == Settings.AI_PROVIDER

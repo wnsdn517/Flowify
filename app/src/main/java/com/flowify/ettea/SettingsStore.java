@@ -35,7 +35,7 @@ public final class SettingsStore implements TypedStore {
         migrateRemovedFollowChipToggles(prefs);
         migrateStatusBarHiddenMode(prefs);
         migrateFullscreenControls(prefs);
-        migrateAdMode(prefs);
+        migrateRemovedAdAndConnect(prefs);
     }
 
     static synchronized void migrateLikedSongsButton(SharedPreferences prefs) {
@@ -104,19 +104,17 @@ public final class SettingsStore implements TypedStore {
         }
     }
 
-    /** The old "Auto-mute ads" switch becomes the Mute choice of the ad mode. */
-    static synchronized void migrateAdMode(SharedPreferences prefs) {
-        if (!prefs.contains(Settings.LEGACY_AUTO_MUTE_ADS)) return;
-        boolean muted = false;
-        try {
-            muted = prefs.getBoolean(Settings.LEGACY_AUTO_MUTE_ADS, false);
-        } catch (ClassCastException ignored) {
+    /** Ad handling and the Spotify Connect web player were removed; drop their stored values. */
+    private static final String[] REMOVED_AD_CONNECT_KEYS = {
+            "auto_mute_ads", "ad_mode", "ad_music_theme",
+            "connect_enabled", "connect_auto_switch", "connect_network_recovery"};
+
+    static synchronized void migrateRemovedAdAndConnect(SharedPreferences prefs) {
+        SharedPreferences.Editor editor = null;
+        for (String key : REMOVED_AD_CONNECT_KEYS) {
+            if (prefs.contains(key)) editor = (editor != null ? editor : prefs.edit()).remove(key);
         }
-        SharedPreferences.Editor editor = prefs.edit().remove(Settings.LEGACY_AUTO_MUTE_ADS);
-        if (muted && !prefs.contains(Settings.AD_MODE.key)) {
-            editor.putString(Settings.AD_MODE.key, Settings.AD_MODE_MUTE);
-        }
-        editor.apply();
+        if (editor != null) editor.apply();
     }
 
     /**

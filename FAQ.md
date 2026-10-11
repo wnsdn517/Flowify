@@ -11,8 +11,8 @@ new fork release before reporting a problem.
 
 ### What is included?
 
-- One APK with the lyric renderer, transliteration, translation, extra fonts, Spotify Connect,
-  ad handling, picture-in-picture, share cards and the HyperGlow bridge.
+- One APK with the lyric renderer, transliteration, translation, extra fonts,
+  picture-in-picture, share cards and the HyperGlow bridge.
 - Language models (Japanese/Chinese dictionaries, language detection) are downloaded on demand from
   Settings instead of being bundled. Lyrics work without them; readings need them.
 
@@ -38,7 +38,7 @@ Still broken? Open an issue with your Spotify version and the module version.
 In the **Layout Editor**: open the lyrics screen and edit the artwork, track text, focus point,
 background, chips, top controls or now-playing card in place. Those settings are deliberately not
 repeated in the Settings panel, which holds everything else (sources, readings, translation,
-double-tap like, picture-in-picture, AI, Seamless Listening, diagnostics).
+double-tap like, picture-in-picture, AI, diagnostics).
 
 ### How do I choose where lyrics come from?
 
@@ -51,13 +51,6 @@ and source.
 Double-tap the lyrics to like the song. Choose the effect and mark in Settings and use **Try it** to
 preview without liking anything. It never removes a like. If you want double-tap to seek instead,
 turn double-tap like off — the two cannot share the gesture.
-
-### Ads and Spicy Connect
-
-- **Ads**: Settings → Seamless Listening → mute, or play generated music during the break.
-- **Spicy Connect**: a background web player that shows up as a Connect device. Sign in from Settings.
-  It needs Spotify's web player to keep working, so it can break when Spotify changes it.
-- Both are fork-only features and are not part of upstream.
 
 ### Lyrics are missing, wrong, or delayed
 

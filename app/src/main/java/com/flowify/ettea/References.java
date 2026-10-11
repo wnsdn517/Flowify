@@ -115,10 +115,6 @@ public class References {
 
                     @SuppressWarnings("unchecked")
                     Map<String, String> md = (Map<String, String>) XpReflect.callMethod(track, "metadata");
-                    if (uri != null && uri.startsWith("spotify:ad:")) {
-                        com.eza.spicyex.hooks.AdBreakInfo.noteMetadata(uri, md);
-                    }
-
                     String artistUri = firstNonBlankMeta(md, "artist_uri", "artist_uri:0");
                     if (artistUri != null && !artistUri.isEmpty()) {
                         lastTrackUri = uri == null ? "" : uri;

@@ -88,17 +88,8 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             bridgeCoordinator = new SpicyLyricBridgeCoordinator(
                     lyricsSessionManager, applicationContext);
             bridgeCoordinator.start();
-            // Ad muting runs process-wide, not per screen: it applies to local playback
-            // everywhere while changing only Spotify's ad AudioTrack.
-            new AdMuteController(this, applicationContext).start();
-            SpotifyConnectHook.init(applicationContext);
-            ConnectTransfer.install(lpparm.classLoader(), symbols);
             SpotifyLyricsCardHider.install(applicationContext, lpparm.classLoader(), symbols);
             LocalFilesFolderHook.install(applicationContext, lpparm.classLoader());
-            // Connect auto-start + auto-connect fire on Spotify's first resumed activity, not
-            // here: at process start Spotify isn't foreground yet, and only a foreground sender
-            // can get the player's foreground service past Android 12+'s background-start ban.
-            SpotifyConnectHook.armAutoStart(applicationContext);
             // Debug builds only, and inert until the arm file exists. See AgentCommandChannel.
             AgentCommandChannel.start(this, applicationContext);
             ActivityResultBridge.install();
@@ -109,14 +100,6 @@ public class NativeSpicyLyricsHook extends SpotifyHook implements LyricsHost {
             Diagnostics.event("bootstrap", "hook_ready",
                     Diagnostics.context("result", "secondary_process"));
         }
-    }
-
-    boolean isPlaybackRemote() {
-        return playbackBridge.playbackIsRemote();
-    }
-
-    boolean isPlayerStatePaused() {
-        return playbackBridge.isPlayerStatePaused();
     }
 
     /** Whether {@code activity} shows the takeover lyrics shell (it is our lyrics screen). */

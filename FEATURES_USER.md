@@ -12,8 +12,8 @@ inside Spotify.
 
 ## APK Contents
 
-One APK carries the lyric renderer, transliteration, translation, extra fonts, Spotify Connect and
-the HyperGlow bridge. The Japanese/Chinese language models are a separate pack that is downloaded
+One APK carries the lyric renderer, transliteration, translation, extra fonts and the
+HyperGlow bridge. The Japanese/Chinese language models are a separate pack that is downloaded
 from Settings when you want readings.
 
 ## Lyrics Experience
@@ -101,21 +101,6 @@ from Settings when you want readings.
 - **Fork** — Animated album-art ambient background, force-dark and extra-dark modes, fallback gradient for
   low-contrast art, and a render-quality option.
 
-## Seamless Listening — Fork
-
-- Mute Spotify's ads, or replace the ad break with soft generated music (Lofi, Cafe jazz, Bossa
-  nova, Ambient, or random). Only Spotify's own audio is muted; the phone's media volume is not
-  touched.
-- An ad card on the lyrics screen during breaks.
-
-## Spicy Connect — Fork
-
-- A background web player appears as a Spotify Connect device you can cast to, with its ads
-  stripped.
-- Sign in from Settings, choose when Spotify hands playback to it (on app start, on first play,
-  never), and optionally reconnect after network changes. The player stops with Spotify and exits
-  when idle.
-
 ## HyperGlow Integration
 
 - Publishes synchronized lyrics, timing, metadata, transliteration and translation to HyperGlow for
@@ -124,7 +109,7 @@ from Settings when you want readings.
 ## In-Spotify Settings
 
 - Settings panel grouped by behavior, lyrics sources, reading, translation, layout
-  editor, Apple animation style, now-playing, picture-in-picture, AI, Seamless Listening and
+  editor, Apple animation style, now-playing, picture-in-picture, AI and
   diagnostics. Anything the Layout Editor can change is edited there, not duplicated in the panel.
 - Cache actions for translation and lyric responses, a status panel, and English, Korean, Japanese, Russian
   and Simplified Chinese interface languages.
@@ -142,4 +127,3 @@ from Settings when you want readings.
 - Non-root login still needs the downgrade-login-upgrade flow.
 - Artistic Japanese readings and Mandarin polyphones can still be wrong; Cyrillic is romanization,
   not pronunciation; Greek is a static table.
-- Spicy Connect and ad handling rely on Spotify's web player and can break when it changes.

@@ -33,7 +33,6 @@ public final class SettingsUiSchema {
                 Settings.TRANSLATION,
                 Settings.AI,
                 Settings.PIP,
-                Settings.AD_FREE,
                 Settings.LABS));
     }
 
@@ -109,12 +108,6 @@ public final class SettingsUiSchema {
             Settings.PIP_CONTROLS,
             Settings.PIP_SONG_INFO,
             Settings.PIP_LEAVE_SPOTIFY,
-            // Ad-free listening
-            Settings.AD_MODE,
-            Settings.AD_MUSIC_THEME,
-            Settings.CONNECT_ENABLED,
-            Settings.CONNECT_AUTO_SWITCH,
-            Settings.CONNECT_NETWORK_RECOVERY,
             // Labs
             Settings.KARAOKE_ORIGINAL_LYRICS,
             Settings.CONTEXT_TRANSLATION,
@@ -165,9 +158,6 @@ public final class SettingsUiSchema {
         group("pip_open", Settings.PIP_ENABLED, Settings.PIP_ON_CLOSE);
         group("pip_window", Settings.PIP_SHAPE, Settings.PIP_CONTROLS, Settings.PIP_SONG_INFO,
                 Settings.PIP_LEAVE_SPOTIFY);
-        group("adfree_ads", Settings.AD_MODE, Settings.AD_MUSIC_THEME);
-        group("adfree_connect", Settings.CONNECT_ENABLED, Settings.CONNECT_AUTO_SWITCH,
-                Settings.CONNECT_NETWORK_RECOVERY);
     }
 
     /** The group id of a setting within its page, or null for none. */

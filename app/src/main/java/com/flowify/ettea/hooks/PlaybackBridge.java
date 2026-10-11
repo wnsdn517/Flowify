@@ -28,14 +28,8 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 /** Bridges Spotify playback/session state into renderer-friendly progress and seek operations. */
 final class PlaybackBridge {
     /** Fired synchronously, right after References.playerState/playerStateStrong are updated,
-     *  every time Spotify's own state machine builds a new PlayerState - e.g. AdMuteController
-     *  uses this for near-instant ad-track detection instead of a slower poll. */
-    private static volatile Runnable stateUpdateListener;
+     *  every time Spotify's own state machine builds a new PlayerState. */
     private static volatile Runnable lyricsStateUpdateListener;
-
-    static void setStateUpdateListener(Runnable listener) {
-        stateUpdateListener = listener;
-    }
 
     static void setLyricsStateUpdateListener(Runnable listener) {
         lyricsStateUpdateListener = listener;
@@ -55,62 +49,10 @@ final class PlaybackBridge {
         outputLatency = new AudioOutputLatency(lpparm.classLoader());
         hookPlayerStateBridge(lpparm, symbols);
         installMediaSessionHook();
-        AdBreakInfo.installHooks();
     }
 
-    /** The installed bridge, for callers outside the lyrics hook (Connect's app-start switch). */
+    /** The installed bridge, for callers outside the lyrics hook. */
     static volatile PlaybackBridge current;
-
-    /** Pauses through Spotify's own MediaSession - a real pause, wherever it is playing
-     *  (locally or on a Connect device). False when no session is captured or it can't pause. */
-    boolean pause() {
-        return sendTransportControl("pause", PlaybackState.ACTION_PAUSE,
-                MediaController.TransportControls::pause);
-    }
-
-    /** Spotify's own session says playing (or about to): what a pause would act on. */
-    boolean sessionPlaying() {
-        try {
-            MediaController controller = transportController();
-            PlaybackState state = controller == null ? null : controller.getPlaybackState();
-            if (state == null) return false;
-            int s = state.getState();
-            return s == PlaybackState.STATE_PLAYING || s == PlaybackState.STATE_BUFFERING
-                    || s == PlaybackState.STATE_CONNECTING;
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
-    /** Playing on this phone itself: Spotify's session is playing and its playback is local.
-     *  (While Spotify controls a Connect device its session switches to remote playback.) */
-    boolean playingLocally() {
-        try {
-            MediaController controller = transportController();
-            if (controller == null || !sessionPlaying()) return false;
-            MediaController.PlaybackInfo info = controller.getPlaybackInfo();
-            return info != null && info.getPlaybackType() == MediaController.PlaybackInfo.PLAYBACK_TYPE_LOCAL;
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
-    /** MediaSessionCompat's own shuffle action (what MediaControllerCompat#setShuffleMode
-     *  sends), which Spotify's session advertises; NONE is idempotent, unlike its "toggle". */
-    boolean setShuffleOff() {
-        try {
-            MediaController controller = transportController();
-            if (controller == null) return false;
-            android.os.Bundle args = new android.os.Bundle();
-            args.putInt("android.support.v4.media.session.action.ARGUMENT_SHUFFLE_MODE", 0);
-            controller.getTransportControls().sendCustomAction(
-                    "android.support.v4.media.session.action.SET_SHUFFLE_MODE", args);
-            return true;
-        } catch (Throwable t) {
-            XpLog.log(NativeSpicyLyricsHook.TAG + " shuffle off failed: " + t);
-            return false;
-        }
-    }
 
     private void hookPlayerStateBridge(XpPackage lpparm, SpotifySymbolResolver symbols) {
         NativeSpicyLyricsHook.dbgEnter("hookPlayerStateBridge");
@@ -125,15 +67,6 @@ final class PlaybackBridge {
                         if (state == null) return;
                         References.playerStateStrong = state;
                         References.playerState = new WeakReference<>(state);
-                        Runnable listener = stateUpdateListener;
-                        if (listener != null) {
-                            try {
-                                listener.run();
-                            } catch (Throwable t) {
-                                XpLog.log(NativeSpicyLyricsHook.TAG
-                                        + " state update listener failed: " + t);
-                            }
-                        }
                         Runnable lyricsListener = lyricsStateUpdateListener;
                         if (lyricsListener != null) {
                             try {
@@ -345,11 +278,6 @@ final class PlaybackBridge {
         }
     }
 
-    /** Spotify's media session has been seen, so local/remote reads mean something. */
-    boolean sessionKnown() {
-        return transportController() != null;
-    }
-
     private MediaController transportController() {
         MediaSession session = currentMediaSession == null ? null : currentMediaSession.get();
         if (session == null) return null;
@@ -470,24 +398,6 @@ final class PlaybackBridge {
         return found.isEmpty() ? NO_PAUSED_ACCESSORS : found.toArray(new Method[0]);
     }
 
-
-    /** True only when Spotify's own PlayerState says paused. Unlike isPlayerActuallyPlaying this
-     *  ignores the media session, which does not always report ads as playing. */
-    boolean isPlayerStatePaused() {
-        try {
-            Object state = References.playerState == null ? null : References.playerState.get();
-            if (state == null) return false;
-            for (Method paused : pausedAccessors(state.getClass())) {
-                try {
-                    Object result = paused.invoke(state);
-                    if (result instanceof Boolean && (Boolean) result) return true;
-                } catch (Throwable ignored) {
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-        return false;
-    }
 
     /** Playback is on another Connect device (Spotify's session is then a remote one). */
     boolean playbackIsRemote() {
