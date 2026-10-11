@@ -252,16 +252,18 @@ final class SpicyLyricBridgeCoordinator implements LyricsSessionManager.Listener
                 Settings.LIVE_CARD_TEXT_SIZE_CUSTOM.key, Settings.LIVE_CARD_TEXT_SIZE_CUSTOM.defaultValue));
         state.putString("liveCardSecondaryMode", preferences.getString(
                 Settings.LIVE_CARD_SECONDARY_MODE.key, Settings.LIVE_CARD_SECONDARY_MODE.defaultValue));
-        state.putString("liveCardAnimation", preferences.getString(
-                Settings.LIVE_CARD_ANIMATION.key, Settings.LIVE_CARD_ANIMATION.defaultValue));
+        state.putString("liveCardAnimation", Settings.LIVE_CARD_ANIMATION.coerce(
+                preferences.getString(Settings.LIVE_CARD_ANIMATION.key,
+                        Settings.LIVE_CARD_ANIMATION.defaultValue)));
         state.putString("liveCardGlow", preferences.getString(
                 Settings.LIVE_CARD_GLOW.key, Settings.LIVE_CARD_GLOW.defaultValue));
         state.putString("liveCardOverflow", preferences.getString(
                 Settings.LIVE_CARD_OVERFLOW.key, Settings.LIVE_CARD_OVERFLOW.defaultValue));
         state.putString("liveCardTransition", preferences.getString(
                 Settings.LIVE_CARD_TRANSITION.key, Settings.LIVE_CARD_TRANSITION.defaultValue));
-        state.putString("liveCardLineSyncFill", preferences.getString(
-                Settings.LIVE_CARD_LINE_SYNC_FILL.key, Settings.LIVE_CARD_LINE_SYNC_FILL.defaultValue));
+        // Fill direction is no longer a choice (Apple Music fills top to bottom); the key stays
+        // for bridge consumers that still read it.
+        state.putString("liveCardLineSyncFill", "Top to bottom");
         state.putString("lyricsFont", preferences.getString(
                 Settings.LYRICS_FONT.key, Settings.LYRICS_FONT.defaultValue));
         publisher.publish(state);

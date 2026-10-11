@@ -54,6 +54,12 @@ final class NowPlayingLyricController {
     private final Activity activity;
     private final LiveLyricCardView card;
     private final ArtworkLyricsOverlayView artworkOverlay;
+    /** The overlay is the Apple-style player's in-place lyrics view, not the artwork overlay. */
+    private boolean inlineMode;
+    private long lastInlineBoundsMs;
+    /** While the lyrics area slides with the controls, the periodic re-placement waits. */
+    private long inlineBoundsAnimatingUntilMs;
+    private android.animation.ValueAnimator inlineBoundsAnimator;
     private final ArtworkTargetHost artworkTargetHost;
     private final LyricsShellLifecycle artworkBackLifecycle;
     private final SpotifyPlusConfig config;
@@ -243,6 +249,7 @@ final class NowPlayingLyricController {
         sessionSubscription = null;
         artworkBackLifecycle.stop();
         artworkOverlay.hideOverlay();
+        leaveInlineMode(false);
         clearPendingCanvasTransfer();
         unregisterPreferenceListener();
         Choreographer.getInstance().removeFrameCallback(frame);
@@ -300,8 +307,10 @@ final class NowPlayingLyricController {
         // No lyrics for this track → show a ♪ placeholder (set once).
         if (id.equals(failedId)) {
             if (!placeholderShown) { card.setInterlude(true); placeholderShown = true; }
+            if (inlineMode) artworkOverlay.setEmptyMessage(noLyricsText());
             return;
         }
+        if (inlineMode) artworkOverlay.setEmptyMessage(null);
         if (cardDocument == null || !id.equals(loadedId)) return; // not loaded for THIS track → stay cleared
 
         long pos = renderConfig.adjustedPositionMs(
@@ -386,10 +395,171 @@ final class NowPlayingLyricController {
         miniProjectedBackgroundKey = "";
     }
 
-    /** A tap on the card's lyrics opens the lyrics screen. (It used to be a choice of single
-     *  or double tap, opening the lyrics or an artwork view - options nobody needed to find.) */
+    /**
+     * A tap on the card's lyrics opens the lyrics. On the Apple-style player (with
+     * Settings.PLAYER_INLINE_LYRICS on) they open in place of the cover, as Apple Music's player
+     * does, and a second tap closes them; otherwise the lyrics screen opens.
+     */
     private void handleCardTap() {
-        hook.launchNativeLyricsFullscreen(activity);
+        if (!toggleInlineLyrics()) hook.launchNativeLyricsFullscreen(activity);
+    }
+
+    /**
+     * Closes the in-place lyrics when open; otherwise opens them when this is the Apple-style
+     * player, the setting is on and the song is not known to have no lyrics (they draw as soon
+     * as they load). False leaves the caller to open the lyrics screen.
+     */
+    boolean toggleInlineLyrics() {
+        if (inlineMode) {
+            closeArtwork();
+            return true;
+        }
+        if (!running
+                || !Boolean.TRUE.equals(config.get(com.eza.spicyex.Settings.PLAYER_INLINE_LYRICS))
+                || (!currentId.isEmpty() && currentId.equals(failedId))) {
+            return false;
+        }
+        return openInline();
+    }
+
+    private boolean openInline() {
+        android.graphics.Rect bounds = ApplePlayerStyler.inlineLyricsBounds(activity);
+        if (bounds == null || !applyInlineBounds(bounds)) return false;
+        inlineMode = true;
+        artworkOverlay.setAppleInline(true);
+        artworkOverlay.setInlineGestures(new com.eza.spicyex.lyrics.ArtworkLyricsOverlayView.InlineGestures() {
+            @Override public void onTap() {
+                setInlineControlsHidden(!ApplePlayerStyler.inlineControlsHidden(activity));
+            }
+
+            @Override public void onSwipe(boolean down) {
+                setInlineControlsHidden(down);
+            }
+        });
+        // The cover shrinks into the small one first; the lyrics come up behind it.
+        long transition = ApplePlayerStyler.INLINE_TRANSITION_MS;
+        artworkOverlay.animate().cancel();
+        artworkOverlay.setAlpha(0f);
+        artworkOverlay.showOverlay();
+        artworkOverlay.animate().alpha(1f).setStartDelay(transition / 3)
+                .setDuration(transition * 2 / 3).start();
+        ApplePlayerStyler.setInlineLyricsOpen(activity, true, this::closeArtwork);
+        card.animate().cancel();
+        card.animate().alpha(0f).setDuration(220L).start();
+        artworkBackLifecycle.start();
+        return true;
+    }
+
+    /**
+     * Swipe down (or tap) to send the playback controls down out of the way so the lyrics run to
+     * the bottom edge; swipe up (or tap again) to bring them back. The lyrics area grows and
+     * shrinks in step with the controls' slide.
+     */
+    private String noLyricsText() {
+        return com.eza.spicyex.ui.UiLanguage.strings(activity,
+                config.get(com.eza.spicyex.Settings.UI_LANGUAGE))
+                .get("lyrics_inline_unavailable", "No lyrics for this song");
+    }
+
+    private void setInlineControlsHidden(boolean hidden) {
+        if (!inlineMode || ApplePlayerStyler.inlineControlsHidden(activity) == hidden) return;
+        ApplePlayerStyler.setInlineControlsHidden(activity, hidden);
+        android.graphics.Rect target = ApplePlayerStyler.inlineLyricsBounds(activity);
+        if (target != null) animateInlineBounds(target);
+    }
+
+    private void animateInlineBounds(android.graphics.Rect target) {
+        if (!(artworkOverlay.getParent() instanceof android.view.View)
+                || !(artworkOverlay.getLayoutParams() instanceof android.widget.FrameLayout.LayoutParams)) {
+            applyInlineBounds(target);
+            return;
+        }
+        android.view.View parent = (android.view.View) artworkOverlay.getParent();
+        int[] parentAt = new int[2];
+        parent.getLocationInWindow(parentAt);
+        android.widget.FrameLayout.LayoutParams lp =
+                (android.widget.FrameLayout.LayoutParams) artworkOverlay.getLayoutParams();
+        int fromTop = lp.topMargin;
+        int fromHeight = lp.height;
+        int toTop = target.top - parentAt[1];
+        int toHeight = target.height();
+        if (inlineBoundsAnimator != null) inlineBoundsAnimator.cancel();
+        long duration = ApplePlayerStyler.INLINE_TRANSITION_MS;
+        inlineBoundsAnimatingUntilMs = SystemClock.uptimeMillis() + duration + 60L;
+        android.animation.ValueAnimator animator = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(duration);
+        animator.setInterpolator(new android.view.animation.PathInterpolator(0.32f, 0.72f, 0f, 1f));
+        animator.addUpdateListener(a -> {
+            float t = (float) a.getAnimatedValue();
+            lp.topMargin = Math.round(fromTop + (toTop - fromTop) * t);
+            lp.height = Math.max(1, Math.round(fromHeight + (toHeight - fromHeight) * t));
+            artworkOverlay.setLayoutParams(lp);
+        });
+        inlineBoundsAnimator = animator;
+        animator.start();
+    }
+
+    /** Keeps the in-place lyrics on the cover's area as Spotify relays the page out. */
+    private void updateInlineBounds(long nowMs) {
+        if (SystemClock.uptimeMillis() < inlineBoundsAnimatingUntilMs) return;
+        if (nowMs - lastInlineBoundsMs < 250L) return;
+        lastInlineBoundsMs = nowMs;
+        android.graphics.Rect bounds = ApplePlayerStyler.inlineLyricsBounds(activity);
+        if (bounds == null || !applyInlineBounds(bounds)) closeArtwork();
+    }
+
+    private boolean applyInlineBounds(android.graphics.Rect bounds) {
+        if (!(artworkOverlay.getParent() instanceof android.view.View)) return false;
+        android.view.View parent = (android.view.View) artworkOverlay.getParent();
+        int[] parentAt = new int[2];
+        parent.getLocationInWindow(parentAt);
+        android.widget.FrameLayout.LayoutParams lp =
+                artworkOverlay.getLayoutParams() instanceof android.widget.FrameLayout.LayoutParams
+                        ? (android.widget.FrameLayout.LayoutParams) artworkOverlay.getLayoutParams()
+                        : new android.widget.FrameLayout.LayoutParams(1, 1);
+        int left = bounds.left - parentAt[0];
+        int top = bounds.top - parentAt[1];
+        if (lp.width != bounds.width() || lp.height != bounds.height()
+                || lp.leftMargin != left || lp.topMargin != top) {
+            lp.width = bounds.width();
+            lp.height = bounds.height();
+            lp.leftMargin = left;
+            lp.topMargin = top;
+            lp.gravity = android.view.Gravity.TOP | android.view.Gravity.START;
+            artworkOverlay.setLayoutParams(lp);
+        }
+        artworkOverlay.bringToFront();
+        return true;
+    }
+
+    /** Gives the cover its place back: the cover and the lyric line under the title return. */
+    private void leaveInlineMode(boolean animate) {
+        if (!inlineMode) return;
+        inlineMode = false;
+        if (inlineBoundsAnimator != null) inlineBoundsAnimator.cancel();
+        inlineBoundsAnimator = null;
+        inlineBoundsAnimatingUntilMs = 0L;
+        ApplePlayerStyler.setInlineLyricsOpen(activity, false, null);
+        artworkOverlay.setInlineGestures(null);
+        artworkOverlay.setEmptyMessage(null);
+        artworkOverlay.animate().cancel();
+        if (animate && artworkOverlay.isOverlayVisible()) {
+            // The lyrics fade while the cover flies back out to full size.
+            artworkOverlay.animate().alpha(0f).setStartDelay(0L)
+                    .setDuration(ApplePlayerStyler.INLINE_TRANSITION_MS / 2)
+                    .withEndAction(() -> {
+                        if (inlineMode) return;
+                        artworkOverlay.hideOverlay();
+                        artworkOverlay.setAlpha(1f);
+                        artworkOverlay.setAppleInline(false);
+                    }).start();
+        } else {
+            artworkOverlay.hideOverlay();
+            artworkOverlay.setAlpha(1f);
+            artworkOverlay.setAppleInline(false);
+        }
+        card.animate().cancel();
+        card.animate().alpha(1f).setDuration(260L).start();
     }
 
     private void closeArtwork() {
@@ -398,7 +568,11 @@ final class NowPlayingLyricController {
 
     private void closeArtwork(boolean clearPendingTransfer) {
         artworkBackLifecycle.stop();
-        artworkOverlay.hideOverlay();
+        if (inlineMode) {
+            leaveInlineMode(true);
+        } else {
+            artworkOverlay.hideOverlay();
+        }
         artworkUnavailableGraceArmed = false;
         artworkUnavailableRetriesRemaining = 0;
         if (clearPendingTransfer) clearPendingCanvasTransfer();
@@ -410,7 +584,8 @@ final class NowPlayingLyricController {
     }
 
     private void onArtworkTargetInvalidated(NowPlayingArtworkTargetResolver.Kind kind) {
-        if (!artworkOverlay.isOverlayVisible()) return;
+        // The in-place lyrics follow the Apple player's layout, not Spotify's cover target.
+        if (inlineMode || !artworkOverlay.isOverlayVisible()) return;
         if (kind == NowPlayingArtworkTargetResolver.Kind.CANVAS) {
             armPendingCanvasTransfer();
             closeArtwork(false);
@@ -420,6 +595,10 @@ final class NowPlayingLyricController {
     }
 
     private void updateArtworkTarget(long nowMs) {
+        if (inlineMode) {
+            if (artworkOverlay.isOverlayVisible()) updateInlineBounds(nowMs);
+            return;
+        }
         if (!artworkOverlay.isOverlayVisible() || nowMs - lastArtworkTargetCheckMs < 250L) return;
         lastArtworkTargetCheckMs = nowMs;
         boolean boundedRefreshPending = artworkTargetRefreshesRemaining > 0;

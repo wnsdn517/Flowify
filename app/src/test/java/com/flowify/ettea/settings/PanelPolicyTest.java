@@ -213,17 +213,10 @@ public class PanelPolicyTest {
     }
 
     @Test
-    public void fillAndGlowFollowAnimationStyle() {
-        PanelSnapshot wash = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ANIMATION_STYLE, "Gradient wash").build();
-        assertTrue(PanelPolicy.shouldRender(Settings.LINE_SYNC_FILL, wash));
-        PanelSnapshot spotlight = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ANIMATION_STYLE, "Spotlight").build();
-        assertFalse(PanelPolicy.shouldRender(Settings.LINE_SYNC_FILL, spotlight));
-        PanelSnapshot karaoke = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.LIVE_CARD_ANIMATION, "Karaoke fill").build();
-        assertTrue(PanelPolicy.shouldRender(Settings.LIVE_CARD_LINE_SYNC_FILL, karaoke));
-        assertTrue(PanelPolicy.shouldRender(Settings.LIVE_CARD_GLOW, karaoke));
+    public void cardGlowFollowsCardAnimation() {
+        PanelSnapshot apple = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.LIVE_CARD_ANIMATION, "Apple Music").build();
+        assertTrue(PanelPolicy.shouldRender(Settings.LIVE_CARD_GLOW, apple));
         PanelSnapshot minimal = PanelSnapshot.builder().allCapabilities()
                 .put(Settings.LIVE_CARD_ANIMATION, "Minimal").build();
         assertFalse(PanelPolicy.shouldRender(Settings.LIVE_CARD_GLOW, minimal));
@@ -233,12 +226,16 @@ public class PanelPolicyTest {
     public void customSizeRowsFollowTheirMode() {
         PanelSnapshot custom = PanelSnapshot.builder().allCapabilities()
                 .put(Settings.LYRICS_TEXT_SIZE, "custom").build();
+        PanelSnapshot normal = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.LYRICS_TEXT_SIZE, "normal").build();
         assertTrue(PanelPolicy.shouldRender(Settings.LYRICS_TEXT_SIZE_CUSTOM, custom));
-        assertFalse(PanelPolicy.shouldRender(Settings.LYRICS_TEXT_SIZE_CUSTOM, full()));
+        assertFalse(PanelPolicy.shouldRender(Settings.LYRICS_TEXT_SIZE_CUSTOM, normal));
         PanelSnapshot trackCustom = PanelSnapshot.builder().allCapabilities()
                 .put(Settings.TRACK_INFO_TEXT_SIZE, "Custom").build();
+        PanelSnapshot trackNormal = PanelSnapshot.builder().allCapabilities()
+                .put(Settings.TRACK_INFO_TEXT_SIZE, "Normal").build();
         assertTrue(PanelPolicy.shouldRender(Settings.TRACK_INFO_TEXT_SIZE_CUSTOM, trackCustom));
-        assertFalse(PanelPolicy.shouldRender(Settings.TRACK_INFO_TEXT_SIZE_CUSTOM, full()));
+        assertFalse(PanelPolicy.shouldRender(Settings.TRACK_INFO_TEXT_SIZE_CUSTOM, trackNormal));
     }
 
     @Test
@@ -420,41 +417,19 @@ public class PanelPolicyTest {
     }
 
     @Test
-    public void appleSectionRendersOnlyUnderAppleMusicStyle() {
+    public void appleRowsAlwaysRender() {
         Settings.Setting<?>[] appleRows = {
                 Settings.APPLE_FADE_PASSED_LINES,
                 Settings.APPLE_COMPACT_TEXT,
                 Settings.LINE_SLIDE_ANIMATION,
                 Settings.APPLE_LIFT
         };
-        PanelSnapshot wash = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ANIMATION_STYLE, "Gradient wash").build();
-        PanelSnapshot spotlight = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ANIMATION_STYLE, "Spotlight").build();
-        PanelSnapshot apple = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ANIMATION_STYLE, "Apple Music").build();
         for (Settings.Setting<?> setting : appleRows) {
             assertTrue(PanelPolicy.isAppleOwned(setting));
-            assertFalse(setting.key + " must hide outside Apple Music",
-                    PanelPolicy.shouldRender(setting, wash));
-            assertFalse(setting.key + " must hide under Spotlight",
-                    PanelPolicy.shouldRender(setting, spotlight));
-            assertTrue(setting.key + " must show under Apple Music",
-                    PanelPolicy.shouldRender(setting, apple));
+            // Apple Music is the only animation style, so its rows always show.
+            assertTrue(setting.key, PanelPolicy.shouldRender(setting, full()));
         }
-        assertFalse(PanelPolicy.isAppleOwned(Settings.WORD_BOUNCE_STYLE));
         assertFalse(PanelPolicy.isAppleOwned(Settings.ENABLE_LINE_BLUR));
     }
 
-    @Test
-    public void bounceRowsStandDownUnderAppleMusic() {
-        PanelSnapshot wash = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ANIMATION_STYLE, "Gradient wash").build();
-        PanelSnapshot apple = PanelSnapshot.builder().allCapabilities()
-                .put(Settings.ANIMATION_STYLE, "Apple Music").build();
-        assertTrue(PanelPolicy.shouldRender(Settings.WORD_BOUNCE, wash));
-        assertTrue(PanelPolicy.shouldRender(Settings.WORD_BOUNCE_STYLE, wash));
-        assertFalse(PanelPolicy.shouldRender(Settings.WORD_BOUNCE, apple));
-        assertFalse(PanelPolicy.shouldRender(Settings.WORD_BOUNCE_STYLE, apple));
-    }
 }

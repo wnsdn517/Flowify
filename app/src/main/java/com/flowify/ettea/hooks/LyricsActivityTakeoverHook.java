@@ -873,7 +873,13 @@ final class LyricsActivityTakeoverHook {
         button.setPadding(dp(13), dp(13), dp(13), dp(13));
         button.setClickable(true);
         button.setFocusable(true);
-        button.setOnClickListener(v -> launchNativeLyricsFullscreen(activity));
+        // On the Apple-style player the lyrics open inside it, in the cover's place (and this
+        // button closes them again); elsewhere it opens the lyrics screen.
+        button.setOnClickListener(v -> {
+            if (!nowPlayingInjector.toggleInlineLyrics(activity)) {
+                launchNativeLyricsFullscreen(activity);
+            }
+        });
         return button;
     }
 

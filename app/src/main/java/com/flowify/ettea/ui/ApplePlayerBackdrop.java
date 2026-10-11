@@ -60,6 +60,10 @@ public final class ApplePlayerBackdrop extends View {
             topGlyphAnimator.cancel();
             topGlyphAnimator = null;
         }
+        if (coverDimAnimator != null) {
+            coverDimAnimator.cancel();
+            coverDimAnimator = null;
+        }
         topGlyphTarget = Integer.MIN_VALUE;
         super.onDetachedFromWindow();
     }
@@ -101,6 +105,11 @@ public final class ApplePlayerBackdrop extends View {
     private int topGlyphColor = Color.WHITE;
     private int topGlyphTarget = Integer.MIN_VALUE;
     private ValueAnimator topGlyphAnimator;
+    /** When set, the handle is drawn by this view (above the top scrim) instead of here. */
+    private View handleHost;
+    /** 0 = cover shown, 1 = cover faded out to the backdrop's own colours (lyrics view). */
+    private float coverDim;
+    private ValueAnimator coverDimAnimator;
 
     public ApplePlayerBackdrop(Context context) {
         super(context);
@@ -138,6 +147,27 @@ public final class ApplePlayerBackdrop extends View {
         invalidate();
     }
 
+    /**
+     * Fades the cover out of the backdrop, leaving its colours, as Apple Music's player does when
+     * it shows the lyrics in the cover's place; false brings the cover back.
+     */
+    public void setCoverDimmed(boolean dimmed) {
+        float target = dimmed ? 1f : 0f;
+        if (coverDimAnimator != null) {
+            coverDimAnimator.cancel();
+            coverDimAnimator = null;
+        }
+        if (coverDim == target) return;
+        coverDimAnimator = ValueAnimator.ofFloat(coverDim, target);
+        coverDimAnimator.setDuration(380L);
+        coverDimAnimator.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        coverDimAnimator.addUpdateListener(animation -> {
+            coverDim = (float) animation.getAnimatedValue();
+            invalidate();
+        });
+        coverDimAnimator.start();
+    }
+
     public void setCoverReplacedByAnimatedArtwork(boolean replaced) {
         if (coverReplacedByAnimatedArtwork == replaced) return;
         coverReplacedByAnimatedArtwork = replaced;
@@ -154,8 +184,36 @@ public final class ApplePlayerBackdrop extends View {
             handleCenterY = Math.abs(difference) < 1f
                     ? y : handleCenterY + difference * 0.28f;
         }
+        invalidateHandle();
+        if (Math.abs(y - handleCenterY) >= 0.5f) {
+            postInvalidateOnAnimation();
+            if (handleHost != null) handleHost.postInvalidateOnAnimation();
+        }
+    }
+
+    /**
+     * Hands the handle to {@code host}, which calls {@link #drawHandle} from its own draw - so
+     * the handle sits above layers stacked over this backdrop (the top scrim). Null draws it here.
+     */
+    public void setHandleHost(View host) {
+        if (handleHost == host) return;
+        handleHost = host;
+        invalidateHandle();
+    }
+
+    /** The handle: a rounded bar in the shared top-glyph colour; nothing while it is hidden. */
+    public void drawHandle(Canvas canvas, int w) {
+        if (handleCenterY <= 0f) return;
+        float hw = 18f * density;
+        float hh = 2.5f * density;
+        handlePaint.setColor(topGlyphColor);
+        canvas.drawRoundRect(w / 2f - hw, handleCenterY - hh, w / 2f + hw, handleCenterY + hh,
+                hh, hh, handlePaint);
+    }
+
+    private void invalidateHandle() {
         invalidate();
-        if (Math.abs(y - handleCenterY) >= 0.5f) postInvalidateOnAnimation();
+        if (handleHost != null) handleHost.invalidate();
     }
 
     /** Smoothly changes the shared foreground tint for the drag handle and header glyphs. */
@@ -172,7 +230,7 @@ public final class ApplePlayerBackdrop extends View {
         topGlyphAnimator.setDuration(220L);
         topGlyphAnimator.addUpdateListener(animation -> {
             topGlyphColor = (int) animation.getAnimatedValue();
-            invalidate();
+            invalidateHandle();
         });
         topGlyphAnimator.start();
     }
@@ -287,7 +345,9 @@ public final class ApplePlayerBackdrop extends View {
         drawMeshBackdrop(canvas, w, h, banner, secondWeight);
         // The cover: full width, coming in under the blur band at the top with a soft edge,
         // dissolving into the colours below over its last third.
-        for (int i = 0; !coverReplacedByAnimatedArtwork && i < pageCount; i++) {
+        float coverVisibility = 1f - coverDim;
+        for (int i = 0; !coverReplacedByAnimatedArtwork && coverVisibility > 0.001f
+                && i < pageCount; i++) {
             Page page = pages[i];
             if (page.cover == null || page.cover.isRecycled()) continue;
             float left = page.offsetPx;
@@ -314,22 +374,19 @@ public final class ApplePlayerBackdrop extends View {
                     new float[]{0f, Math.min(0.3f, softTop / span), (fadeStart - top) / span, 1f},
                     Shader.TileMode.CLAMP);
             coverPaint.setShader(new ComposeShader(bitmapShader, mask, PorterDuff.Mode.DST_IN));
-            coverPaint.setAlpha(Math.round(255 * alpha));
+            coverPaint.setAlpha(Math.round(255 * alpha * coverVisibility));
             canvas.drawRect(left, top, left + w, bottom, coverPaint);
         }
         coverPaint.setShader(null);
         coverPaint.setAlpha(255);
-        if (zone > 0 && !coverReplacedByAnimatedArtwork) {
+        if (zone > 0 && !coverReplacedByAnimatedArtwork && coverVisibility > 0.001f) {
+            int save = coverVisibility < 0.999f
+                    ? canvas.saveLayerAlpha(0f, 0f, w, banner, Math.round(255 * coverVisibility))
+                    : -1;
             drawTopProgressiveBlur(canvas, w, top, banner, zone / 0.6f + 56f * density);
+            if (save >= 0) canvas.restoreToCount(save);
         }
-        // The handle: a rounded bar in a white tinted with the cover.
-        if (handleCenterY > 0f) {
-            float hw = 18f * density;
-            float hh = 2.5f * density;
-            handlePaint.setColor(topGlyphColor);
-            canvas.drawRoundRect(w / 2f - hw, handleCenterY - hh, w / 2f + hw, handleCenterY + hh,
-                    hh, hh, handlePaint);
-        }
+        if (handleHost == null) drawHandle(canvas, w);
     }
 
     private void drawPaletteBlobs(Canvas canvas, int w, int h, float banner,

@@ -9,7 +9,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.eza.spicyex.SpotifyPlusConfig;
 
-import java.lang.reflect.Constructor;
 
 import org.junit.Test;
 import com.eza.spicyex.lyrics.LyricsBackgroundStyle;
@@ -166,29 +165,35 @@ public class LyricsTransliterationSessionTest {
 
     private static LyricsRenderConfig configWithKorean(String koreanModeConfig, String defaultKoreanMode,
                                                        String koreanMode) throws Exception {
-        Constructor<LyricsRenderConfig> ctor = LyricsRenderConfig.class.getDeclaredConstructor(
-                String.class, boolean.class, boolean.class, boolean.class, boolean.class, boolean.class,
-                boolean.class, float.class,
-                boolean.class, boolean.class, boolean.class, boolean.class, boolean.class,
-                String.class, float.class, String.class, String.class, String.class, String.class, String.class, float.class,
-                String.class, float.class, String.class, boolean.class, boolean.class, boolean.class,
-                String.class, String.class, String.class, String.class, String.class, String.class, String.class,
-                String.class, String.class, String.class, String.class, String.class, String.class, String.class,
-                boolean.class, String.class, String.class, String.class, boolean.class,
-                boolean.class, String.class, String.class, boolean.class, int.class);
-        ctor.setAccessible(true);
-        return ctor.newInstance(
-                LyricsBackgroundStyle.GRADIENT, true, true, false, true, true, true, 1f,
-                false, true, true, true, true,
-                "more", 1f, "Medium", "Medium", "default", "", "normal", 1f,
-                "normal", 1f, "Main only", false, false, false,
-                "Spotlight word", "Off", "Top to bottom", "Fade up", "Scroll with lyric", "Grouped", "Top to bottom",
-                "cycle", SpotifyPlusConfig.JP_READING_FURIGANA_ROMAJI,
-                "cycle", SpotifyPlusConfig.CHINESE_MODE_PINYIN,
-                koreanModeConfig, defaultKoreanMode, koreanMode,
-                false,
-                "cycle", SpicyRomanizer.CYRILLIC_RUSSIAN, SpicyRomanizer.CYRILLIC_RUSSIAN, false,
-                true, "google_unofficial", "en", false, 0);
+        LyricsRenderConfig config = LyricsRenderConfig.read(null, null);
+        set(config, "attachTransliterationToWords", true);
+        set(config, "transliterationEnabled", true);
+        set(config, "japaneseModeConfig", "cycle");
+        set(config, "defaultJapaneseReadingMode", SpotifyPlusConfig.JP_READING_FURIGANA_ROMAJI);
+        set(config, "chineseModeConfig", "cycle");
+        set(config, "defaultChineseMode", SpotifyPlusConfig.CHINESE_MODE_PINYIN);
+        set(config, "koreanModeConfig", koreanModeConfig);
+        set(config, "defaultKoreanMode", defaultKoreanMode);
+        set(config, "koreanMode", koreanMode);
+        set(config, "chineseTones", false);
+        set(config, "cyrillicModeConfig", "cycle");
+        set(config, "defaultCyrillicMode", SpicyRomanizer.CYRILLIC_RUSSIAN);
+        set(config, "cyrillicMode", SpicyRomanizer.CYRILLIC_RUSSIAN);
+        set(config, "cyrillicKeepSigns", false);
+        set(config, "translationEnabled", true);
+        set(config, "translationBackend", "google_unofficial");
+        set(config, "translationTarget", "en");
+        return config;
+    }
+
+    private static void set(LyricsRenderConfig config, String field, Object value) throws Exception {
+        java.lang.reflect.Field target = LyricsRenderConfig.class.getDeclaredField(field);
+        target.setAccessible(true);
+        if (target.getType() == boolean.class) {
+            target.setBoolean(config, (Boolean) value);
+        } else {
+            target.set(config, value);
+        }
     }
 
     @Test

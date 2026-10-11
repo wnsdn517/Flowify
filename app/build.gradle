@@ -91,7 +91,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.eza.spicyex"
+        applicationId "com.flowify.ettea"
         minSdk 27
         targetSdk 35
         // Fork version: MAJOR (large refactor) . MINOR (features) . PATCH (bug fixes), set in

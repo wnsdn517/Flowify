@@ -31,31 +31,6 @@ public class LyricAnimationsTest {
     }
 
     @Test
-    public void scaleSplineKnots() {
-        assertEquals(0.95f, LyricAnimations.scaleSpline(0f), EPS);
-        assertEquals(1.025f, LyricAnimations.scaleSpline(0.7f), EPS);
-        assertEquals(1.0f, LyricAnimations.scaleSpline(1f), EPS);
-        assertContinuous(LyricAnimations::scaleSpline, 0.7f);
-    }
-
-    @Test
-    public void yOffsetSplineKnots() {
-        assertEquals(0.01f, LyricAnimations.yOffsetSpline(0f), EPS);
-        assertEquals(-(1f / 60f), LyricAnimations.yOffsetSpline(0.9f), EPS);
-        assertEquals(0f, LyricAnimations.yOffsetSpline(1f), EPS);
-        assertContinuous(LyricAnimations::yOffsetSpline, 0.9f);
-    }
-
-    @Test
-    public void liftYOffsetUsesSymmetricVerticalArc() {
-        assertEquals(0f, LyricAnimations.liftYOffsetSpline(0f), EPS);
-        assertEquals(-0.04f, LyricAnimations.liftYOffsetSpline(0.5f), EPS);
-        assertEquals(0f, LyricAnimations.liftYOffsetSpline(1f), EPS);
-        assertEquals(LyricAnimations.liftYOffsetSpline(0.25f),
-                LyricAnimations.liftYOffsetSpline(0.75f), EPS);
-    }
-
-    @Test
     public void glowSplinePlateau() {
         assertEquals(0f, LyricAnimations.glowSpline(0f), EPS);
         assertEquals(1f, LyricAnimations.glowSpline(0.15f), EPS);
@@ -64,28 +39,6 @@ public class LyricAnimationsTest {
         assertEquals(0f, LyricAnimations.glowSpline(1f), EPS);
         assertContinuous(LyricAnimations::glowSpline, 0.15f);
         assertContinuous(LyricAnimations::glowSpline, 0.6f);
-    }
-
-    @Test
-    public void letterSplinesPopHarderThanWords() {
-        assertEquals(1.18f, LyricAnimations.letterScaleSpline(0.7f), EPS);
-        assertTrue(LyricAnimations.letterScaleSpline(0.7f) > LyricAnimations.scaleSpline(0.7f));
-        assertEquals(0.95f, LyricAnimations.letterScaleSpline(0f), EPS);
-        assertEquals(1.0f, LyricAnimations.letterScaleSpline(1f), EPS);
-        assertContinuous(LyricAnimations::letterScaleSpline, 0.7f);
-        assertContinuous(LyricAnimations::letterYOffsetSpline, 0.9f);
-    }
-
-    @Test
-    public void wordScaleSplineStrongMatchesLetterAmplitude() {
-        assertEquals(LyricAnimations.letterScaleSpline(0f),
-                LyricAnimations.wordScaleSplineStrong(0f), EPS);
-        assertEquals(LyricAnimations.letterScaleSpline(0.7f),
-                LyricAnimations.wordScaleSplineStrong(0.7f), EPS);
-        assertEquals(LyricAnimations.letterScaleSpline(1f),
-                LyricAnimations.wordScaleSplineStrong(1f), EPS);
-        assertTrue(LyricAnimations.wordScaleSplineStrong(0.7f) > LyricAnimations.scaleSpline(0.7f));
-        assertContinuous(LyricAnimations::wordScaleSplineStrong, 0.7f);
     }
 
     @Test

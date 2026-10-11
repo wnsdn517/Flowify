@@ -36,6 +36,33 @@ public final class SettingsStore implements TypedStore {
         migrateStatusBarHiddenMode(prefs);
         migrateFullscreenControls(prefs);
         migrateRemovedAdAndConnect(prefs);
+        migrateScrollMotion(prefs);
+    }
+
+    /**
+     * Folds the old slide toggle + spring-strength slider into SCROLL_MOTION, for the portrait key
+     * and its landscape ("_ls") twin. Slide off was a plain glide (Static); slide on with the
+     * spring turned well down read as no overshoot (Smooth); anything else kept the bounce.
+     * Untouched installs get SCROLL_MOTION's default.
+     */
+    static synchronized void migrateScrollMotion(SharedPreferences prefs) {
+        migrateScrollMotion(prefs, "");
+        migrateScrollMotion(prefs, "_ls");
+    }
+
+    private static void migrateScrollMotion(SharedPreferences prefs, String suffix) {
+        String target = Settings.SCROLL_MOTION.key + suffix;
+        String slideKey = Settings.LINE_SLIDE_ANIMATION.key + suffix;
+        String springKey = Settings.APPLE_SPRING_STRENGTH.key + suffix;
+        if (prefs.contains(target)) return;
+        if (!prefs.contains(slideKey) && !prefs.contains(springKey)) return;
+        Map<String, ?> values = prefs.getAll();
+        // The slide's pre-SCROLL_MOTION default was off.
+        boolean slide = Boolean.TRUE.equals(values.get(slideKey));
+        Object strength = values.get(springKey);
+        int spring = strength instanceof Integer ? (Integer) strength : 100;
+        String motion = !slide ? "Static" : spring <= 75 ? "Smooth" : "Spring";
+        prefs.edit().putString(target, motion).apply();
     }
 
     static synchronized void migrateLikedSongsButton(SharedPreferences prefs) {
@@ -46,7 +73,8 @@ public final class SettingsStore implements TypedStore {
         Map<String, ?> values = prefs.getAll();
         Object show = hasShow ? values.get(Settings.LEGACY_SHOW_SAVE_BUTTON) : Boolean.TRUE;
         Object icon = hasIcon ? values.get(Settings.LEGACY_SAVE_BUTTON_ICON) : "Heart";
-        String mode = Settings.LIKED_SONGS_BUTTON.defaultValue;
+        // A legacy "hidden" choice stays hidden even though the default is now Heart.
+        String mode = "Off";
         if (Boolean.TRUE.equals(show) && ("Heart".equals(icon) || "Star".equals(icon))) {
             mode = (String) icon;
         }
@@ -148,7 +176,8 @@ public final class SettingsStore implements TypedStore {
             editor.apply();
             return;
         }
-        String mode = Settings.STATUS_BAR_HIDDEN_MODE.defaultValue;
+        // Both legacy flags off meant shown everywhere, whatever the current default is.
+        String mode = "Off";
         if (portrait && landscape) {
             mode = "Both";
         } else if (portrait) {

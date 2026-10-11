@@ -400,19 +400,12 @@ public final class LiveLyricCardView extends LinearLayout {
                 + "|" + config.liveCardMinimalAnimation
                 + "|" + config.liveCardAnimationMode
                 + "|" + config.liveCardGlowMode
-                + "|" + config.liveCardLineSyncFillMode
                 + "|" + config.liveCardTransitionMode
                 + "|" + config.liveCardOverflowMode
                 + "|" + config.liveCardScrollScope
                 + "|" + config.adaptiveSectioningEnabled
-                + "|" + config.spotlight
-                + "|" + config.wordBounceEnabled
-                + "|" + config.wordBounceScope
-                + "|" + config.wordBounceStyle
-                + "|" + config.appleStyle
                 + "|" + config.appleLift
                 + "|" + config.appleDimPassed
-                + "|" + config.lineSyncFillMode
                 + "|" + config.glowBlurEnabled
                 + "|" + config.lineBlurEnabled
                 + "|" + config.lineBlurHeavy

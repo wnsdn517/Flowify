@@ -106,17 +106,6 @@ public final class LyricsScrollController {
      * any other line change, not snap as if starting over).
      */
     public static boolean shouldScrollInstantly(boolean requested, int previousActiveIndex) {
-        return shouldScrollInstantly(requested, previousActiveIndex, true);
-    }
-
-    /**
-     * @param appleStyle animation style is "Apple Music". The two-sentinel split is Apple motion;
-     *  every other style keeps snapping on any negative index, which is what its scroll path
-     *  (ScrollView's own {@code smoothScrollTo}) expects.
-     */
-    public static boolean shouldScrollInstantly(boolean requested, int previousActiveIndex,
-                                                boolean appleStyle) {
-        if (!appleStyle) return requested || previousActiveIndex < 0;
         return requested || previousActiveIndex < -1;
     }
 
@@ -126,21 +115,18 @@ public final class LyricsScrollController {
     }
 
     /**
-     * @param appleStyle animation style is "Apple Music": only then does a wrapped row anchor by
-     *  its first/last visual line. Other styles keep the row's own centre, as before.
+     * A wrapped row anchors by its first/last visual line (see {@link #anchorLineOffset}).
      *  @param rowHalfPx half the height of a single (unwrapped) lyric line, in px - used as the
      *  offset back from the row's top instead of half the row's OWN height, so a long line that
      *  wraps to two or three visual lines still anchors by its first line's position. Using the
      *  full row height there would center the whole wrapped block instead, sitting the first
      *  (the actually-read) line noticeably off the anchor point for anything but a single-line
      *  row. */
-    public int centeredScrollTarget(View row, int rowHalfPx, boolean appleStyle) {
+    public int centeredScrollTarget(View row, int rowHalfPx) {
         if (scrollView == null || contentColumn == null || row == null) return 0;
         workRect.set(0, 0, row.getWidth(), row.getHeight());
         contentColumn.offsetDescendantRectToMyCoords(row, workRect);
-        int lineOffset = appleStyle
-                ? anchorLineOffset(row.getHeight(), rowHalfPx, anchorFraction)
-                : row.getHeight() / 2;
+        int lineOffset = anchorLineOffset(row.getHeight(), rowHalfPx, anchorFraction);
         if (anchorFraction == CENTER_ANCHOR_FRACTION) {
             return scrollView.getPaddingTop() + workRect.top - (scrollView.getHeight() / 2) + lineOffset;
         }

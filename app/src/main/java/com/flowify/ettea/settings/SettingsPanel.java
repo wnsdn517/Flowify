@@ -1,7 +1,6 @@
 package com.eza.spicyex.settings;
 
 import com.eza.spicyex.BuildStamp;
-import com.eza.spicyex.AppSigningIdentity;
 import com.eza.spicyex.CurrentLyricState;
 import com.eza.spicyex.Diagnostics;
 import com.eza.spicyex.FeatureAvailability;
@@ -812,7 +811,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         snapshot.put(Settings.TRANSLITERATION_ENABLED, store.get(Settings.TRANSLITERATION_ENABLED));
         snapshot.put(Settings.BACKGROUND_STYLE, store.get(Settings.BACKGROUND_STYLE));
         snapshot.put(Settings.FORCE_DARK_BACKGROUND, store.get(Settings.FORCE_DARK_BACKGROUND));
-        snapshot.put(Settings.ANIMATION_STYLE, store.get(Settings.ANIMATION_STYLE));
         snapshot.put(Settings.LIVE_CARD_ANIMATION, store.get(Settings.LIVE_CARD_ANIMATION));
         snapshot.put(Settings.LYRICS_TEXT_SIZE, store.get(Settings.LYRICS_TEXT_SIZE));
         snapshot.put(Settings.LINE_SPACING, store.get(Settings.LINE_SPACING));
@@ -849,9 +847,42 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
             }
             LinearLayout card = style.newCard();
             card.setTag(PanelTags.CARD_PREFIX + section.id + ":" + i);
-            for (Settings.Setting<?> setting : run) renderSetting(card, setting);
+            for (Settings.Setting<?> setting : run) {
+                renderSetting(card, setting);
+                appendRowExtras(card, setting);
+            }
             if (i == runs.size() - 1) appendPageExtras(card, section);
             style.attachCard(parent, card, -1);
+        }
+    }
+
+    /**
+     * Actions that belong to one setting, placed right under its row instead of on the About
+     * page: the sync reset next to the sync offset, and the cache clears next to the cache size.
+     */
+    private void appendRowExtras(LinearLayout card, Settings.Setting<?> setting) {
+        if (setting == Settings.SYNC_OFFSET_MS) {
+            rows.actionRow(card, null,
+                    uiStrings.get("settings_action_resync_timing", "Reset lyrics sync"),
+                    v -> {
+                        // The panel owns the stored offset; the host re-anchors its playback clock
+                        // so the next frame measures from the real position, not the old offset.
+                        writer.put(Settings.SYNC_OFFSET_MS, 0);
+                        if (onResyncTiming != null) onResyncTiming.run();
+                        rebuildSection(Settings.SYNC_OFFSET_MS.section);
+                        android.widget.Toast.makeText(context,
+                                uiStrings.get("settings_resync_timing_done", "Lyrics sync reset"),
+                                android.widget.Toast.LENGTH_SHORT).show();
+                    });
+        } else if (setting == Settings.CACHE_SIZE) {
+            clearAction(card, "settings_action_clear_lyrics_cache",
+                    "Clear lyrics response cache", CacheClearKind.LYRICS_RESPONSE);
+            clearAction(card, "settings_action_clear_translation_cache",
+                    "Clear translation cache", CacheClearKind.TRANSLATION);
+            clearAction(card, "settings_action_clear_reading_cache",
+                    "Clear transliteration cache", CacheClearKind.TRANSLITERATION);
+            clearAction(card, "settings_action_clear_ai_cache",
+                    "Clear AI results", CacheClearKind.AI);
         }
     }
 
@@ -888,9 +919,8 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     private static final String FORK_REPO = "wnsdn517/spicy-ex";
 
     /**
-     * The page's head: the wordmark shining in the album's colour, the version in the fork's
-     * own scheme, who made it and where the source is, the newest release on GitHub, and what
-     * this build is running on.
+     * The page's head: the wordmark shining in the album's colour, the version with the update
+     * check right under it (tap for the releases), then who made it and where the source is.
      */
     private void appendAboutCard(LinearLayout parent) {
         LinearLayout hero = new LinearLayout(context);
@@ -902,35 +932,11 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
                         PanelStyle.COL_ACCENT, font == null ? null : font.get()),
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // Main version: just "nightly 2.0.0"
         TextView version = style.text(BuildStamp.VERSION, 18, PanelStyle.COL_TITLE, true);
         version.setGravity(Gravity.CENTER);
         version.setPadding(0, style.dp(8), 0, 0);
         hero.addView(version);
-
-        // Official / Unofficial badge
-        boolean officialBuild = AppSigningIdentity.isOfficial(context);
-        TextView signingStatus = style.text(
-                uiStrings.get(officialBuild ? "settings_about_official" : "settings_about_unofficial",
-                        officialBuild ? "Official" : "Unofficial"),
-                12, officialBuild ? PanelStyle.COL_ACCENT : PanelStyle.COL_TITLE, true);
-        signingStatus.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams signingStatusLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        signingStatusLp.topMargin = style.dp(4);
-        hero.addView(signingStatus, signingStatusLp);
-
-        // Subtle build badge (commit + date)
-        TextView clue = style.text(BuildStamp.CLUE, 11, PanelStyle.COL_SUMMARY, false);
-        clue.setPadding(style.dp(14), style.dp(4), style.dp(14), style.dp(4));
-        android.graphics.drawable.GradientDrawable clueBg = new android.graphics.drawable.GradientDrawable();
-        clueBg.setCornerRadius(style.dp(14));
-        clueBg.setColor((PanelStyle.COL_ACCENT & 0x00FFFFFF) | 0x1A000000);
-        clue.setBackground(clueBg);
-        LinearLayout.LayoutParams clueLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        clueLp.topMargin = style.dp(6);
-        hero.addView(clue, clueLp);
+        hero.addView(updateStatusRow(), centeredWrap(style.dp(8)));
 
         LinearLayout heroCard = style.newCard();
         heroCard.addView(hero);
@@ -941,130 +947,46 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         personRow(people, uiStrings.get("settings_about_original", "Original developer"), "amarinne");
         rows.actionRow(people, Kind.EXTERNAL_LINK, uiStrings.get("settings_about_source", "Source code on GitHub"),
                 v -> openUrl("https://github.com/" + FORK_REPO));
-        // The three pills below open Telegram channels, but nothing about a plain accent-colored
-        // pill says so on its own - this caption is the only thing that does.
-        people.addView(style.groupCaption(uiStrings.get("settings_about_telegram_caption", "Telegram")));
-        communityRow(people);
-        addLatestGithubRelease(people);
         style.attachCard(parent, people, -1);
-
-        LinearLayout system = style.newCard();
-        rows.infoRow(system, "Spotify", spotifyVersion());
-        rows.infoRow(system, "Android", android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")");
-        rows.infoRow(system, uiStrings.get("settings_about_device", "Device"),
-                android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL);
-        String framework = com.eza.spicyex.xposed.XpHooks.frameworkLabel();
-        if (!framework.isEmpty()) {
-            rows.infoRow(system, uiStrings.get("settings_about_framework", "Framework"), framework);
-        }
-        rows.infoRow(system, uiStrings.get("settings_about_build", "Build"),
-                com.eza.spicyex.BuildConfig.BUILD_DATE + " · " + com.eza.spicyex.BuildConfig.GIT_SHA);
-        rows.actionRow(system, Kind.BUG, uiStrings.get("settings_about_share_bug_info", "Share for a bug report"),
-                v -> shareBugReportInfo());
-        style.attachCard(parent, system, -1);
     }
 
-    private void addLatestGithubRelease(LinearLayout parent) {
-        LinearLayout card = new LinearLayout(context);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(style.dp(12), style.dp(10), style.dp(12), style.dp(10));
-        android.graphics.drawable.GradientDrawable background =
-                new android.graphics.drawable.GradientDrawable();
-        background.setColor(0x12FFFFFF);
-        background.setCornerRadius(style.dp(16));
-        background.setStroke(Math.max(1, style.dp(1)), PanelStyle.COL_CARD_BORDER);
-        card.setBackground(background);
-
-        LinearLayout heading = new LinearLayout(context);
-        heading.setOrientation(LinearLayout.HORIZONTAL);
-        heading.setGravity(Gravity.CENTER_VERTICAL);
-        TextView label = style.text(uiStrings.get("settings_about_latest", "Latest on GitHub"),
-                12, PanelStyle.COL_SUMMARY, true);
-        heading.addView(label, new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
+    /** "Up to date" / "Update available · 1.2.3 · date", checked against the fork's releases. */
+    private LinearLayout updateStatusRow() {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
         TextView status = style.text(uiStrings.get("settings_about_checking", "Checking…"),
-                11, PanelStyle.COL_ACCENT, true);
-        status.setPadding(style.dp(9), style.dp(4), style.dp(9), style.dp(4));
+                12, PanelStyle.COL_ACCENT, true);
+        status.setPadding(style.dp(10), style.dp(4), style.dp(10), style.dp(4));
         android.graphics.drawable.GradientDrawable statusBackground =
                 new android.graphics.drawable.GradientDrawable();
         statusBackground.setColor((PanelStyle.COL_ACCENT & 0x00FFFFFF) | 0x26000000);
         statusBackground.setCornerRadius(style.dp(12));
         status.setBackground(statusBackground);
-        heading.addView(status);
-        card.addView(heading);
-
-        LinearLayout details = new LinearLayout(context);
-        details.setOrientation(LinearLayout.HORIZONTAL);
-        details.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams detailsLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        detailsLp.topMargin = style.dp(7);
-        TextView version = style.text("—", 18, PanelStyle.COL_TITLE, true);
-        details.addView(version, new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(status);
+        TextView latest = style.text("", 12, PanelStyle.COL_SUMMARY, true);
+        LinearLayout.LayoutParams latestLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        latestLp.leftMargin = style.dp(8);
+        row.addView(latest, latestLp);
         TextView date = style.text("", 12, PanelStyle.COL_SUMMARY, false);
-        details.addView(date);
-        card.addView(details, detailsLp);
-
-        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardLp.topMargin = style.dp(8);
-        parent.addView(card, cardLp);
-        card.setOnClickListener(v -> openUrl("https://github.com/" + FORK_REPO + "/releases"));
-        checkLatestRelease(version, status, date);
+        LinearLayout.LayoutParams dateLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dateLp.leftMargin = style.dp(6);
+        row.addView(date, dateLp);
+        row.setOnClickListener(v -> openUrl("https://github.com/" + FORK_REPO + "/releases"));
+        checkLatestRelease(latest, status, date);
+        return row;
     }
 
-    /** Shares app/Spotify/Android/device info as plain text, so a bug report always carries exact
-     *  version numbers instead of relying on the reporter to remember or retype them. */
-    private void shareBugReportInfo() {
-        String framework = com.eza.spicyex.xposed.XpHooks.frameworkLabel();
-        String info = "Spicy EX " + BuildStamp.NAME + " (" + BuildStamp.VERSION_CODE + ")\n"
-                + "Spotify: " + spotifyVersion() + "\n"
-                + "Android: " + android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")\n"
-                + "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
-                + (framework.isEmpty() ? "" : "\nFramework: " + framework);
-        try {
-            Intent send = new Intent(Intent.ACTION_SEND);
-            send.setType("text/plain");
-            send.putExtra(Intent.EXTRA_TEXT, info);
-            Intent chooser = Intent.createChooser(send, uiStrings.get("settings_about_share_info_chooser", "Share app info"));
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(chooser);
-        } catch (Throwable ignored) {
-        }
+    private LinearLayout.LayoutParams centeredWrap(int topMargin) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.gravity = Gravity.CENTER_HORIZONTAL;
+        lp.topMargin = topMargin;
+        return lp;
     }
 
-    /** Announcements / discussion / CI channel as one row of three pills instead of three list rows. */
-    private void communityRow(LinearLayout card) {
-        LinearLayout row = new LinearLayout(context);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(style.dp(12), style.dp(10), style.dp(12), style.dp(12));
-        String[][] links = {
-                {"settings_about_announcements", "Announcements", "https://t.me/spicy_ex"},
-                {"settings_about_discussion", "Discussion", "https://t.me/spicy_ex_discussion"},
-                {"settings_about_ci_channel", "CI builds", "https://t.me/spicy_ex_ci"},
-        };
-        for (int i = 0; i < links.length; i++) {
-            final String url = links[i][2];
-            TextView pill = style.text(uiStrings.get(links[i][0], links[i][1]), 13, PanelStyle.COL_ACCENT, true);
-            pill.setGravity(Gravity.CENTER);
-            pill.setSingleLine(true);
-            pill.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            pill.setPadding(style.dp(8), style.dp(10), style.dp(8), style.dp(10));
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setCornerRadius(style.dp(14));
-            bg.setColor((PanelStyle.COL_ACCENT & 0x00FFFFFF) | 0x24000000);
-            pill.setBackground(bg);
-            pill.setOnClickListener(v -> openUrl(url));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            if (i > 0) lp.leftMargin = style.dp(8);
-            row.addView(pill, lp);
-        }
-        card.addView(row);
-    }
-
-    /** A GitHub account: round avatar, role, name; opens the profile. */
     private void personRow(LinearLayout card, String role, String login) {
         LinearLayout row = style.newRow(card);
         ImageView avatar = new ImageView(context);
@@ -1253,12 +1175,33 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
 
     private void appendDebugCard(LinearLayout parent, int at) {
         appendAboutCard(parent);
-        LinearLayout card = style.newCard();
-        card.setTag(PanelTags.card(Settings.DEBUG));
-        renderActions(card);
-        renderStatus(card);
-        renderDiagnostics(card);
-        style.attachCard(parent, card, at);
+
+        parent.addView(style.groupCaption(
+                uiStrings.get("settings_about_diagnostics_caption", "Diagnostics")));
+        LinearLayout system = style.newCard();
+        system.setTag(PanelTags.card(Settings.DEBUG));
+        rows.infoRow(system, "Spotify", spotifyVersion());
+        rows.infoRow(system, "Android", android.os.Build.VERSION.RELEASE
+                + " (API " + android.os.Build.VERSION.SDK_INT + ")");
+        rows.infoRow(system, uiStrings.get("settings_about_device", "Device"),
+                android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL);
+        String framework = com.eza.spicyex.xposed.XpHooks.frameworkLabel();
+        if (!framework.isEmpty()) {
+            rows.infoRow(system, uiStrings.get("settings_about_framework", "Framework"), framework);
+        }
+        rows.infoRow(system, uiStrings.get("settings_about_build", "Build"),
+                com.eza.spicyex.BuildConfig.BUILD_DATE + " · " + com.eza.spicyex.BuildConfig.GIT_SHA);
+        rows.actionRow(system, Kind.BUG,
+                DiagnosticReportingDialog.reportProblemLabel(context, store),
+                v -> DiagnosticReportingDialog.show(context, store));
+        style.attachCard(parent, system, at);
+
+        parent.addView(style.groupCaption(
+                uiStrings.get("settings_about_current_lyrics_caption", "Current lyrics")));
+        LinearLayout current = style.newCard();
+        renderStatus(current);
+        renderDiagnostics(current);
+        style.attachCard(parent, current, -1);
     }
 
     // --- Anchor-preserving rebuilds ---
@@ -1434,10 +1377,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
         }
         if (setting == Settings.UI_LANGUAGE) {
             rebuildSections();
-        } else if (setting == Settings.ANIMATION_STYLE) {
-            // The Apple Music section appears/disappears with this pick (a cross-section
-            // change), so the whole panel rebuilds anchor-preserved instead of one section.
-            rebuildSections();
         } else if (PanelPolicy.shouldRebuildSectionAfterChange(setting)) {
             rebuildSection(setting.section);
         }
@@ -1605,31 +1544,6 @@ public final class SettingsPanel implements SettingRowFactory.Host, PanelDialogs
     }
 
     // --- Diagnostics card ---
-
-    private void renderActions(LinearLayout content) {
-        rows.actionRow(content, Kind.BUG,
-                DiagnosticReportingDialog.reportProblemLabel(context, store),
-                v -> DiagnosticReportingDialog.show(context, store));
-        rows.actionRow(content, null,
-                uiStrings.get("settings_action_resync_timing", "Reset lyrics sync"),
-                v -> {
-                    // The panel owns the stored offset; the host re-anchors its playback clock so
-                    // the next frame measures from the real position instead of the old offset.
-                    writer.put(Settings.SYNC_OFFSET_MS, 0);
-                    if (onResyncTiming != null) onResyncTiming.run();
-                    android.widget.Toast.makeText(context,
-                            uiStrings.get("settings_resync_timing_done", "Lyrics sync reset"),
-                            android.widget.Toast.LENGTH_SHORT).show();
-                });
-        clearAction(content, "settings_action_clear_translation_cache",
-                "Clear translation cache", CacheClearKind.TRANSLATION);
-        clearAction(content, "settings_action_clear_reading_cache",
-                "Clear transliteration cache", CacheClearKind.TRANSLITERATION);
-        clearAction(content, "settings_action_clear_ai_cache",
-                "Clear AI results", CacheClearKind.AI);
-        clearAction(content, "settings_action_clear_lyrics_cache",
-                "Clear lyrics response cache", CacheClearKind.LYRICS_RESPONSE);
-    }
 
     private void clearAction(LinearLayout content, String key, String fallback, CacheClearKind kind) {
         rows.actionRow(content, null, uiStrings.get(key, fallback), v -> clearCache(kind));

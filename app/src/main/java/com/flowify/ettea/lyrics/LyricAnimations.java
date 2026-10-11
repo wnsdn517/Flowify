@@ -38,8 +38,6 @@ public final class LyricAnimations {
     // recovering, which reads as a wobble rather than a note being held. A held note rises, stays
     // risen for as long as it is sung, and settles as it ends.
 
-    /** Peak growth, as a fraction of resting size, at full strength. */
-    public static final float EMPHASIS_MAX_SCALE = 0.18f;
     /** Peak float-up, in em, at full strength. */
     public static final float EMPHASIS_MAX_LIFT_EM = 0.03f;
     /** Duration ratio against the line average at which a word starts to swell at all. */
@@ -63,12 +61,7 @@ public final class LyricAnimations {
         return clamp01((ratio - EMPHASIS_MIN_RATIO) / (EMPHASIS_FULL_RATIO - EMPHASIS_MIN_RATIO));
     }
 
-    /** Rise, hold, release. Returns a scale multiplier around 1. */
-    public static float emphasisScale(float t, float strength) {
-        return 1f + EMPHASIS_MAX_SCALE * clamp01(strength) * emphasisEnvelope(t);
-    }
-
-    /** Vertical companion to {@link #emphasisScale}, in em (negative is up). */
+    /** Held-note lift, in em (negative is up). */
     public static float emphasisLiftEm(float t, float strength) {
         return -EMPHASIS_MAX_LIFT_EM * clamp01(strength) * emphasisEnvelope(t);
     }
@@ -79,35 +72,6 @@ public final class LyricAnimations {
         if (p < EMPHASIS_RISE) return smoothStep(p / EMPHASIS_RISE);
         if (p < EMPHASIS_RELEASE) return 1f;
         return 1f - smoothStep((p - EMPHASIS_RELEASE) / (1f - EMPHASIS_RELEASE));
-    }
-
-    /** Zoom style: recessed rest -> gentle peak -> neutral sung state. */
-    public static float scaleSpline(float t) {
-        if (t <= 0.7f) return lerp(0.95f, 1.025f, smoothStep(t / 0.7f));
-        return lerp(1.025f, 1f, smoothStep((t - 0.7f) / 0.3f));
-    }
-
-    /** Word-granularity version of {@link #letterScaleSpline}'s amplitude (0.95 -> 1.18 -> 1.0),
-     *  for words that qualify for the strong pop but can't run the per-letter animator - e.g. a
-     *  furigana-annotated Japanese word, whose ruby span needs a single contiguous text layout
-     *  rather than one view per code point. Keeps grow intensity comparable to English's
-     *  per-letter pop instead of falling back to the much weaker {@link #scaleSpline}. */
-    public static float wordScaleSplineStrong(float t) {
-        if (t <= 0.7f) return lerp(0.95f, 1.18f, smoothStep(t / 0.7f));
-        return lerp(1.18f, 1f, smoothStep((t - 0.7f) / 0.3f));
-    }
-
-    /** Zoom style Y range retained from the original Spicy curve. */
-    public static float yOffsetSpline(float t) {
-        if (t <= 0.9f) return lerp(0.01f, -(1f / 60f), t / 0.9f);
-        return lerp(-(1f / 60f), 0f, (t - 0.9f) / 0.1f);
-    }
-
-    /** Lift style: smooth vertical-only arc, 0 -> -0.04em -> 0. */
-    public static float liftYOffsetSpline(float t) {
-        float progress = clamp01(t);
-        float wave = (float) Math.sin(Math.PI * progress);
-        return -0.04f * wave * wave;
     }
 
     /** Apple lift height. 0.04em (~3px at lyric size) was too small to read as a lift at all. */
@@ -123,20 +87,6 @@ public final class LyricAnimations {
         if (t <= 0.15f) return lerp(0f, 1f, t / 0.15f);
         if (t <= 0.6f) return 1f;
         return lerp(1f, 0f, (t - 0.6f) / 0.4f);
-    }
-
-    // --- letter-level karaoke curves (pop harder than words) ---
-
-    /** Spicy 6 letter ScaleRange: 0 -> 0.95, 0.7 -> 1.18, 1 -> 1. */
-    public static float letterScaleSpline(float t) {
-        if (t <= 0.7f) return lerp(0.95f, 1.18f, t / 0.7f);
-        return lerp(1.18f, 1.0f, (t - 0.7f) / 0.3f);
-    }
-
-    /** Spicy 6 letter YOffsetRange: 0 -> 0.01, 0.9 -> -1/50, 1 -> 0. */
-    public static float letterYOffsetSpline(float t) {
-        if (t <= 0.9f) return lerp(0.01f, -(1f / 50f), t / 0.9f);
-        return lerp(-(1f / 50f), 0f, (t - 0.9f) / 0.1f);
     }
 
     /** d3 easeSinOut — desktop eases the active-letter gradient sweep with this. */

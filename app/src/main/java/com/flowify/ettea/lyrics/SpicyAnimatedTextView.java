@@ -33,26 +33,8 @@ public class SpicyAnimatedTextView extends TextView {
     // Apple line shadow under the active line (0 = off, the shared-path default).
     private float lineShadowAlpha;
 
-    /**
-     * Whether the karaoke fill is mixed from the view's own text colour (Apple Music) or from plain
-     * white (every other animation style, which is what this shader has always used).
-     *
-     * <p>A style-wide switch rather than a per-view one on purpose: the base colour is a property of
-     * the animation style, not of an individual row, and the shader is rebuilt on many paths
-     * (line-level, word, letter, dot, live card) that a per-view setter would have to be threaded
-     * through individually. {@link LyricsRenderConfig#read} is the only place the style is resolved
-     * and publishes it here, so the flag cannot drift from the rest of the Apple stack.
-     */
-    private static volatile boolean appleGradientBase;
-
-    /** Called by {@link LyricsRenderConfig#read} whenever the animation style is resolved. */
-    public static void setAppleGradientBaseStyle(boolean enabled) {
-        appleGradientBase = enabled;
-    }
-
     // Words/letters use horizontal fill; line-level rows can switch to vertical fill by setting.
     private boolean verticalGradient;
-    private boolean contentGradient;
     private int containerGradientWidth = -1;
     private float containerGradientOffsetX = 0f;
     private int containerGradientHeight = -1;
@@ -118,12 +100,6 @@ public class SpicyAnimatedTextView extends TextView {
 
     public boolean usesVerticalGradient() {
         return verticalGradient;
-    }
-
-    public void setContentGradient(boolean enabled) {
-        if (this.contentGradient == enabled) return;
-        this.contentGradient = enabled;
-        cachedShader = null;
     }
 
     /** Current glow strength (0..1), read by the parent GlowFlexbox to draw a continuous glow. */
@@ -212,7 +188,7 @@ public class SpicyAnimatedTextView extends TextView {
         boolean horizontalContainerSpace = !verticalGradient && containerGradientWidth > 0;
         boolean verticalContainerSpace = verticalGradient && containerGradientHeight > 0;
         boolean horizontalRtl = !verticalGradient && getLayoutDirection() == LAYOUT_DIRECTION_RTL;
-        int contentWidth = !horizontalContainerSpace && !verticalGradient && contentGradient ? contentWidthPx(extent) : extent;
+        int contentWidth = extent;
         int shaderExtent = horizontalContainerSpace
                 ? containerGradientWidth
                 : verticalContainerSpace ? containerGradientHeight : contentWidth;
@@ -230,9 +206,8 @@ public class SpicyAnimatedTextView extends TextView {
         }
         // Spicy CSS parity (Mixed.css): --gradient-alpha 0.85 (sung), --gradient-alpha-end 0.35
         // (unsung). glow nudges the sung edge toward full white (desktop does this via text-shadow).
-        // Apple Music fills the gradient from the text colour so it adapts to the theme; every other
-        // animation style keeps the legacy white base.
-        int base = appleGradientBase ? getCurrentTextColor() : Color.WHITE;
+        // Apple Music fills the gradient from the text colour so it adapts to the theme.
+        int base = getCurrentTextColor();
         int baseR = Color.red(base);
         int baseG = Color.green(base);
         int baseB = Color.blue(base);
@@ -291,16 +266,6 @@ public class SpicyAnimatedTextView extends TextView {
     public void onRtlPropertiesChanged(int layoutDirection) {
         super.onRtlPropertiesChanged(layoutDirection);
         cachedShader = null;
-    }
-
-    private int contentWidthPx(int fallback) {
-        android.text.Layout layout = getLayout();
-        if (layout == null || layout.getLineCount() <= 0) return fallback;
-        float width = 0f;
-        for (int i = 0; i < layout.getLineCount(); i++) {
-            width = Math.max(width, layout.getLineWidth(i));
-        }
-        return Math.max(1, Math.min(fallback, Math.round(width)));
     }
 
     @Override

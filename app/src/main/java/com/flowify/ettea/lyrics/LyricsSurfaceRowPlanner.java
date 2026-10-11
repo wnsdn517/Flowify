@@ -38,15 +38,11 @@ public final class LyricsSurfaceRowPlanner {
         options.showJapaneseRomaji = LyricsDisplayMode.showJapaneseRomaji(
                 displayLine, safePolicy.showRomanization, safePolicy.japaneseReadingMode);
         options.attachTransliterationToWords = safePolicy.attachTransliterationToWords;
-        options.lineLevelFillTopDown = safePolicy.lineLevelFillTopDown;
-        options.lineLevelFillSentence = safePolicy.lineLevelFillSentence;
-        options.wordLevelFill = safePolicy.wordLevelFill;
         options.interludeNoteIcon = safePolicy.interludeNoteIcon;
         options.lyricWeight = safePolicy.lyricWeight;
         options.lyricsFont = safePolicy.lyricsFont;
         options.textSizeMultiplier = safePolicy.textSizeMultiplier;
         options.adaptiveTextSizeEnabled = safePolicy.adaptiveTextSizeEnabled;
-        options.appleStyle = safePolicy.appleStyle;
         options.appleCompactText = safePolicy.appleCompactText;
         options.translationBright = safePolicy.translationBright;
         options.wrapLongLines = safePolicy.wrapLongLines;
@@ -171,11 +167,14 @@ public final class LyricsSurfaceRowPlanner {
         return copy;
     }
 
+    /**
+     * Line-synced rows only get synthetic word spans when a timed reading has to attach under
+     * each word; otherwise they stay one line-level text (Apple Music's top-to-bottom sweep).
+     */
     private static void ensureAlignedWordsForSentenceSync(AppliedLine line, SurfacePolicy policy) {
-        boolean needsAttachedRomanization = policy.attachTransliterationToWords && policy.showRomanization
+        boolean needsSyntheticWords = policy.attachTransliterationToWords && policy.showRomanization
                 && line != null && line.readingRenderPlan != null
                 && !line.readingRenderPlan.timedReadingUnits.isEmpty();
-        boolean needsSyntheticWords = needsAttachedRomanization || policy.lineLevelFillSentence || policy.wordLevelFill;
         if (line == null || line.dotLine || line.bgLine) return;
         if (line.syntheticWords && !needsSyntheticWords) {
             line.words.clear();
@@ -184,17 +183,8 @@ public final class LyricsSurfaceRowPlanner {
         }
         if (!needsSyntheticWords) return;
         if (!line.words.isEmpty()) return;
-        if (isJapaneseLine(line) && !policy.lineLevelFillSentence
-                && (!policy.wordLevelFill || hasJapaneseReading(line))
-                && !needsAttachedRomanization) return;
         String text = line.text == null ? "" : line.text.trim();
         if (text.isEmpty()) return;
-        if (needsAttachedRomanization
-                && !policy.lineLevelFillSentence
-                && !policy.wordLevelFill
-                && isBlank(line.romanizedText) && line.readingRenderPlan == null) {
-            return;
-        }
         String[] parts;
         boolean japaneseSyntheticWords = isJapaneseLine(line);
         boolean chineseSyntheticWords = "zh".equals(ReadingLanguagePolicy.layoutLanguage(line));
@@ -276,15 +266,11 @@ public final class LyricsSurfaceRowPlanner {
         public final boolean showTranslation;
         public final String japaneseReadingMode;
         public final boolean attachTransliterationToWords;
-        public final boolean lineLevelFillTopDown;
-        public final boolean lineLevelFillSentence;
-        public final boolean wordLevelFill;
         public final boolean interludeNoteIcon;
         public final String lyricWeight;
         public final String lyricsFont;
         public final float textSizeMultiplier;
         public final boolean adaptiveTextSizeEnabled;
-        public final boolean appleStyle;
         public final boolean appleCompactText;
         public final boolean translationBright;
         public final boolean wrapLongLines;
@@ -298,9 +284,6 @@ public final class LyricsSurfaceRowPlanner {
                 boolean showTranslation,
                 String japaneseReadingMode,
                 boolean attachTransliterationToWords,
-                boolean lineLevelFillTopDown,
-                boolean lineLevelFillSentence,
-                boolean wordLevelFill,
                 boolean interludeNoteIcon,
                 String lyricWeight,
                 String lyricsFont,
@@ -309,9 +292,8 @@ public final class LyricsSurfaceRowPlanner {
                 boolean wrapLongLines
         ) {
             this(lineSpacingMultiplier, showRomanization, showTranslation, japaneseReadingMode,
-                    attachTransliterationToWords, lineLevelFillTopDown, lineLevelFillSentence,
-                    wordLevelFill, interludeNoteIcon, lyricWeight, lyricsFont, textSizeMultiplier,
-                    translationBright, wrapLongLines, false);
+                    attachTransliterationToWords, interludeNoteIcon, lyricWeight, lyricsFont,
+                    textSizeMultiplier, translationBright, wrapLongLines, false);
         }
 
         public SurfacePolicy(
@@ -320,9 +302,6 @@ public final class LyricsSurfaceRowPlanner {
                 boolean showTranslation,
                 String japaneseReadingMode,
                 boolean attachTransliterationToWords,
-                boolean lineLevelFillTopDown,
-                boolean lineLevelFillSentence,
-                boolean wordLevelFill,
                 boolean interludeNoteIcon,
                 String lyricWeight,
                 String lyricsFont,
@@ -332,9 +311,8 @@ public final class LyricsSurfaceRowPlanner {
                 boolean forceStartAligned
         ) {
             this(lineSpacingMultiplier, showRomanization, showTranslation, japaneseReadingMode,
-                    attachTransliterationToWords, lineLevelFillTopDown, lineLevelFillSentence,
-                    wordLevelFill, interludeNoteIcon, lyricWeight, lyricsFont, textSizeMultiplier,
-                    translationBright, wrapLongLines, forceStartAligned, true);
+                    attachTransliterationToWords, interludeNoteIcon, lyricWeight, lyricsFont,
+                    textSizeMultiplier, translationBright, wrapLongLines, forceStartAligned, true);
         }
 
         public SurfacePolicy(
@@ -343,9 +321,6 @@ public final class LyricsSurfaceRowPlanner {
                 boolean showTranslation,
                 String japaneseReadingMode,
                 boolean attachTransliterationToWords,
-                boolean lineLevelFillTopDown,
-                boolean lineLevelFillSentence,
-                boolean wordLevelFill,
                 boolean interludeNoteIcon,
                 String lyricWeight,
                 String lyricsFont,
@@ -356,9 +331,9 @@ public final class LyricsSurfaceRowPlanner {
                 boolean horizontalSafetyPadding
         ) {
             this(lineSpacingMultiplier, showRomanization, showTranslation, japaneseReadingMode,
-                    attachTransliterationToWords, lineLevelFillTopDown, lineLevelFillSentence,
-                    wordLevelFill, interludeNoteIcon, lyricWeight, lyricsFont, textSizeMultiplier,
-                    translationBright, wrapLongLines, forceStartAligned, horizontalSafetyPadding, true);
+                    attachTransliterationToWords, interludeNoteIcon, lyricWeight, lyricsFont,
+                    textSizeMultiplier, translationBright, wrapLongLines, forceStartAligned,
+                    horizontalSafetyPadding, true, true, false);
         }
 
         public SurfacePolicy(
@@ -367,62 +342,6 @@ public final class LyricsSurfaceRowPlanner {
                 boolean showTranslation,
                 String japaneseReadingMode,
                 boolean attachTransliterationToWords,
-                boolean lineLevelFillTopDown,
-                boolean lineLevelFillSentence,
-                boolean wordLevelFill,
-                boolean interludeNoteIcon,
-                String lyricWeight,
-                String lyricsFont,
-                float textSizeMultiplier,
-                boolean translationBright,
-                boolean wrapLongLines,
-                boolean forceStartAligned,
-                boolean horizontalSafetyPadding,
-                boolean adaptiveSectioningEnabled
-        ) {
-            this(lineSpacingMultiplier, showRomanization, showTranslation, japaneseReadingMode,
-                    attachTransliterationToWords, lineLevelFillTopDown, lineLevelFillSentence,
-                    wordLevelFill, interludeNoteIcon, lyricWeight, lyricsFont, textSizeMultiplier,
-                    translationBright, wrapLongLines, forceStartAligned, horizontalSafetyPadding,
-                    adaptiveSectioningEnabled, true, false, false);
-        }
-
-        public SurfacePolicy(
-                float lineSpacingMultiplier,
-                boolean showRomanization,
-                boolean showTranslation,
-                String japaneseReadingMode,
-                boolean attachTransliterationToWords,
-                boolean lineLevelFillTopDown,
-                boolean lineLevelFillSentence,
-                boolean wordLevelFill,
-                boolean interludeNoteIcon,
-                String lyricWeight,
-                String lyricsFont,
-                float textSizeMultiplier,
-                boolean translationBright,
-                boolean wrapLongLines,
-                boolean forceStartAligned,
-                boolean horizontalSafetyPadding,
-                boolean adaptiveSectioningEnabled,
-                boolean adaptiveTextSizeEnabled
-        ) {
-            this(lineSpacingMultiplier, showRomanization, showTranslation, japaneseReadingMode,
-                    attachTransliterationToWords, lineLevelFillTopDown, lineLevelFillSentence,
-                    wordLevelFill, interludeNoteIcon, lyricWeight, lyricsFont, textSizeMultiplier,
-                    translationBright, wrapLongLines, forceStartAligned, horizontalSafetyPadding,
-                    adaptiveSectioningEnabled, adaptiveTextSizeEnabled, false, false);
-        }
-
-        public SurfacePolicy(
-                float lineSpacingMultiplier,
-                boolean showRomanization,
-                boolean showTranslation,
-                String japaneseReadingMode,
-                boolean attachTransliterationToWords,
-                boolean lineLevelFillTopDown,
-                boolean lineLevelFillSentence,
-                boolean wordLevelFill,
                 boolean interludeNoteIcon,
                 String lyricWeight,
                 String lyricsFont,
@@ -433,7 +352,6 @@ public final class LyricsSurfaceRowPlanner {
                 boolean horizontalSafetyPadding,
                 boolean adaptiveSectioningEnabled,
                 boolean adaptiveTextSizeEnabled,
-                boolean appleStyle,
                 boolean appleCompactText
         ) {
             this.lineSpacingMultiplier = lineSpacingMultiplier;
@@ -441,9 +359,6 @@ public final class LyricsSurfaceRowPlanner {
             this.showTranslation = showTranslation;
             this.japaneseReadingMode = japaneseReadingMode == null ? "" : japaneseReadingMode;
             this.attachTransliterationToWords = attachTransliterationToWords;
-            this.lineLevelFillTopDown = lineLevelFillTopDown;
-            this.lineLevelFillSentence = lineLevelFillSentence;
-            this.wordLevelFill = wordLevelFill;
             this.interludeNoteIcon = interludeNoteIcon;
             this.lyricWeight = lyricWeight == null ? "Medium" : lyricWeight;
             this.lyricsFont = lyricsFont == null ? "spotify" : lyricsFont;
@@ -452,7 +367,6 @@ public final class LyricsSurfaceRowPlanner {
             this.wrapLongLines = wrapLongLines;
             this.adaptiveSectioningEnabled = adaptiveSectioningEnabled;
             this.adaptiveTextSizeEnabled = adaptiveTextSizeEnabled;
-            this.appleStyle = appleStyle;
             this.appleCompactText = appleCompactText;
             this.forceStartAligned = forceStartAligned;
             this.horizontalSafetyPadding = horizontalSafetyPadding;
@@ -471,9 +385,6 @@ public final class LyricsSurfaceRowPlanner {
                     showTranslation,
                     japaneseReadingMode,
                     cfg != null && cfg.attachTransliterationToWords,
-                    cfg != null && cfg.lineSyncFillTopDown(),
-                    cfg != null && cfg.lineSyncFillSentence(),
-                    cfg != null && cfg.lineSyncFillWord(),
                     cfg != null && cfg.interludeNoteIcon,
                     cfg == null ? "Medium" : cfg.lyricWeight,
                     cfg == null ? "spotify" : cfg.lyricsFont,
@@ -484,7 +395,6 @@ public final class LyricsSurfaceRowPlanner {
                     false,
                     cfg == null || cfg.adaptiveSectioningEnabled,
                     cfg == null || cfg.adaptiveTextSizeEnabled,
-                    cfg != null && cfg.appleStyle,
                     cfg != null && cfg.appleCompactText);
         }
 
@@ -498,9 +408,6 @@ public final class LyricsSurfaceRowPlanner {
                     cfg != null && cfg.liveCardShowTranslation,
                     cfg == null ? "" : cfg.defaultJapaneseReadingMode,
                     cfg != null && cfg.attachTransliterationToWords,
-                    cfg != null && cfg.lineSyncFillTopDown(),
-                    cfg != null && cfg.lineSyncFillSentence(),
-                    cfg != null && cfg.lineSyncFillWord(),
                     cfg != null && cfg.interludeNoteIcon,
                     cfg == null ? "Medium" : cfg.liveCardWeight,
                     cfg == null ? "spotify" : cfg.lyricsFont,
@@ -510,12 +417,14 @@ public final class LyricsSurfaceRowPlanner {
                     scrollOverflow,
                     wrapOverflow,
                     cfg == null || cfg.adaptiveSectioningEnabled,
-                    cfg == null || cfg.adaptiveTextSizeEnabled);
+                    cfg == null || cfg.adaptiveTextSizeEnabled,
+                    false);
         }
 
         /**
-         * Album-art overlay policy. Text semantics and timing stay on the shared row planner;
-         * the surface adapter only chooses the bounded row window that fits over the artwork.
+         * Album-art overlay policy (also the Apple-style player's in-place lyrics). Text semantics
+         * and timing stay on the shared row planner; the surface adapter only chooses the bounded
+         * row window that fits.
          */
         public static SurfacePolicy artwork(LyricsRenderConfig config) {
             LyricsRenderConfig cfg = config;
@@ -525,9 +434,6 @@ public final class LyricsSurfaceRowPlanner {
                     cfg != null && cfg.translationEnabled,
                     cfg == null ? "" : cfg.defaultJapaneseReadingMode,
                     cfg != null && cfg.attachTransliterationToWords,
-                    cfg != null && cfg.lineSyncFillTopDown(),
-                    cfg != null && cfg.lineSyncFillSentence(),
-                    cfg != null && cfg.lineSyncFillWord(),
                     cfg != null && cfg.interludeNoteIcon,
                     cfg == null ? "Medium" : cfg.lyricWeight,
                     cfg == null ? "spotify" : cfg.lyricsFont,
@@ -537,12 +443,13 @@ public final class LyricsSurfaceRowPlanner {
                     false,
                     true,
                     cfg == null || cfg.adaptiveSectioningEnabled,
-                    cfg == null || cfg.adaptiveTextSizeEnabled);
+                    cfg == null || cfg.adaptiveTextSizeEnabled,
+                    false);
         }
 
         public static SurfacePolicy defaultPolicy() {
-            return new SurfacePolicy(1f, false, false, "", false, false, false,
-                    false, false, "Medium", "spotify", 1f, false, true, false);
+            return new SurfacePolicy(1f, false, false, "", false, false, "Medium", "spotify", 1f,
+                    false, true, false);
         }
     }
 }

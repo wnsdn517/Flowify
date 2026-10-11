@@ -113,6 +113,33 @@ public class SpotifyCollectionActionTest {
     }
 
     @Test
+    public void dispatchesCurrentSpotifyIdsWithLocalizedLabels() {
+        // As advertised by Spotify on a Korean-locale device: no "collection" in id or label.
+        SpotifyTrack unsaved = track("spotify:track:abc", false);
+        FakeSession add = new FakeSession();
+        add.trackUri = "spotify:track:abc";
+        add.actions = Arrays.asList(action("ADD_TO", "컬렉션에 추가하기"),
+                action("START_RADIO", "라디오 시작하기"),
+                action("TURN_REPEAT_ALL_ON", "모든 트랙 반복 시작하기"));
+        assertTrue(SpotifyCollectionAction.dispatch("Heart", unsaved, () -> unsaved, () -> add));
+        assertEquals("ADD_TO", add.dispatched.get());
+
+        SpotifyTrack saved = track("spotify:track:abc", true);
+        FakeSession remove = new FakeSession();
+        remove.trackUri = "spotify:track:abc";
+        remove.actions = Arrays.asList(action("START_RADIO", "라디오 시작하기"),
+                action("CHECK_FILL", "컬렉션에서 삭제하기"));
+        assertTrue(SpotifyCollectionAction.dispatch("Heart", saved, () -> saved, () -> remove));
+        assertEquals("CHECK_FILL", remove.dispatched.get());
+    }
+
+    @Test
+    public void doesNotTreatEpisodeOrBanActionsAsLikedSongs() {
+        assertEquals(null, SpotifyCollectionAction.collectionActionId(Arrays.asList(
+                action("ADD_TO_YOUR_EPISODES", "Add"), action("BAN", "Hide"))));
+    }
+
+    @Test
     public void abortsWhenTrackChangesBeforeDispatch() {
         SpotifyTrack expected = track("spotify:track:abc", false);
         FakeSession session = new FakeSession();

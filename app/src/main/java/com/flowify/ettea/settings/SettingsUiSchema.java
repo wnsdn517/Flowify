@@ -61,6 +61,7 @@ public final class SettingsUiSchema {
             Settings.HIDE_SPOTIFY_LYRICS_CARD,
             Settings.PLAYER_APPLE_STYLE,
             Settings.PLAYER_APPLE_TIME,
+            Settings.PLAYER_INLINE_LYRICS,
             Settings.PLAYER_ANIMATED_ARTWORK,
             Settings.HYPERGLOW_ENABLED,
             Settings.LONG_PRESS_SHARE,
@@ -75,7 +76,6 @@ public final class SettingsUiSchema {
             // Editor-managed (PanelPolicy hides these); the schema test requires every
             // non-internal setting listed exactly once.
             Settings.FULLSCREEN_CONTROLS,
-            Settings.ANIMATION_STYLE,
             // Reading & transliteration
             Settings.DOWNLOAD_LANGUAGE_MODELS,
             Settings.TRANSLITERATION_ENABLED,
@@ -144,7 +144,8 @@ public final class SettingsUiSchema {
         group("general_timing", Settings.SYNC_OFFSET_MS);
         group("general_outside", Settings.MINI_PLAYER_LYRICS_ICON, Settings.LYRICS_IN_PLAYER,
                 Settings.HIDE_SPOTIFY_LYRICS_CARD, Settings.PLAYER_APPLE_STYLE,
-                Settings.PLAYER_APPLE_TIME, Settings.HYPERGLOW_ENABLED);
+                Settings.PLAYER_APPLE_TIME, Settings.PLAYER_INLINE_LYRICS,
+                Settings.HYPERGLOW_ENABLED);
         group("gestures_seek", Settings.TAP_SEEK_MODE);
         group("gestures_like", Settings.DOUBLE_TAP_LIKE, Settings.DOUBLE_TAP_LIKE_MARK,
                 Settings.DOUBLE_TAP_LIKE_EFFECT);

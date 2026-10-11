@@ -25,25 +25,15 @@ public class LyricVisualsTest {
     }
 
     @Test
-    public void shortSingleLetterSegmentsNeedTheDurationBarRegardlessOfScript() {
-        // A short SINGLE-character segment isn't "multi" CJK either, so it still needs the
-        // duration bar like English does - the bypass only ever covers multi-character runs.
-        assertFalse(LyricVisuals.shouldUseLetterAnimator(segment("go", 400), false));
-        assertFalse(LyricVisuals.shouldUseLetterAnimator(segment("あ", 400), false));
-
-        assertTrue(LyricVisuals.shouldUseLetterAnimator(segment("go", 1200), false));
-        assertTrue(LyricVisuals.shouldUseLetterAnimator(segment("あ", 1200), false));
-    }
-
-    @Test
-    public void appleGateUnaffectedByNonAppleThreshold() {
-        assertTrue(LyricVisuals.shouldUseLetterAnimator(segment("go", 100), true));
-        assertFalse(LyricVisuals.shouldUseLetterAnimator(segment("go", 50), true));
+    public void segmentsHeldAtLeast80msAnimateByLetter() {
+        assertTrue(LyricVisuals.shouldUseLetterAnimator(segment("go", 100)));
+        assertTrue(LyricVisuals.shouldUseLetterAnimator(segment("あ", 400)));
+        assertFalse(LyricVisuals.shouldUseLetterAnimator(segment("go", 50)));
     }
 
     @Test
     public void codePointCapStillApplies() {
-        String longText = "abcdefghijklm"; // 13 code points, over the 12 cap
-        assertFalse(LyricVisuals.shouldUseLetterAnimator(segment(longText, 5000), false));
+        String longText = "abcdefghijklmnopqrstuvwxyz123"; // 29 code points, over the 28 cap
+        assertFalse(LyricVisuals.shouldUseLetterAnimator(segment(longText, 5000)));
     }
 }

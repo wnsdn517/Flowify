@@ -183,23 +183,16 @@ public final class LyricsLineViewState {
     /** Opacity a fully blurred row gives up. */
     private static final float BLUR_FADE = 0.42f;
 
-    public static void applyRowFrame(AppliedLine line, FrameStyleBatcher styleBatcher, float opacity, float blurPx) {
-        applyRowFrame(line, styleBatcher, opacity, blurPx, false);
-    }
-
-    /** @param appleStyle animation style is "Apple Music": only then does a blurred row also dim. */
     public static void applyRowFrame(AppliedLine line, FrameStyleBatcher styleBatcher, float opacity,
-                                     float blurPx, boolean appleStyle) {
+                                     float blurPx) {
         if (line == null || styleBatcher == null || state(line).rowView == null) return;
         float blur = Math.max(blurPx, state(line).entranceBlurPx);
         // Apple's out-of-focus lines don't just soften, they recede: dimming in step with the
         // blur lets the smeared glyphs dissolve into the background instead of sitting on top
-        // of it as a bright haze. Other styles keep opacity untouched.
-        float fade = appleStyle
-                ? 1f - BLUR_FADE * Math.min(1f, Math.max(0f, blurPx) / BLUR_FADE_FULL_PX)
-                : 1f;
+        // of it as a bright haze.
+        float fade = 1f - BLUR_FADE * Math.min(1f, Math.max(0f, blurPx) / BLUR_FADE_FULL_PX);
         styleBatcher.applyAlphaIfChanged(state(line).rowView,
-                appleStyle ? opacity * fade * state(line).entranceProgress : opacity);
+                opacity * fade * state(line).entranceProgress);
         styleBatcher.queueBlurIfChanged(state(line).rowView, blur, 0.25f);
     }
 
@@ -382,22 +375,11 @@ public final class LyricsLineViewState {
         return clamp(state(line).opacitySpring.step(frameDelta(deltaSeconds)), 0f, 1f);
     }
 
+    /** The line's own scale spring (Apple's 2.2 Hz / 0.85). */
     public static float stepLineScale(AppliedLine line, float targetScale, float deltaSeconds) {
-        return stepLineScale(line, targetScale, deltaSeconds, false);
-    }
-
-    /**
-     * @param appleStyle animation style is "Apple Music": the line's own scale spring is part of
-     *  the Apple stack (2.2/0.85). Every other style keeps the pre-PR 1.0/0.7 spring, which is what
-     *  the non-Apple Spotlight/bounce scale targets were tuned against.
-     */
-    public static float stepLineScale(AppliedLine line, float targetScale, float deltaSeconds,
-                                      boolean appleStyle) {
         if (line == null) return targetScale;
         if (state(line).lineScaleSpring == null) {
-            state(line).lineScaleSpring = appleStyle
-                    ? new Spring(targetScale, 2.2f, 0.85f)
-                    : new Spring(targetScale, 1.0f, 0.7f);
+            state(line).lineScaleSpring = new Spring(targetScale, 2.2f, 0.85f);
         }
         state(line).lineScaleSpring.setGoal(targetScale);
         return state(line).lineScaleSpring.step(frameDelta(deltaSeconds));

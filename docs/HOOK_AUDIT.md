@@ -246,3 +246,65 @@
 - [ ] (안 멈추면) 모듈 다시 켜고 설정에서 Apple 스타일 플레이어 OFF → 재확인
 - [ ] LSPosed 로그에서 `[SpotifyPlus] Loading SpotifyPlus` 이후 설치된 훅 목록 확인 (`[SpicyAdMute]`, `[SpicyConnect]`가 없어야 함)
 - [ ] Spotify APK에서 에러 문자열과 그 호출 조건 확인 (§0)
+
+---
+
+## 8. 후속 조치 (코드로 해결한 항목)
+
+| 항목 | 조치 |
+|---|---|
+| §2 #20 가사 요청 언어 | `NativeLyricsCaptureHook.clientLanguage()`를 원본과 동일하게 복원. 앱 locale(`applicationContext` Configuration) 우선, 없으면 시스템 locale |
+| §2 #13 / §6-4 LocalFilesFolderHook | 숨긴 폴더가 없으면 Spotify Cursor를 **그대로 통과**. 숨긴 폴더가 있어도 `ALBUM` 컬럼은 더 이상 덮어쓰지 않음 (행 제외만 수행) |
+| §2 #16 / §6-6 ResponseBody 전역 훅 | 짝지어지지 않은 응답은 `"lines"` + `"startTime…"`가 있는 JSON일 때만 파싱 (그 외 JSON이 현재 트랙 가사로 오귀속되던 문제 차단). `bytes()`는 짝지어졌거나 `{`/`[`로 시작할 때만 문자열 변환 (이미지·protobuf 제외) |
+| §2 #15 `PENDING` 누수 | 최대 16개로 제한, 넘으면 비움 |
+| §2-3 공유 카드 Web API 토큰 | 확인 결과 `SpotifyWebApiToken.current()`가 null이면 `api.spotify.com` 요청 자체를 보내지 않음 (oEmbed만 사용). 원본도 토큰 캡처 훅(`AuthTokenCaptureHook`)을 `3e18742a`에서 의도적으로 제거했으므로 **캡처 훅은 다시 넣지 않음** |
+
+코드로 해결하지 않은 것 (기기 확인 필요)
+- §6-1/§6-2: 스코프 해제 상태 재현 여부, 이전 빌드 잔존 여부는 §7 체크리스트로 확인.
+- §6-3 Apple 스타일 플레이어 기본 ON: 원인으로 확인되면 `PLAYER_APPLE_STYLE` 기본값을 false로 변경.
+
+---
+
+## 9. Spotify APK 분석 결과 (기기에서 뽑은 base/split APK + 테스트 앱)
+
+분석 대상: 폰에서 `adb pull`한 `com.spotify.music` 9.1.90.2270 (base.dex ×15 + arm64 split 네이티브).
+교차 확인: 같은 탐지 로직을 재현한 `:detector-test` 앱을 실제 기기(SM-G970N)에서 실행.
+
+### 9-1. Spotify가 쓰는 보호 메커니즘 전체 목록
+
+| # | 메커니즘 | 위치 | 성격 | 이 기기에서 |
+|---|---|---|---|---|
+| 1 | **네이티브 app_integrity + DRM** | `liborbit-jni-spotify.so` (`AppIntegrityLoggerSetupImpl`, `app_integrity_delayed_request`, `spotify::drm::collectFridaFeatures`, `frida_detect`, Widevine, `playback_error_drm_denied`) | 재생 게이트 | **1곡 후 멈춤의 유력 원인.** DRM 키 거부(`playback_error_drm_denied`). Frida 탐지는 디버그 빌드에서 passive |
+| 2 | **Play Integrity API** (Standard+Express) | `classes.dex`, `classes2.dex` (`PlayIntegritySessionPlugin`, `requestExpressIntegrityToken`) | 서버 어테스테이션 | 로그인/세션 시점. 루팅 기기는 DEVICE_INTEGRITY 실패 |
+| 3 | **reCAPTCHA Enterprise** | `classes.dex` (`mobile_client/authentication`, `EsRecaptchaInfo`) | 로그인 abuse | 로그인 시 |
+| 4 | **RASP 루트/후킹 체크 (RootBeer 계열)** | `classes3.dex` | 클라이언트 | **테스트 앱에서 전부 통과** (아래 9-2) |
+| 5 | **Ravelin 네이티브 루트 체커** | `librootChecker.so` (`RootCheckerNative`, `/proc/self/mounts` magisk 스캔) | 클라이언트 | 루트 숨김으로 통과 추정 |
+| 6 | **APK 서명 자가검증** | `classes.dex` (`SigningInfo`, `getPackageInfo`, `CRC32`, `getLocalCertificates`) | 클라이언트 | 모듈은 Spotify APK를 건드리지 않음 → 통과 |
+| 7 | **Crashlytics + gabo 텔레메트리** | `classes.dex` (`X-Crashlytics-*`, `eventsender/gabo`, `setDefaultUncaughtExceptionHandler`) | 간접(수집) | Spotify 프로세스 크래시 시 스택에 `com.eza.spicyex.*` 프레임이 업로드될 수 있음 |
+
+### 9-2. 테스트 앱(`:detector-test`) 결과 — 이 기기의 실제 상태
+
+`com.spicytest.detector`를 자기 프로세스에서 실행 → **11개 체크 전부 clean**:
+- 루트/후킹 매니저 앱 22종 없음 / su·busybox·magisk 바이너리 앱에서 안 보임 / test-keys 아님(release-keys) /
+  `ro.secure=1 ro.debuggable=0` / system read-only / magisk 마운트 없음 / 스택 훅 없음 /
+  XposedBridge 로드 불가 / 에뮬레이터 아님 / 디버거 없음.
+- 단, **adb 셸에서는** `/system/bin/su` 존재 + `org.lsposed.corepatch` 설치 확인됨.
+- 해석: **루트가 앱 샌드박스(SELinux)에서 숨겨져 있어** RootBeer/Ravelin류 클라이언트 체크(#4,#5)는
+  Spotify에서도 통과할 가능성이 높음. 앱이 자기 프로세스에서 볼 수 있는 유일한 흔적은
+  **"내 프로세스가 후킹됐는가"**(XposedBridge 로드 / 훅된 스택)인데, 이는 LSPosed가
+  **스코프에 든 앱(Spotify)에만** 주입하므로 테스트 앱에선 안 보임.
+
+### 9-3. 결론 (수정된 의심 순위)
+
+1. **네이티브 DRM / app_integrity (#1)** — `playback_error_drm_denied`가 1곡 후 멈춤과 직결. 모듈 코드로 해결 불가.
+2. **Play Integrity (#2)** — 로그인/세션 레벨. 루팅/부트로더 상태에 좌우. 모듈 무관.
+3. **프로세스 내부 후킹 탐지** — Spotify 프로세스에 한해 `XposedBridge` 로드가 보임. LSPosed DenyList/숨김 영역.
+4. RootBeer/Ravelin 클라이언트 체크 — 이 기기에선 통과(루트 숨김).
+
+즉 **차단은 RASP(dex) 쪽이 아니라 네이티브 DRM/무결성·기기 루트 레벨**일 가능성이 높고,
+모듈의 훅 노출면 축소로는 바뀌지 않을 공산이 큼. "최대한 피하기"의 핵심은 모듈이 아니라
+LSPosed 숨김 + 루트 DenyList(이미 부분적으로 숨겨져 있음) 쪽.
+
+### 9-4. 미확인 영역
+- `liborbit-jni-spotify.so`의 app_integrity가 **정확히 무엇을 신호로 보내는지**(네이티브 역어셈블 필요).
+- Widevine 보안 레벨(L1/L3)과 provisioning 상태가 이 기기에서 정상인지.

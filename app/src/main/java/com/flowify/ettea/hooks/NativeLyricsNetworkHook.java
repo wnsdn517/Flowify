@@ -28,6 +28,8 @@ final class NativeLyricsNetworkHook {
     /** Response body instance to the track whose color-lyrics request produced it. */
     private static final Map<Object, String> PENDING =
             Collections.synchronizedMap(new IdentityHashMap<>());
+    /** Bodies that were paired but streamed instead of read whole never leave PENDING. */
+    private static final int MAX_PENDING = 16;
 
     private NativeLyricsNetworkHook() {
     }
@@ -94,7 +96,11 @@ final class NativeLyricsNetworkHook {
             String trackId = trackIdFromLyricsUrl(url);
             if (trackId.isEmpty()) return;
             Object body = invokeNoArg(response, "body");
-            if (body != null) PENDING.put(body, trackId);
+            if (body == null) return;
+            synchronized (PENDING) {
+                if (PENDING.size() >= MAX_PENDING) PENDING.clear();
+                PENDING.put(body, trackId);
+            }
         } catch (Throwable ignored) {
         }
     }
@@ -112,7 +118,10 @@ final class NativeLyricsNetworkHook {
             XpHooks.hookAllMethods(body, "bytes", "lyrics:net:ResponseBody#bytes",
                     (XpHooks.After) param -> {
                         Object result = param.getResult();
-                        if (result instanceof byte[]) {
+                        // Skip images/protobuf: only decode bodies that were paired or look like JSON.
+                        if (result instanceof byte[]
+                                && (PENDING.containsKey(param.thisObject)
+                                        || startsLikeJson((byte[]) result))) {
                             capture(param.thisObject,
                                     new String((byte[]) result, java.nio.charset.StandardCharsets.UTF_8));
                         }
@@ -126,15 +135,32 @@ final class NativeLyricsNetworkHook {
     private static void capture(Object body, Object payload) {
         try {
             if (body == null || !(payload instanceof String)) return;
-            String paired = body == null ? null : PENDING.remove(body);
+            String paired = PENDING.remove(body);
             String text = ((String) payload).trim();
             if (text.length() < 32) return;
+            // Unpaired bodies are every other HTTP response Spotify reads; only lyrics-shaped
+            // JSON is worth parsing, otherwise it would be stored under the current track.
+            if (isBlank(paired) && !looksLikeColorLyrics(text)) return;
             String trackId = !isBlank(paired) ? paired : embeddedTrackId(text);
             if (isBlank(trackId)) trackId = currentTrackId();
             if (isBlank(trackId)) return;
             if (source() != null) source().captureColorLyricsResponse(trackId, text);
         } catch (Throwable ignored) {
         }
+    }
+
+    private static boolean looksLikeColorLyrics(String text) {
+        char first = text.charAt(0);
+        return (first == '{' || first == '[')
+                && text.contains("\"lines\"") && text.contains("\"startTime");
+    }
+
+    private static boolean startsLikeJson(byte[] bytes) {
+        for (byte b : bytes) {
+            if (b == ' ' || b == '\n' || b == '\r' || b == '\t') continue;
+            return b == '{' || b == '[';
+        }
+        return false;
     }
 
     private static boolean isBlank(String value) {

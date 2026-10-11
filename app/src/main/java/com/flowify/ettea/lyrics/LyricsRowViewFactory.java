@@ -140,17 +140,13 @@ public final class LyricsRowViewFactory {
                 && (showJapaneseRomaji || showChineseRomaji || showGenericRomaji);
         // Ruby groups remain visual-only; timed provider children keep their existing word path.
         boolean useSyllableWords = !indicLine && (hasRealTimedWords || (hasSyllableWords
-                && (options.wordLevelFill || options.lineLevelFillSentence || showJapaneseFurigana || showAlignedRomaji)));
-        // Gradient direction is a document-level choice. Do not switch one row to horizontal
-        // merely because that row has timed syllables; mixed rows otherwise render with different
-        // fill geometry in the same song.
-        boolean lineLevelFillTopDown = options.lineLevelFillTopDown;
+                && (showJapaneseFurigana || showAlignedRomaji)));
+        // Line-level text (no timed words) fills top to bottom, Apple Music's line sweep.
         if (useSyllableWords) {
             buildSyllableWords(row, line, options, romanizedWordProvider,
                     showJapaneseFurigana, showAlignedRomaji);
         } else {
-            buildLineLevelMain(row, line, showJapaneseFurigana, lineLevelFillTopDown,
-                    options.lineLevelFillSentence, weight, font, wrapLongLines,
+            buildLineLevelMain(row, line, showJapaneseFurigana, weight, font, wrapLongLines,
                     options.adaptiveSectioningEnabled);
         }
 
@@ -168,8 +164,7 @@ public final class LyricsRowViewFactory {
             roman.setMaxLines(wrapLongLines ? 3 : 1);
             applyAdaptiveWrapping(roman, wrapLongLines && options.adaptiveSectioningEnabled, false);
             roman.setSelfGlow(true);
-            roman.setVerticalGradient(lineLevelFillTopDown);
-            roman.setContentGradient(options.lineLevelFillSentence);
+            roman.setVerticalGradient(true);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.topMargin = dp(2);
             if (!wrapLongLines) lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
@@ -187,7 +182,7 @@ public final class LyricsRowViewFactory {
             applyAdaptiveWrapping(translated, wrapLongLines && options.adaptiveSectioningEnabled, false);
             translated.setAlpha(1f);
             translated.setBrightnessMultiplier(options.translationBright ? 1f : 0.42f);
-            translated.setVerticalGradient(lineLevelFillTopDown);
+            translated.setVerticalGradient(true);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.topMargin = dp(2);
             if (!wrapLongLines) lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
@@ -734,8 +729,7 @@ public final class LyricsRowViewFactory {
     private View buildWordView(AppliedLine line, SyllableSegment seg, boolean showJapaneseFurigana, int wordStart, String weight, String font,
                                Options options, boolean wrapLongLines) {
         int color = line.bgLine ? Color.rgb(170, 170, 170) : Color.WHITE;
-        boolean appleStyle = options != null && options.appleStyle;
-        if (!showJapaneseFurigana && LyricVisuals.shouldUseLetterAnimator(seg, appleStyle)) {
+        if (!showJapaneseFurigana && LyricVisuals.shouldUseLetterAnimator(seg)) {
             // Single-line on purpose: a segment that must wrap mid-word is Han/kana, and those are
             // laid out as running text by addFlowingCjkSegment instead of a nested wrap box.
             LinearLayout letters = new LinearLayout(activity);
@@ -805,7 +799,6 @@ public final class LyricsRowViewFactory {
     }
 
     private void buildLineLevelMain(LinearLayout row, AppliedLine line, boolean showJapaneseFurigana,
-                                    boolean lineLevelFillTopDown, boolean lineLevelFillSentence,
                                     String weight, String font, boolean wrapLongLines,
                                     boolean adaptiveSectioningEnabled) {
         int color = line.bgLine ? Color.rgb(170, 170, 170) : Color.WHITE;
@@ -825,8 +818,7 @@ public final class LyricsRowViewFactory {
         applyAdaptiveWrapping(main,
                 adaptiveSectioningEnabled && (wrapLongLines || showJapaneseFurigana),
                 isCjkPhraseLine(line));
-        main.setVerticalGradient(lineLevelFillTopDown);
-        main.setContentGradient(lineLevelFillSentence);
+        main.setVerticalGradient(true);
         main.setGradientPosition(LyricAnimations.GRADIENT_UNSUNG, 0f);
         row.addView(main, new LinearLayout.LayoutParams(
                 wrapLongLines ? ViewGroup.LayoutParams.MATCH_PARENT : ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -943,9 +935,6 @@ public final class LyricsRowViewFactory {
         public boolean showJapaneseFurigana;
         public boolean showJapaneseRomaji;
         public boolean attachTransliterationToWords;
-        public boolean lineLevelFillTopDown;
-        public boolean lineLevelFillSentence;
-        public boolean wordLevelFill;
         public boolean interludeNoteIcon;
         public String lyricWeight = "Medium";
         public String lyricsFont = "spotify";
@@ -956,7 +945,6 @@ public final class LyricsRowViewFactory {
         public boolean adaptiveSectioningEnabled = true;
         public boolean horizontalSafetyPadding = true;
         public String documentText = "";
-        public boolean appleStyle;
         public boolean appleCompactText;
     }
 }

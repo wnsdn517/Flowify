@@ -85,23 +85,6 @@ public final class PanelPolicy {
         if (setting == Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS) {
             return Boolean.TRUE.equals(snapshot.get(Settings.AUTO_RESUME_FOLLOW));
         }
-        if (setting == Settings.LINE_SYNC_FILL) {
-            return "Gradient wash".equals(snapshot.get(Settings.ANIMATION_STYLE));
-        }
-        if (setting == Settings.WORD_BOUNCE || setting == Settings.WORD_BOUNCE_STYLE) {
-            // Apple motion is owned by the Apple section under Apple Music; the shared
-            // bounce rows would compete, so they stand down while the Apple card is up.
-            return !"Apple Music".equals(snapshot.get(Settings.ANIMATION_STYLE));
-        }
-        if (setting == Settings.APPLE_SPRING_STRENGTH) {
-            return "Apple Music".equals(snapshot.get(Settings.ANIMATION_STYLE));
-        }
-        if (isAppleOwned(setting)) {
-            return "Apple Music".equals(snapshot.get(Settings.ANIMATION_STYLE));
-        }
-        if (setting == Settings.LIVE_CARD_LINE_SYNC_FILL) {
-            return "Karaoke fill".equals(snapshot.get(Settings.LIVE_CARD_ANIMATION));
-        }
         if (setting == Settings.LIVE_CARD_GLOW) {
             return !"Minimal".equals(snapshot.get(Settings.LIVE_CARD_ANIMATION));
         }
@@ -131,7 +114,6 @@ public final class PanelPolicy {
                 || setting == Settings.BACKGROUND_RENDER_QUALITY
                 || setting == Settings.FORCE_DARK_BACKGROUND
                 || setting == Settings.EXTRA_DARK_BACKGROUND
-                || setting == Settings.ANIMATION_STYLE
                 || setting == Settings.LOAD_LIFT_ANIMATION
                 || setting == Settings.APPLE_CASCADE_SPEED
                 || setting == Settings.APPLE_SPRING_STRENGTH
@@ -230,7 +212,6 @@ public final class PanelPolicy {
                 || setting == Settings.TRANSLITERATION_ENABLED
                 || setting == Settings.BACKGROUND_STYLE
                 || setting == Settings.FORCE_DARK_BACKGROUND
-                || setting == Settings.ANIMATION_STYLE
                 || setting == Settings.LIVE_CARD_ANIMATION
                 || setting == Settings.LYRICS_TEXT_SIZE
                 || setting == Settings.LINE_SPACING

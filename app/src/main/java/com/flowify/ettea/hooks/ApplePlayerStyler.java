@@ -25,6 +25,7 @@ import android.view.Gravity;
 import android.view.Window;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -189,6 +190,47 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         return true;
     }
 
+    private static ApplePlayerStyler stylerFor(Activity activity) {
+        synchronized (ATTACHED) {
+            return ATTACHED.get(activity);
+        }
+    }
+
+    /**
+     * Window-space area for lyrics shown inside the styled player: under the small cover row,
+     * down to the progress bar - or to the bottom edge while the controls are swiped away. Null
+     * when the Apple screen style is not on this activity or its views are not laid out yet.
+     */
+    static android.graphics.Rect inlineLyricsBounds(Activity activity) {
+        ApplePlayerStyler styler = stylerFor(activity);
+        return styler == null || !styler.styleScreen ? null : styler.inlineBounds();
+    }
+
+    /**
+     * Lyrics take (or give back) the cover's place, the way BitChord and Apple Music do it: the
+     * big cover shrinks into a small one at the top beside the title, and the lyrics fill the
+     * space between it and the controls. {@code closeAction} runs when the small cover row is
+     * tapped.
+     */
+    static void setInlineLyricsOpen(Activity activity, boolean open, Runnable closeAction) {
+        ApplePlayerStyler styler = stylerFor(activity);
+        if (styler != null) styler.setInlineOpen(open, closeAction);
+    }
+
+    /** Swipe the playback controls down out of the way (true) or back up (false). */
+    static void setInlineControlsHidden(Activity activity, boolean hidden) {
+        ApplePlayerStyler styler = stylerFor(activity);
+        if (styler != null) styler.setControlsHidden(hidden);
+    }
+
+    static boolean inlineControlsHidden(Activity activity) {
+        ApplePlayerStyler styler = stylerFor(activity);
+        return styler != null && styler.inlineControlsHidden;
+    }
+
+    /** How long the cover shrink and the controls slide take; the lyrics area follows in step. */
+    static final long INLINE_TRANSITION_MS = 420L;
+
     private ApplePlayerStyler(Activity activity, boolean styleScreen, boolean styleTime,
                               boolean animatedArtworkEnabled, NativeSpicyLyricsHook hook) {
         this.activity = activity;
@@ -231,6 +273,11 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                 // state animation runs. Keep this small, idempotent override on every draw;
                 // broader layout maintenance remains throttled below.
                 styleTransportButton();
+                // The like button is otherwise only restyled on the throttled maintenance pass,
+                // so on the frames it first appears it flashes Spotify's native heart before the
+                // Apple circle is applied. Restyle it every draw too (the track-saved read inside
+                // stays throttled), so it is Apple-styled on the first frame it exists.
+                styleLikeButton();
                 long now = android.os.SystemClock.elapsedRealtime();
                 if (now - screenMaintenanceAt >= SCREEN_MAINTENANCE_INTERVAL_MS) {
                     screenMaintenanceAt = now;
@@ -297,6 +344,11 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         nativeProgress = null;
         progressScanAt = 0L;
         playbackBoundsReadAt = 0L;
+        if (topScrim != null && topScrim.getParent() instanceof ViewGroup) {
+            ((ViewGroup) topScrim.getParent()).removeView(topScrim);
+        }
+        topScrim = null;
+        releaseInlineViews();
         if (backdrop != null && backdrop.getParent() instanceof ViewGroup) {
             ((ViewGroup) backdrop.getParent()).removeView(backdrop);
         }
@@ -353,6 +405,11 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             overlay.addView(backdrop, 0, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             attachAnimatedArtworkLayer();
+            attachTopScrim();
+            if (inlineLyricsOpen) {
+                backdrop.setCoverDimmed(true);
+                applyInlineLayoutNow();
+            }
         }
         if (styleTime) attachClocks();
         if (styleScreen) {
@@ -510,6 +567,7 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             }
         }
         placeTop();
+        if (inlineLyricsOpen) maintainInlineLayout();
         styleTrackInfo();
         hidePlaylistHideButton();
         styleLikeButton();
@@ -546,7 +604,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                     || label.contains("hide this song") || label.contains("dislike")
                     || label.contains("don't play") || label.contains("don’t play")
                     || label.startsWith("hide")
-                    || label.contains("재생 안") || label.contains("숨기") || label.contains("숨김")
+                    || label.contains("재생 안") || label.contains("재생하지")
+                    || label.contains("숨기") || label.contains("숨김")
                     || label.contains("싫어");
             if (hideButton && view != moreButton && view.getVisibility() != View.GONE) {
                 if (!hiddenPlaylistControls.containsKey(view)) {
@@ -622,15 +681,11 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                     addButtonPaddingRight + contentInset,
                     addButtonPaddingBottom + contentInset);
         }
-        int buttonSize = Math.round(
-                ACTION_BUTTON_SIZE_DP * activity.getResources().getDisplayMetrics().density);
-        ViewGroup.LayoutParams buttonParams = found.getLayoutParams();
-        if (buttonParams != null
-                && (buttonParams.width != buttonSize || buttonParams.height != buttonSize)) {
-            buttonParams.width = buttonSize;
-            buttonParams.height = buttonSize;
-            found.setLayoutParams(buttonParams);
-        }
+        // Do not resize the native add button's layout params: Spotify lays the feedback row out
+        // with a constraint/linear solver, and rewriting this child's width/height every frame
+        // made it thrash position (the "+" jumped off its slot). We only restyle it visually -
+        // a circular background inset to the Apple action size and a shrunk icon - and leave the
+        // view's measured slot exactly where Spotify put it, matching the like/ban buttons.
         int width = found.getWidth();
         int height = found.getHeight();
         if (width != addButtonStyledWidth || height != addButtonStyledHeight) {
@@ -654,7 +709,27 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                 && found.getBackground() != addButtonStyledBackground) {
             found.setBackground(addButtonStyledBackground);
         }
+        alignMoreButtonAfterAdd(row, found, width);
         shrinkAddButtonIcons(found);
+    }
+
+    /**
+     * The add button keeps Spotify's wider slot, its circle inset inside it, so the gap to the
+     * "..." button we add after it reads twice the gap between our own buttons. Pull our button
+     * in by that transparent inset; Spotify's view is left untouched.
+     */
+    private void alignMoreButtonAfterAdd(ViewGroup row, View add, int addWidth) {
+        if (moreButton == null || addWidth <= 0
+                || row.indexOfChild(moreButton) != row.indexOfChild(add) + 1) return;
+        float density = activity.getResources().getDisplayMetrics().density;
+        int inset = Math.max(0, (addWidth - Math.round(ACTION_BUTTON_SIZE_DP * density)) / 2);
+        int wanted = Math.round(8 * density) - inset;
+        ViewGroup.LayoutParams params = moreButton.getLayoutParams();
+        if (params instanceof ViewGroup.MarginLayoutParams
+                && ((ViewGroup.MarginLayoutParams) params).getMarginStart() != wanted) {
+            ((ViewGroup.MarginLayoutParams) params).setMarginStart(wanted);
+            moreButton.setLayoutParams(params);
+        }
     }
 
     private void shrinkAddButtonIcons(View root) {
@@ -775,18 +850,26 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
     private ValueAnimator topTextColorAnimator;
 
     /**
-     * The "Playing from" lines, the handle and the status-bar icons sit on the cover's top edge:
-     * a bright one turns them dark so they stay readable, a dark one keeps them white.
+     * The "Playing from" lines, the handle and the status-bar icons sit on the cover's top edge.
+     * Picking black or white from the edge's average brightness failed on busy covers - part of
+     * the text always landed on the wrong half - so, as Apple Music does, they stay white over a
+     * soft dark scrim that deepens the brighter the cover's top is, with a light text shadow.
      */
     private void applyTopContrast() {
         if (backdrop == null || header == null) return;
         ApplePlayerBackdrop.Page page = backdrop.currentPage();
         if (page == null) return;
         float luminance = backdrop.topLuminance();
-        int wanted = bestContrastGlyph(luminance);
-        boolean light = wanted == Color.BLACK;
+        int wanted = Color.WHITE;
+        boolean light = false;
         View title = header.findViewById(id("context_header_title"));
         View subtitle = header.findViewById(id("context_header_subtitle"));
+        if (topScrim != null) {
+            topScrim.setLuminance(luminance);
+            sizeTopScrim();
+        }
+        shadowHeaderText(title);
+        shadowHeaderText(subtitle);
         backdrop.setTopGlyphColor(wanted);
         animateTopTextColor(title, subtitle, wanted);
         if (!topContrastApplied || light != lastStatusBarLight) {
@@ -798,13 +881,6 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                     : (flags & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
             decor.setSystemUiVisibility(flags);
         }
-    }
-
-    private static int bestContrastGlyph(float luminance) {
-        float surface = Math.max(0f, Math.min(1f, luminance));
-        float whiteContrast = 1.05f / (surface + 0.05f);
-        float blackContrast = (surface + 0.05f) / 0.05f;
-        return blackContrast >= whiteContrast ? Color.BLACK : Color.WHITE;
     }
 
     private void animateTopTextColor(View title, View subtitle, int targetColor) {
@@ -850,6 +926,114 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         topTextTarget = Integer.MIN_VALUE;
         if (topContrastApplied) decor.setSystemUiVisibility(originalSystemUiVisibility);
         topContrastApplied = false;
+        for (java.util.Map.Entry<TextView, float[]> entry : headerShadows.entrySet()) {
+            float[] o = entry.getValue();
+            entry.getKey().setShadowLayer(o[0], o[1], o[2], (int) o[3]);
+        }
+        headerShadows.clear();
+    }
+
+    // --- Top scrim ---------------------------------------------------------------------------
+
+    private TopScrimView topScrim;
+    /** Header lines given a shadow, with their original {radius, dx, dy, color}. */
+    private final WeakHashMap<TextView, float[]> headerShadows = new WeakHashMap<>();
+
+    /** Above the cover and any motion artwork, under the header: so it darkens both. */
+    private void attachTopScrim() {
+        if (!(overlay instanceof FrameLayout) || backdrop == null) return;
+        TopScrimView scrim = new TopScrimView(activity, backdrop);
+        int index = overlay.indexOfChild(animatedArtworkLayer != null
+                ? animatedArtworkLayer : backdrop) + 1;
+        overlay.addView(scrim, index, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, minTopScrimHeight(), Gravity.TOP));
+        backdrop.setHandleHost(scrim);
+        topScrim = scrim;
+    }
+
+    private int minTopScrimHeight() {
+        return Math.round(150f * activity.getResources().getDisplayMetrics().density);
+    }
+
+    /** Reaches a little past the "Playing from" lines, wherever Spotify laid them out. */
+    private void sizeTopScrim() {
+        int wanted = minTopScrimHeight();
+        if (header != null && header.getHeight() > 0) {
+            int[] headerAt = new int[2];
+            int[] overlayAt = new int[2];
+            header.getLocationInWindow(headerAt);
+            overlay.getLocationInWindow(overlayAt);
+            int headerBottom = headerAt[1] - overlayAt[1] + header.getHeight();
+            float density = activity.getResources().getDisplayMetrics().density;
+            wanted = Math.max(wanted, headerBottom + Math.round(56f * density));
+        }
+        ViewGroup.LayoutParams params = topScrim.getLayoutParams();
+        if (params != null && Math.abs(params.height - wanted) > 2) {
+            params.height = wanted;
+            topScrim.setLayoutParams(params);
+        }
+    }
+
+    private void shadowHeaderText(View view) {
+        if (!(view instanceof TextView)) return;
+        TextView text = (TextView) view;
+        if (!headerShadows.containsKey(text)) {
+            headerShadows.put(text, new float[]{text.getShadowRadius(), text.getShadowDx(),
+                    text.getShadowDy(), text.getShadowColor()});
+        }
+        float density = activity.getResources().getDisplayMetrics().density;
+        float radius = 6f * density;
+        if (text.getShadowRadius() != radius) {
+            text.setShadowLayer(radius, 0f, density, 0x73000000);
+        }
+    }
+
+    /**
+     * Apple Music's top edge: a soft black fade from the top that keeps the status bar, the
+     * handle and "Playing from" readable over any cover, stronger over a bright cover top. The
+     * backdrop's handle is drawn here, on top of the fade, so the fade never dims it.
+     */
+    private static final class TopScrimView extends View {
+        private final Paint paint = new Paint();
+        private final ApplePlayerBackdrop backdrop;
+        private float luminance = -1f;
+        private int shaderHeight = -1;
+
+        TopScrimView(Activity activity, ApplePlayerBackdrop backdrop) {
+            super(activity);
+            this.backdrop = backdrop;
+            setWillNotDraw(false);
+            setClickable(false);
+            setFocusable(false);
+            setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+
+        void setLuminance(float value) {
+            float clamped = Math.max(0f, Math.min(1f, value));
+            if (luminance >= 0f && Math.abs(clamped - luminance) < 0.02f) return;
+            luminance = clamped;
+            shaderHeight = -1;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            int h = getHeight();
+            if (h <= 0) return;
+            if (luminance >= 0f) {
+                if (shaderHeight != h) {
+                    shaderHeight = h;
+                    float strength = 0.30f + 0.30f * luminance;
+                    int top = Color.argb(Math.round(255 * strength), 0, 0, 0);
+                    int middle = Color.argb(Math.round(255 * strength * 0.55f), 0, 0, 0);
+                    paint.setShader(new LinearGradient(0f, 0f, 0f, h,
+                            new int[]{top, middle, Color.TRANSPARENT},
+                            new float[]{0f, 0.5f, 1f}, android.graphics.Shader.TileMode.CLAMP));
+                }
+                canvas.drawRect(0f, 0f, getWidth(), h, paint);
+            }
+            backdrop.drawHandle(canvas, getWidth());
+        }
     }
 
     private void styleLikeButton() {
@@ -962,6 +1146,380 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
     }
 
+    // --- Inline lyrics ------------------------------------------------------------------------
+
+    private boolean inlineLyricsOpen;
+    private long artworkLayerFadeUntil;
+
+    private static final int MINI_COVER_DP = 56;
+    private static final int MINI_ROW_DP = 72;
+
+    private boolean inlineControlsHidden;
+    private Runnable inlineCloseAction;
+    private LinearLayout miniHeader;
+    private ImageView miniCover;
+    private TextView miniTitle;
+    private TextView miniArtist;
+    private ImageView flyingCover;
+    private android.graphics.Bitmap miniCoverBitmap;
+
+    private void setInlineOpen(boolean open, Runnable closeAction) {
+        inlineCloseAction = open ? closeAction : null;
+        if (inlineLyricsOpen == open) return;
+        inlineLyricsOpen = open;
+        if (backdrop != null) backdrop.setCoverDimmed(open);
+        if (animatedArtworkLayer != null) {
+            artworkLayerFadeUntil = android.os.SystemClock.elapsedRealtime() + INLINE_TRANSITION_MS + 40L;
+            animatedArtworkLayer.animate().cancel();
+            animatedArtworkLayer.animate().alpha(open ? 0f : 1f).setDuration(INLINE_TRANSITION_MS).start();
+        }
+        if (motionView != null && open) motionView.setPlaying(false);
+        if (overlay == null) return;
+        if (!open) setControlsHidden(false);
+        ensureMiniHeader();
+        maintainInlineLayout();
+        flyCover(open);
+        float hiddenAlpha = open ? 0f : 1f;
+        fadeTo(header, hiddenAlpha);
+        fadeTo(overlay.findViewById(id("track_info_feedback_container")), hiddenAlpha);
+        if (miniHeader != null) {
+            miniHeader.animate().cancel();
+            if (open) {
+                miniHeader.setVisibility(View.VISIBLE);
+                miniHeader.setTranslationY(dp(10));
+            }
+            miniHeader.animate().alpha(open ? 1f : 0f).translationY(0f)
+                    .setStartDelay(open ? INLINE_TRANSITION_MS / 3 : 0L)
+                    .setDuration(open ? INLINE_TRANSITION_MS * 2 / 3 : INLINE_TRANSITION_MS / 2)
+                    .withEndAction(() -> {
+                        if (!inlineLyricsOpen && miniHeader != null) miniHeader.setVisibility(View.GONE);
+                    }).start();
+        }
+    }
+
+    /** A rebuilt page while the lyrics are open: take the open layout without animating. */
+    private void applyInlineLayoutNow() {
+        ensureMiniHeader();
+        maintainInlineLayout();
+        if (header != null) header.setAlpha(0f);
+        View info = overlay.findViewById(id("track_info_feedback_container"));
+        if (info != null) info.setAlpha(0f);
+        if (miniHeader != null) {
+            miniHeader.setVisibility(View.VISIBLE);
+            miniHeader.setAlpha(1f);
+            miniHeader.setTranslationY(0f);
+        }
+        if (miniCover != null) miniCover.setAlpha(1f);
+        if (inlineControlsHidden) {
+            inlineControlsHidden = false;
+            setControlsHidden(true);
+        }
+    }
+
+    private void fadeTo(View view, float alpha) {
+        if (view == null) return;
+        view.animate().cancel();
+        view.animate().alpha(alpha).setDuration(INLINE_TRANSITION_MS / 2).start();
+    }
+
+    private int dp(float value) {
+        return Math.round(value * activity.getResources().getDisplayMetrics().density);
+    }
+
+    /** The small cover row: cover, title over artist, and the "..." Spotify's header had. */
+    private void ensureMiniHeader() {
+        if (miniHeader != null && miniHeader.getParent() == overlay) return;
+        if (!(overlay instanceof FrameLayout)) return;
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(24), 0, dp(20), 0);
+        row.setAlpha(0f);
+        row.setVisibility(View.GONE);
+        // Tapping the cover row goes back to the big cover, as in Apple Music.
+        row.setOnClickListener(v -> {
+            Runnable close = inlineCloseAction;
+            if (close != null) close.run();
+        });
+
+        ImageView cover = new ImageView(activity);
+        cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        cover.setClipToOutline(true);
+        cover.setOutlineProvider(roundedOutline(dp(10)));
+        row.addView(cover, new LinearLayout.LayoutParams(dp(MINI_COVER_DP), dp(MINI_COVER_DP)));
+
+        LinearLayout texts = new LinearLayout(activity);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams textsLp = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        textsLp.setMarginStart(dp(14));
+        textsLp.setMarginEnd(dp(12));
+        TextView title = new TextView(activity);
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(18f);
+        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView artist = new TextView(activity);
+        artist.setTextColor(0xB3FFFFFF);
+        artist.setTextSize(15f);
+        artist.setSingleLine(true);
+        artist.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        texts.addView(title);
+        texts.addView(artist);
+        row.addView(texts, textsLp);
+
+        if (menuButton != null) {
+            android.widget.ImageButton more = new android.widget.ImageButton(activity);
+            float density = activity.getResources().getDisplayMetrics().density;
+            more.setImageDrawable(new com.eza.spicyex.ui.ActionIconDrawable(
+                    com.eza.spicyex.ui.ActionIconDrawable.Kind.ELLIPSIS, Color.WHITE, density,
+                    ACTION_ICON_SIZE_DP));
+            more.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            android.graphics.drawable.GradientDrawable circle = new android.graphics.drawable.GradientDrawable();
+            circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            circle.setColor(0x33FFFFFF);
+            more.setBackground(circle);
+            CharSequence label = menuButton.getContentDescription();
+            more.setContentDescription(label != null ? label : "More options");
+            more.setOnClickListener(v -> {
+                View target = menuButton;
+                if (target != null) target.performClick();
+            });
+            row.addView(more, new LinearLayout.LayoutParams(dp(ACTION_BUTTON_SIZE_DP + 4),
+                    dp(ACTION_BUTTON_SIZE_DP + 4)));
+        }
+
+        overlay.addView(row, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(MINI_ROW_DP), Gravity.TOP));
+        miniHeader = row;
+        miniCover = cover;
+        miniTitle = title;
+        miniArtist = artist;
+        miniCoverBitmap = null;
+    }
+
+    private static android.view.ViewOutlineProvider roundedOutline(float radius) {
+        return new android.view.ViewOutlineProvider() {
+            @Override public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+            }
+        };
+    }
+
+    /** Where the small cover row sits: in the "Playing from" lines' place, under the handle. */
+    private int miniHeaderTop() {
+        int top = dp(44);
+        if (header != null && header.getHeight() > 0 && overlay != null) {
+            int[] headerAt = new int[2];
+            int[] overlayAt = new int[2];
+            header.getLocationInWindow(headerAt);
+            overlay.getLocationInWindow(overlayAt);
+            top = headerAt[1] - overlayAt[1];
+        }
+        return Math.max(dp(28), top);
+    }
+
+    /** Keeps the small cover row placed and showing the current song. */
+    private void maintainInlineLayout() {
+        if (miniHeader == null || overlay == null) return;
+        ViewGroup.LayoutParams params = miniHeader.getLayoutParams();
+        if (params instanceof FrameLayout.LayoutParams) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) params;
+            int top = miniHeaderTop();
+            if (lp.topMargin != top) {
+                lp.topMargin = top;
+                miniHeader.setLayoutParams(lp);
+            }
+        }
+        if (miniHeader.getParent() == overlay
+                && overlay.indexOfChild(miniHeader) != overlay.getChildCount() - 1
+                && (flyingCover == null || flyingCover.getParent() != overlay)) {
+            miniHeader.bringToFront();
+        }
+        View title = overlay.findViewById(id("track_info_view_title"));
+        View artist = overlay.findViewById(id("track_info_view_subtitle"));
+        if (title instanceof TextView && miniTitle != null) {
+            CharSequence text = ((TextView) title).getText();
+            if (!android.text.TextUtils.equals(text, miniTitle.getText())) miniTitle.setText(text);
+        }
+        if (artist instanceof TextView && miniArtist != null) {
+            CharSequence text = ((TextView) artist).getText();
+            if (!android.text.TextUtils.equals(text, miniArtist.getText())) miniArtist.setText(text);
+        }
+        android.graphics.Bitmap cover = currentCoverBitmap();
+        if (cover != null && cover != miniCoverBitmap && miniCover != null) {
+            miniCoverBitmap = cover;
+            miniCover.setImageBitmap(cover);
+        }
+    }
+
+    private android.graphics.Bitmap currentCoverBitmap() {
+        ApplePlayerBackdrop.Page page = backdrop == null ? null : backdrop.currentPage();
+        return page == null || page.cover == null || page.cover.isRecycled() ? null : page.cover;
+    }
+
+    /**
+     * The big cover flies into the small one (or back out): a copy of it travels between the
+     * banner and the small cover's slot while the backdrop's own cover fades, so the cover is
+     * seen moving rather than vanishing in one place and appearing in another.
+     */
+    private void flyCover(boolean toSmall) {
+        android.graphics.Bitmap cover = currentCoverBitmap();
+        if (overlay == null || miniHeader == null || cover == null || overlay.getWidth() <= 0) {
+            if (miniCover != null) miniCover.setAlpha(toSmall ? 1f : 0f);
+            return;
+        }
+        if (flyingCover != null && flyingCover.getParent() instanceof ViewGroup) {
+            flyingCover.animate().cancel();
+            ((ViewGroup) flyingCover.getParent()).removeView(flyingCover);
+        }
+        int bigSide = overlay.getWidth();
+        int smallSide = dp(MINI_COVER_DP);
+        float smallScale = smallSide / (float) bigSide;
+        float smallX = dp(24);
+        float smallY = miniHeaderTop() + (dp(MINI_ROW_DP) - smallSide) / 2f;
+        ImageView flying = new ImageView(activity);
+        flying.setImageBitmap(cover);
+        flying.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        flying.setPivotX(0f);
+        flying.setPivotY(0f);
+        flying.setClipToOutline(true);
+        float[] radius = {0f};
+        flying.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius[0]);
+            }
+        });
+        flying.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        overlay.addView(flying, new FrameLayout.LayoutParams(bigSide, bigSide, Gravity.TOP | Gravity.LEFT));
+        flyingCover = flying;
+        if (miniCover != null) miniCover.setAlpha(0f);
+        // In screen units the small cover's corners are 10dp; the view is drawn scaled, so the
+        // radius it needs grows as it shrinks.
+        float smallRadius = dp(10) / smallScale;
+        android.animation.ValueAnimator animator = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(INLINE_TRANSITION_MS);
+        animator.setInterpolator(new android.view.animation.PathInterpolator(0.32f, 0.72f, 0f, 1f));
+        animator.addUpdateListener(a -> {
+            float t = (float) a.getAnimatedValue();
+            float p = toSmall ? t : 1f - t;
+            float scale = 1f + (smallScale - 1f) * p;
+            flying.setScaleX(scale);
+            flying.setScaleY(scale);
+            flying.setTranslationX(smallX * p);
+            flying.setTranslationY(smallY * p);
+            radius[0] = smallRadius * p;
+            flying.invalidateOutline();
+        });
+        animator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator animation) {
+                if (miniCover != null) miniCover.setAlpha(toSmall && inlineLyricsOpen ? 1f : 0f);
+                if (flying.getParent() instanceof ViewGroup) ((ViewGroup) flying.getParent()).removeView(flying);
+                if (flyingCover == flying) flyingCover = null;
+            }
+        });
+        animator.start();
+    }
+
+    /** The views that slide away with the controls: progress and times, transport, footer row. */
+    private View[] inlineControlViews() {
+        if (overlay == null) return new View[0];
+        return new View[]{
+                overlay.findViewById(id("track_seekbar")),
+                overlay.findViewById(id("playback_controls_container")),
+                overlay.findViewById(id("revised_template_overlay_footer")),
+        };
+    }
+
+    private void setControlsHidden(boolean hidden) {
+        if (inlineControlsHidden == hidden || overlay == null) return;
+        inlineControlsHidden = hidden;
+        View seekbar = overlay.findViewById(id("track_seekbar"));
+        float distance = overlay.getHeight();
+        if (seekbar != null && seekbar.getHeight() > 0) {
+            int[] seekAt = new int[2];
+            int[] overlayAt = new int[2];
+            seekbar.getLocationInWindow(seekAt);
+            overlay.getLocationInWindow(overlayAt);
+            distance = overlay.getHeight() - (seekAt[1] - overlayAt[1] - seekbar.getTranslationY());
+        }
+        android.view.animation.Interpolator ease =
+                new android.view.animation.PathInterpolator(0.32f, 0.72f, 0f, 1f);
+        for (View view : inlineControlViews()) {
+            if (view == null) continue;
+            view.animate().cancel();
+            view.animate().translationY(hidden ? distance : 0f).alpha(hidden ? 0f : 1f)
+                    .setDuration(INLINE_TRANSITION_MS).setInterpolator(ease).start();
+        }
+        if (playbackBar != null) {
+            playbackBar.animate().cancel();
+            playbackBar.animate().alpha(hidden ? 0f : 1f)
+                    .setDuration(INLINE_TRANSITION_MS / 2).start();
+        }
+    }
+
+    /** Puts back everything the open lyrics changed, and drops the views they added. */
+    private void releaseInlineViews() {
+        for (View view : inlineControlViews()) {
+            if (view == null) continue;
+            view.animate().cancel();
+            view.setTranslationY(0f);
+            view.setAlpha(1f);
+        }
+        if (playbackBar != null) playbackBar.setAlpha(1f);
+        if (header != null) header.setAlpha(1f);
+        if (overlay != null) {
+            View info = overlay.findViewById(id("track_info_feedback_container"));
+            if (info != null) info.setAlpha(1f);
+        }
+        if (miniHeader != null && miniHeader.getParent() instanceof ViewGroup) {
+            miniHeader.animate().cancel();
+            ((ViewGroup) miniHeader.getParent()).removeView(miniHeader);
+        }
+        if (flyingCover != null && flyingCover.getParent() instanceof ViewGroup) {
+            ((ViewGroup) flyingCover.getParent()).removeView(flyingCover);
+        }
+        miniHeader = null;
+        miniCover = null;
+        miniTitle = null;
+        miniArtist = null;
+        flyingCover = null;
+        miniCoverBitmap = null;
+    }
+
+    /**
+     * Top of the controls block, where it rests (a running slide's offset taken out). Spotify
+     * hides the progress bar for a moment around playback changes, so it falls back to the
+     * transport row and then to a fixed share of the screen rather than giving up.
+     */
+    private int controlsTopInWindow(int[] overlayAt) {
+        for (String name : new String[]{"track_seekbar", "playback_controls_container"}) {
+            View view = overlay.findViewById(id(name));
+            if (view == null || view.getHeight() <= 0 || view.getVisibility() != View.VISIBLE) continue;
+            int[] at = new int[2];
+            view.getLocationInWindow(at);
+            return at[1] - Math.round(view.getTranslationY());
+        }
+        return overlayAt[1] + Math.round(overlay.getHeight() * 0.70f);
+    }
+
+    private android.graphics.Rect inlineBounds() {
+        if (overlay == null || !overlay.isAttachedToWindow() || overlay.getWidth() <= 0) return null;
+        int[] overlayAt = new int[2];
+        overlay.getLocationInWindow(overlayAt);
+        int top = overlayAt[1] + miniHeaderTop() + dp(MINI_ROW_DP) + dp(4);
+        int bottom;
+        if (inlineControlsHidden) {
+            bottom = overlayAt[1] + overlay.getHeight() - dp(24);
+        } else {
+            bottom = controlsTopInWindow(overlayAt) - dp(4);
+        }
+        if (bottom - top < dp(160)) return null;
+        return new android.graphics.Rect(overlayAt[0], top,
+                overlayAt[0] + overlay.getWidth(), bottom);
+    }
+
     private void attachAnimatedArtworkLayer() {
         if (!animatedArtworkEnabled || !(overlay instanceof FrameLayout)) return;
         try {
@@ -1068,7 +1626,10 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             }
             return;
         }
-        animatedArtworkLayer.setAlpha(1f);
+        if (!inlineLyricsOpen
+                && android.os.SystemClock.elapsedRealtime() >= artworkLayerFadeUntil) {
+            animatedArtworkLayer.setAlpha(1f);
+        }
         syncMotionArtwork();
         updateAnimatedArtworkPlayback();
     }
@@ -1079,7 +1640,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         long now = android.os.SystemClock.elapsedRealtime();
         if (now - animatedPlaybackReadAt < 250L) return;
         animatedPlaybackReadAt = now;
-        motionView.setPlaying(hook == null || hook.isPlayerActuallyPlaying());
+        motionView.setPlaying(!inlineLyricsOpen
+                && (hook == null || hook.isPlayerActuallyPlaying()));
     }
 
     private static final class FadingArtworkFrame extends FrameLayout {
@@ -1159,7 +1721,11 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             clearBackground(button);
             clearBackground(icon);
             Drawable current = icon.getDrawable();
-            if (current != null && "p.dxe".equals(current.getClass().getName())) {
+            // Spotify's play/pause glyph is a custom drawable that paints its own filled circle
+            // behind the glyph. Its obfuscated class name drifts between app versions (p.dxe,
+            // p.daf, ...), so match structurally - any non-framework drawable - instead of a
+            // hardcoded name, then zero the circle fill so only the white glyph remains.
+            if (current != null && !current.getClass().getName().startsWith("android.")) {
                 if (current != circularDrawable) {
                     circularDrawable = current;
                     circlePaint = spotifyCirclePaint(current);
@@ -1217,7 +1783,8 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
         }
     }
 
-    private static Paint spotifyCirclePaint(Drawable drawable) {
+    /** Quiet probe: the drawable's own FILL paint (the filled circle), or null. */
+    private static Paint findFillPaint(Drawable drawable) {
         try {
             for (java.lang.reflect.Field field : drawable.getClass().getDeclaredFields()) {
                 if (!Paint.class.isAssignableFrom(field.getType())) continue;
@@ -1227,13 +1794,19 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
                     return (Paint) nested;
                 }
             }
-            XpLog.log(NativeSpicyLyricsHook.TAG
-                    + " Spotify play/pause drawable has no circle fill paint");
         } catch (ReflectiveOperationException | RuntimeException e) {
-            XpLog.log(NativeSpicyLyricsHook.TAG
-                    + " could not restyle Spotify play/pause drawable: " + e);
+            // Treated as "no circle paint" by callers.
         }
         return null;
+    }
+
+    private static Paint spotifyCirclePaint(Drawable drawable) {
+        Paint paint = findFillPaint(drawable);
+        if (paint == null) {
+            XpLog.log(NativeSpicyLyricsHook.TAG
+                    + " Spotify play/pause drawable has no circle fill paint");
+        }
+        return paint;
     }
 
     private static View findLottieLayer(View root, View icon) {
@@ -1367,7 +1940,13 @@ final class ApplePlayerStyler implements ViewTreeObserver.OnPreDrawListener {
             if (view.getClass().getName().contains("LottieAnimationView")) continue;
             ImageView image = (ImageView) view;
             Drawable drawable = image.getDrawable();
-            if (drawable != null && "p.dxe".equals(drawable.getClass().getName())) return image;
+            // Prefer the icon whose drawable is Spotify's custom circular play/pause glyph
+            // (non-framework class with a discoverable fill paint), resilient to its obfuscated
+            // name changing across app versions; otherwise fall back to the first icon found.
+            if (drawable != null && !drawable.getClass().getName().startsWith("android.")
+                    && findFillPaint(drawable) != null) {
+                return image;
+            }
             if (fallback == null) fallback = image;
         }
         return fallback;

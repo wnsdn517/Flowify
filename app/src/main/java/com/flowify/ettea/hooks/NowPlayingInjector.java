@@ -89,6 +89,15 @@ final class NowPlayingInjector {
         }
     }
 
+    /** Opens (or closes) the lyrics inside the Apple-style player; false when it cannot. */
+    boolean toggleInlineLyrics(Activity activity) {
+        NowPlayingLyricController controller;
+        synchronized (controllers) {
+            controller = controllers.get(activity);
+        }
+        return controller != null && controller.toggleInlineLyrics();
+    }
+
     boolean consumeArtworkBack(Activity activity) {
         if (ApplePlayerStyler.consumeRecentCarouselSwipe(activity)) return true;
         NowPlayingLyricController controller;

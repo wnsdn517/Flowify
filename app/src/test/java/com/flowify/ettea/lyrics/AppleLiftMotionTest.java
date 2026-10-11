@@ -18,18 +18,17 @@ public class AppleLiftMotionTest {
     }
 
     @Test
-    public void wordMotionYPicksSplineByFlag() {
-        // Apple lift holds -APPLE_LIFT_EM once sung; the shared lift arc returns to 0.
+    public void wordMotionYRisesAndHoldsWhileSung() {
+        // Apple lift holds -APPLE_LIFT_EM once sung.
         assertEquals(-LyricAnimations.APPLE_LIFT_EM,
-                LyricsAnimationApplier.wordMotionY(true, false, true, 0.9f, true), EPS);
-        assertEquals(0f,
-                LyricsAnimationApplier.wordMotionY(true, false, true, 0.9f, false), EPS);
-        // Inactive and unsung words never move under either curve.
-        assertEquals(0f,
-                LyricsAnimationApplier.wordMotionY(true, false, false, 0.5f, true), EPS);
-        // Without the flag the legacy 4-arg path is unchanged.
-        assertEquals(LyricAnimations.liftYOffsetSpline(0.5f),
-                LyricsAnimationApplier.wordMotionY(true, true, false, 0.5f), EPS);
+                LyricsAnimationApplier.wordMotionY(false, true, 0.9f, 0f), EPS);
+        // Unsung words stay put; an active word is on its way up.
+        assertEquals(0f, LyricsAnimationApplier.wordMotionY(false, false, 0.5f, 0f), EPS);
+        assertEquals(LyricAnimations.appleLiftYOffsetSpline(0.5f),
+                LyricsAnimationApplier.wordMotionY(true, false, 0.5f, 0f), EPS);
+        // A held note lifts a little further.
+        assertTrue(LyricsAnimationApplier.wordMotionY(true, false, 0.5f, 1f)
+                < LyricsAnimationApplier.wordMotionY(true, false, 0.5f, 0f));
     }
 
     @Test
@@ -41,16 +40,4 @@ public class AppleLiftMotionTest {
                 > LyricAnimations.appleLetterGlowFalloff(2f));
     }
 
-    @Test
-    public void sharedAppleLiftStyleSelectsMotionWithoutAppleStyle() {
-        assertTrue(LyricsRenderConfig.appleLiftMotion("Apple lift", false, false));
-        assertTrue(LyricsRenderConfig.appleLiftMotion("Apple lift", true, false));
-    }
-
-    @Test
-    public void appleToggleStillGatesOnAppleStyle() {
-        assertTrue(LyricsRenderConfig.appleLiftMotion("Word lift", true, true));
-        assertFalse(LyricsRenderConfig.appleLiftMotion("Word lift", false, true));
-        assertFalse(LyricsRenderConfig.appleLiftMotion("Phrase zoom", false, false));
-    }
 }

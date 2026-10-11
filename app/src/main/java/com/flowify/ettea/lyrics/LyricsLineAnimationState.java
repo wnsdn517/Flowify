@@ -17,7 +17,6 @@ public final class LyricsLineAnimationState {
 
     public boolean active;
     public boolean sung;
-    public boolean spotlight;
     public float progress;
     public float gradient;
     public float glowTarget;
@@ -30,7 +29,6 @@ public final class LyricsLineAnimationState {
     private void set(
             boolean active,
             boolean sung,
-            boolean spotlight,
             float progress,
             float gradient,
             float glowTarget,
@@ -39,7 +37,6 @@ public final class LyricsLineAnimationState {
     ) {
         this.active = active;
         this.sung = sung;
-        this.spotlight = spotlight;
         this.progress = progress;
         this.gradient = gradient;
         this.glowTarget = glowTarget;
@@ -50,41 +47,28 @@ public final class LyricsLineAnimationState {
     public static LyricsLineAnimationState forLine(
             AppliedLine line,
             long positionMs,
-            boolean spotlight,
             boolean washEnabled
     ) {
-        return forLine(line, positionMs, spotlight, washEnabled, false);
-    }
-
-    public static LyricsLineAnimationState forLine(
-            AppliedLine line,
-            long positionMs,
-            boolean spotlight,
-            boolean washEnabled,
-            boolean appleDimPassed
-    ) {
-        return forLine(line, positionMs, spotlight, washEnabled, appleDimPassed, true);
+        return forLine(line, positionMs, washEnabled, false);
     }
 
     /**
-     * @param appleStyle animation style is "Apple Music". Only the Apple stack ramps the active
-     *  line up to 1.03 (1.05 under Spotlight); every other style keeps the flat 1.0/1.04 target.
+     * Apple Music's line targets: the sung fill sweeps the active line ({@code washEnabled}),
+     * the active line ramps up to a small 1.03 zoom as it is sung and the rest rest at 0.95.
+     *
+     * @param appleDimPassed passed lines keep only a faint glow (Settings.APPLE_FADE_PASSED_LINES)
      */
     public static LyricsLineAnimationState forLine(
             AppliedLine line,
             long positionMs,
-            boolean spotlight,
             boolean washEnabled,
-            boolean appleDimPassed,
-            boolean appleStyle
+            boolean appleDimPassed
     ) {
         boolean active = LyricTimeline.isRowActiveAt(line, positionMs);
         boolean sung = line != null && positionMs >= line.endMs;
         float progress = active ? progress01(positionMs, line.startMs, LyricTimeline.fillEndMs(line)) : 0f;
         float gradient;
-        if (spotlight) {
-            gradient = active || sung ? LyricAnimations.GRADIENT_SUNG : LyricAnimations.GRADIENT_UNSUNG;
-        } else if (!washEnabled) {
+        if (!washEnabled) {
             gradient = LyricAnimations.GRADIENT_SUNG;
         } else if (active) {
             gradient = LyricAnimations.gradientPosition(progress);
@@ -93,34 +77,23 @@ public final class LyricsLineAnimationState {
         }
 
         float glowTarget = 0f;
-        if ((active || sung) && (spotlight || washEnabled)) {
-            float glowPeak = spotlight ? 1.0f : 0.5f;
+        if ((active || sung) && washEnabled) {
+            float glowPeak = 0.5f;
             if (sung) {
                 glowTarget = appleDimPassed ? glowPeak * 0.3f : glowPeak;
             } else {
-                glowTarget = spotlight
-                        ? glowPeak * LyricAnimations.easeSinOut(progress) * LyricAnimations.easeSinOut(progress)
-                        : 0.16f + (glowPeak - 0.16f) * progress;
+                glowTarget = 0.16f + (glowPeak - 0.16f) * progress;
             }
         }
-        float brightnessTarget = 1f;
-        if (spotlight && active) {
-            float eased = LyricAnimations.easeSinOut(progress);
-            brightnessTarget = 0.42f + 0.58f * eased * eased;
-        }
         float scaleTarget;
-        if (!appleStyle) {
-            scaleTarget = active ? (spotlight ? 1.04f : 1.0f) : 0.95f;
-        } else if (active) {
-            float baseScale = 1.0f;
-            // Kept small: the emphasis now goes to held words (GlowFlexbox word emphasis).
-            float maxScale = spotlight ? 1.05f : 1.03f;
-            scaleTarget = baseScale + (maxScale - baseScale) * LyricAnimations.easeSinOut(progress);
+        if (active) {
+            // Kept small: the emphasis goes to held words (GlowFlexbox word emphasis).
+            scaleTarget = 1.0f + 0.03f * LyricAnimations.easeSinOut(progress);
         } else {
             scaleTarget = 0.95f;
         }
         LyricsLineAnimationState state = line == null ? new LyricsLineAnimationState() : state(line);
-        state.set(active, sung, spotlight, progress, gradient, glowTarget, brightnessTarget, scaleTarget);
+        state.set(active, sung, progress, gradient, glowTarget, 1f, scaleTarget);
         return state;
     }
 

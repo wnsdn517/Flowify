@@ -89,28 +89,7 @@ public class TimedTextRowProjectionTest {
         assertEquals(8834L, TimedWordGrouping.endMs(line, 2));
         assertEquals(2, TimedWordGrouping.focusIndex(line, 2, 3, 8100));
         assertEquals(3, TimedWordGrouping.focusIndex(line, 2, 3, 8400));
-        assertEquals(0.95f, LyricsAnimationApplier.wordMotionScale(
-                false, false, false, 0f), 0.0001f);
-        assertEquals(1f, LyricsAnimationApplier.wordMotionScale(
-                false, false, true, 1f), 0.0001f);
-        assertTrue(LyricsAnimationApplier.wordMotionScale(
-                false, true, false, 0.5f) > 1f);
-        assertTrue(LyricsAnimationApplier.wordMotionY(
-                false, true, false, 0.5f) < 0f);
-    }
-
-    @Test
-    public void groupedMotionKeepsCompletedFragmentsStillAndSeamsClosed() {
-        assertEquals(1f, LyricsAnimationApplier.groupedLocalScale(
-                false, false, true, false, 0.5f), 0.0001f);
-        assertEquals(0f, LyricsAnimationApplier.groupedLocalY(
-                false, false, true, false, 0.5f), 0.0001f);
-        assertTrue(LyricsAnimationApplier.groupedLocalScale(
-                true, false, true, false, 0.5f) > 1f);
-        assertEquals(1f, LyricsAnimationApplier.groupedLocalScale(
-                true, true, true, false, 0.5f), 0.0001f);
-        assertTrue(LyricsAnimationApplier.groupedLocalY(
-                true, true, true, false, 0.5f) < 0f);
+        assertTrue(LyricsAnimationApplier.wordMotionY(true, false, 0.5f, 0f) < 0f);
     }
 
     @Test
@@ -118,22 +97,6 @@ public class TimedTextRowProjectionTest {
         assertEquals(1f, LyricsAnimationApplier.inactiveWordScale(false, false), 0.0001f);
         assertEquals(0.95f, LyricsAnimationApplier.inactiveWordScale(true, false), 0.0001f);
         assertEquals(1f, LyricsAnimationApplier.inactiveWordScale(true, true), 0.0001f);
-        assertEquals(1f, LyricsAnimationApplier.letterMotionScale(
-                false, 0.5f, 1f), 0.0001f);
-        assertEquals(0f, LyricsAnimationApplier.letterMotionY(
-                false, 0.5f, 1f), 0.0001f);
-        assertTrue(LyricsAnimationApplier.letterMotionScale(true, 0.5f, 1f) > 1f);
-        assertTrue(LyricsAnimationApplier.letterMotionY(true, 0.5f, 1f) < 0f);
-    }
-
-    @Test
-    public void bounceStylesKeepDistinctMotionContracts() {
-        assertTrue(LyricsAnimationApplier.wordMotionScale(
-                false, true, false, 0.5f) > 1f);
-        assertEquals(1f, LyricsAnimationApplier.wordMotionScale(
-                true, true, false, 0.5f), 0.0001f);
-        assertTrue(LyricsAnimationApplier.wordMotionY(
-                true, true, false, 0.5f) < 0f);
     }
 
     @Test

@@ -51,8 +51,15 @@ public final class SpicyEXModule extends XposedModule {
         }
     }
 
+    /** Diagnostic-only target: the detection test app ({@code :detector-test}). */
+    private static final String DETECTOR_PACKAGE = "com.spicytest.detector";
+
     @Override
     public void onPackageReady(@NonNull PackageReadyParam param) {
+        if (DETECTOR_PACKAGE.equals(param.getPackageName())) {
+            installDetectorProbeHook(param.getClassLoader());
+            return;
+        }
         if (!TARGET_PACKAGE.equals(param.getPackageName())) return;
         Diagnostics.markHookRuntimeActive();
         XpLog.log(TAG + " Loading SpotifyPlus");
@@ -109,6 +116,23 @@ public final class SpicyEXModule extends XposedModule {
                     cleanUpCache(context);
                     initSpotifyHook(xpPackage, context);
                 }, Context.class);
+    }
+
+    /**
+     * Installs a single trivial hook in the detection test app, so its "method hooked on stack
+     * trace" / "hook framework class loadable" probes report the same injected state Spotify's
+     * process is in. Diagnostic only - the detector package is scoped alongside Spotify so we don't
+     * have to repoint the (Spotify-locked) module scope by hand.
+     */
+    private void installDetectorProbeHook(ClassLoader classLoader) {
+        try {
+            Class<?> activity = Class.forName("com.spicytest.detector.MainActivity", false, classLoader);
+            XpHooks.hookAllMethods(activity, "runChecksHooked", "detector:probe",
+                    (XpHooks.Before) p -> { /* presence of the hook is the point */ });
+            XpLog.log(TAG + " detector probe hook installed");
+        } catch (Throwable throwable) {
+            XpLog.log(TAG + " detector probe hook failed: " + throwable);
+        }
     }
 
     /** A cache hit requires no native library. Discovery owns and closes its temporary bridge. */

@@ -18,14 +18,15 @@ import java.util.Set;
 
 public class LikedSongsButtonTest {
     @Test
-    public void defaultsOffWithThreeOptions() {
+    public void defaultsHeartWithThreeOptions() {
         // "Plus" retired per owner decision 2026-09-17; it never shipped on private main,
         // so there is no stored-Plus migration path to guard.
-        assertEquals("Off", Settings.LIKED_SONGS_BUTTON.defaultValue);
+        assertEquals("Heart", Settings.LIKED_SONGS_BUTTON.defaultValue);
         assertEquals(Arrays.asList("Off", "Heart", "Star"),
                 Settings.LIKED_SONGS_BUTTON.allowedValues);
-        assertEquals("Off", Settings.LIKED_SONGS_BUTTON.coerce("bogus"));
-        assertEquals("Off", Settings.LIKED_SONGS_BUTTON.coerce(null));
+        assertEquals("Heart", Settings.LIKED_SONGS_BUTTON.coerce("bogus"));
+        assertEquals("Off", Settings.LIKED_SONGS_BUTTON.coerce("Off"));
+        assertEquals("Heart", Settings.LIKED_SONGS_BUTTON.coerce(null));
         assertEquals("Heart", Settings.LIKED_SONGS_BUTTON.coerce("Heart"));
     }
 

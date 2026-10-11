@@ -74,15 +74,6 @@ public class LyricsRenderConfigDiffTest {
     }
 
     @Test
-    public void bounceScopeInvalidates() throws Exception {
-        String current = (String) fieldValue(base(), "wordBounceScope");
-        LyricsRenderConfig.Diff diff = base().diff(
-                withField("wordBounceScope", current + "-other"));
-        assertTrue(diff.needsToggleOnly);
-        assertTrue(diff.hasChanges);
-    }
-
-    @Test
     public void blurControlsInvalidate() throws Exception {
         boolean current = (Boolean) fieldValue(base(), "lineBlurEnabled");
         LyricsRenderConfig.Diff diff = base().diff(withField("lineBlurEnabled", !current));

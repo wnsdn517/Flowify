@@ -88,18 +88,50 @@ final class NativeLyricsCaptureHook {
     private final SpotifySymbolResolver symbols;
     private final NativeLyricsSource nativeLyricsSource;
     private final TrackProvider trackProvider;
+    private final android.content.Context applicationContext;
     private volatile Object spotifyLyricsService;
 
     NativeLyricsCaptureHook(
             ClassLoader classLoader,
             SpotifySymbolResolver symbols,
             NativeLyricsSource nativeLyricsSource,
-            TrackProvider trackProvider
+            TrackProvider trackProvider,
+            android.content.Context applicationContext
     ) {
         this.classLoader = classLoader;
         this.symbols = symbols;
         this.nativeLyricsSource = nativeLyricsSource;
         this.trackProvider = trackProvider;
+        this.applicationContext = applicationContext;
+    }
+
+    static String resolveClientLanguage(Locale appLocale, Locale systemLocale) {
+        if (appLocale != null) {
+            String appLanguage = appLocale.getLanguage();
+            if (appLanguage != null && !appLanguage.isEmpty()) return appLanguage;
+        }
+        if (systemLocale != null) {
+            String systemLanguage = systemLocale.getLanguage();
+            if (systemLanguage != null && !systemLanguage.isEmpty()) return systemLanguage;
+        }
+        return "";
+    }
+
+    // Spotify's own lyrics request sends the app's locale, which can differ from the system one.
+    private String clientLanguage() {
+        Locale appLocale = null;
+        try {
+            if (applicationContext != null) {
+                android.content.res.Configuration config =
+                        applicationContext.getResources().getConfiguration();
+                if (config != null && config.getLocales() != null
+                        && !config.getLocales().isEmpty()) {
+                    appLocale = config.getLocales().get(0);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return resolveClientLanguage(appLocale, Locale.getDefault());
     }
 
     void hook() {
@@ -209,10 +241,8 @@ final class NativeLyricsCaptureHook {
         };
         try {
             Object client = clientField.get(owner);
-            // clientLanguage: the language Spotify's own getter returned was the app's locale.
-            String language = Locale.getDefault().getLanguage();
-            Object request = endpoint.invoke(client, id, false,
-                    language == null ? "" : language, false);
+            String language = clientLanguage();
+            Object request = endpoint.invoke(client, id, false, language, false);
             Class<?> consumer = XpReflect.findClass(
                     "io.reactivex.rxjava3.functions.Consumer", classLoader);
             Object success = Proxy.newProxyInstance(classLoader, new Class<?>[]{consumer},

@@ -257,18 +257,6 @@ public final class LyricsShellSettings {
         return normalizeLiveCardGlowMode(fallback);
     }
 
-    public String liveCardLineSyncFillMode() {
-        String fallback = config == null ? "" : config.get(Settings.LIVE_CARD_LINE_SYNC_FILL);
-        try {
-            SharedPreferences prefs = prefs();
-            if (prefs != null && prefs.contains(Settings.LIVE_CARD_LINE_SYNC_FILL.key)) {
-                return normalizeLiveCardLineSyncFillMode(prefs.getString(Settings.LIVE_CARD_LINE_SYNC_FILL.key, fallback));
-            }
-        } catch (Throwable ignored) {
-        }
-        return normalizeLiveCardLineSyncFillMode(fallback);
-    }
-
     public String liveCardTransitionMode() {
         String fallback = config == null ? "" : config.get(Settings.LIVE_CARD_TRANSITION);
         try {
@@ -364,56 +352,6 @@ public final class LyricsShellSettings {
         return safe(fallback);
     }
 
-    /** "Spotlight" animation style = zoom + glow the active line/word, no gradient fill. */
-    public boolean spotlightAnimation() {
-        String fallback = config == null ? "" : config.get(Settings.ANIMATION_STYLE);
-        try {
-            SharedPreferences prefs = prefs();
-            if (prefs != null && prefs.contains(Settings.ANIMATION_STYLE.key)) {
-                return "Spotlight".equals(prefs.getString(Settings.ANIMATION_STYLE.key, fallback));
-            }
-        } catch (Throwable ignored) {
-        }
-        return "Spotlight".equals(fallback);
-    }
-
-    /** "Apple Music" animation style = the Apple-owned motion/blur/fade stack (R3). */
-    public boolean appleAnimation() {
-        String fallback = config == null ? "" : config.get(Settings.ANIMATION_STYLE);
-        try {
-            SharedPreferences prefs = prefs();
-            if (prefs != null && prefs.contains(Settings.ANIMATION_STYLE.key)) {
-                return "Apple Music".equals(prefs.getString(Settings.ANIMATION_STYLE.key, fallback));
-            }
-        } catch (Throwable ignored) {
-        }
-        return "Apple Music".equals(fallback);
-    }
-
-    public boolean lineSyncFillTopDown() {
-        return "Top to bottom".equals(lineSyncFillMode());
-    }
-
-    public boolean lineSyncFillWord() {
-        return false;
-    }
-
-    public boolean lineSyncFillSentence() {
-        return "Left to right (sentence)".equals(lineSyncFillMode());
-    }
-
-    public String lineSyncFillMode() {
-        String fallback = normalizeLineSyncFillMode(config == null ? "" : config.get(Settings.LINE_SYNC_FILL));
-        try {
-            SharedPreferences prefs = prefs();
-            if (prefs != null && prefs.contains(Settings.LINE_SYNC_FILL.key)) {
-                return normalizeLineSyncFillMode(prefs.getString(Settings.LINE_SYNC_FILL.key, fallback));
-            }
-        } catch (Throwable ignored) {
-        }
-        return fallback;
-    }
-
     public float lineBlurQualityMultiplier() {
         String quality = config == null ? "" : config.get(Settings.BACKGROUND_QUALITY);
         if ("superLow".equalsIgnoreCase(quality)) return 0f;
@@ -452,20 +390,10 @@ public final class LyricsShellSettings {
         }
     }
 
-    private static String normalizeLineSyncFillMode(String mode) {
-        String value = safe(mode);
-        if ("Left to right".equals(value)) return "Left to right (block)";
-        if ("Left to right (word)".equals(value)) return "Left to right (sentence)";
-        if ("Left to right (block)".equals(value)
-                || "Left to right (sentence)".equals(value)) return value;
-        return "Top to bottom";
-    }
-
+    /** "Minimal" keeps the card still; every other value (including the removed "Karaoke fill",
+     *  "Spotlight word" and older "Full") is the Apple Music animation. */
     private static String normalizeLiveCardAnimationMode(String mode) {
-        String value = safe(mode);
-        if ("Full".equals(value)) return "Spotlight word";
-        if ("Minimal".equals(value) || "Karaoke fill".equals(value) || "Spotlight word".equals(value)) return value;
-        return "Karaoke fill";
+        return "Minimal".equals(safe(mode)) ? "Minimal" : "Apple Music";
     }
 
     private static String normalizeLiveCardSecondaryMode(String mode) {
@@ -479,13 +407,6 @@ public final class LyricsShellSettings {
         String value = safe(mode);
         if ("Off".equals(value) || "Word only".equals(value) || "Subtle line".equals(value)) return value;
         return "Off";
-    }
-
-    private static String normalizeLiveCardLineSyncFillMode(String mode) {
-        String value = safe(mode);
-        if ("Left to right (block)".equals(value)
-                || "Left to right (sentence)".equals(value)) return value;
-        return "Top to bottom";
     }
 
     private static String normalizeLiveCardTransitionMode(String mode) {

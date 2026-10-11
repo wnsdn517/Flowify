@@ -11,32 +11,33 @@ import org.junit.Test;
 public class SettingsDefaultsTest {
     @Test
     public void quietReadableDefaultsAreOptInForProcessing() {
-        assertEquals("Karaoke fill", Settings.LIVE_CARD_ANIMATION.defaultValue);
         assertEquals("Fullscreen", Settings.LIVE_CARD_TAP_TARGET.defaultValue);
         assertEquals("lyrics_live_card_tap_target", Settings.LIVE_CARD_TAP_TARGET.key);
         assertEquals(java.util.Arrays.asList("Fullscreen", "Artwork"),
                 Settings.LIVE_CARD_TAP_TARGET.allowedValues);
         assertEquals("spacious", Settings.LINE_SPACING.defaultValue);
-        assertEquals("note", Settings.INTERLUDE_ICON.defaultValue);
-        assertEquals("Off", Settings.AUTO_SKIP_INTRO_OUTRO.defaultValue);
-        assertEquals("spotify", Settings.LYRICS_FONT.defaultValue);
+        assertEquals("dots", Settings.INTERLUDE_ICON.defaultValue);
+        assertEquals("On demand", Settings.AUTO_SKIP_INTRO_OUTRO.defaultValue);
+        assertEquals("apple", Settings.LYRICS_FONT.defaultValue);
         assertEquals(java.util.Arrays.asList("spotify", "apple", "custom"),
                 Settings.LYRICS_FONT.allowedValues);
         assertEquals("custom", Settings.LYRICS_FONT.coerce("custom"));
-        assertEquals("spotify", Settings.LYRICS_FONT.coerce("bogus"));
+        assertEquals("apple", Settings.LYRICS_FONT.coerce("bogus"));
+        // The pre-"spotify" alias still means the Spotify font, not the (new) default.
+        assertEquals("spotify", Settings.LYRICS_FONT.coerce("default"));
         assertEquals("", Settings.LYRICS_FONT_CUSTOM_PATH.defaultValue);
         assertEquals(Settings.INTERNAL, Settings.LYRICS_FONT_CUSTOM_PATH.section); // edited in the layout editor
-        assertEquals("Off", Settings.STATUS_BAR_HIDDEN_MODE.defaultValue);
+        assertEquals("Both", Settings.STATUS_BAR_HIDDEN_MODE.defaultValue);
         assertEquals(Settings.LYRICS, Settings.STATUS_BAR_HIDDEN_MODE.section);
         assertEquals(java.util.Arrays.asList("Off", "Portrait", "Landscape", "Both"),
                 Settings.STATUS_BAR_HIDDEN_MODE.allowedValues);
         assertEquals("Both", Settings.STATUS_BAR_HIDDEN_MODE.coerce("Both"));
-        assertEquals("Off", Settings.STATUS_BAR_HIDDEN_MODE.coerce("bogus"));
+        assertEquals("Both", Settings.STATUS_BAR_HIDDEN_MODE.coerce("bogus"));
         assertEquals(java.util.Arrays.asList("Off", "On demand", "Auto"),
                 Settings.AUTO_SKIP_INTRO_OUTRO.allowedValues);
         assertEquals("Auto", Settings.AUTO_SKIP_INTRO_OUTRO.coerce("Auto"));
-        assertEquals("Off", Settings.AUTO_SKIP_INTRO_OUTRO.coerce("bogus"));
-        assertFalse(Settings.MINI_PLAYER_LYRICS_ICON.defaultValue);
+        assertEquals("On demand", Settings.AUTO_SKIP_INTRO_OUTRO.coerce("bogus"));
+        assertTrue(Settings.MINI_PLAYER_LYRICS_ICON.defaultValue);
         assertFalse(Settings.KARAOKE_ORIGINAL_LYRICS.defaultValue);
         assertEquals("Single tap", Settings.PANEL_MEDIA_CONTROLS.defaultValue);
         assertEquals(java.util.Arrays.asList("Off", "Single tap", "Double tap"),
@@ -44,19 +45,21 @@ public class SettingsDefaultsTest {
         assertEquals("Double tap", Settings.PANEL_MEDIA_CONTROLS.coerce("Double tap"));
         assertEquals("Single tap", Settings.PANEL_MEDIA_CONTROLS.coerce("bogus"));
 
-        // Apple Music style: selector gains the Apple option, sub-settings are Apple-owned with
-        // PR9's on-values, slide stays off, lift on. STYLE default is unchanged (Gradient wash).
-        assertEquals("Gradient wash", Settings.ANIMATION_STYLE.defaultValue);
-        assertEquals(java.util.Arrays.asList("Gradient wash", "Spotlight", "Apple Music"),
-                Settings.ANIMATION_STYLE.allowedValues);
-        assertEquals("Apple Music", Settings.ANIMATION_STYLE.coerce("Apple Music"));
-        assertEquals("Gradient wash", Settings.ANIMATION_STYLE.coerce("bogus"));
+        // Apple Music is the only animation; the card's removed modes coerce to it.
+        assertEquals("Apple Music", Settings.LIVE_CARD_ANIMATION.defaultValue);
+        assertEquals(java.util.Arrays.asList("Minimal", "Apple Music"),
+                Settings.LIVE_CARD_ANIMATION.allowedValues);
+        assertEquals("Apple Music", Settings.LIVE_CARD_ANIMATION.coerce("Karaoke fill"));
+        assertEquals("Apple Music", Settings.LIVE_CARD_ANIMATION.coerce("Spotlight word"));
+        assertEquals("Spring", Settings.SCROLL_MOTION.defaultValue);
+        assertEquals(java.util.Arrays.asList("Static", "Smooth", "Spring"),
+                Settings.SCROLL_MOTION.allowedValues);
         assertTrue(Settings.APPLE_FADE_PASSED_LINES.defaultValue);
         assertTrue(Settings.APPLE_COMPACT_TEXT.defaultValue);
-        assertFalse(Settings.LINE_SLIDE_ANIMATION.defaultValue);
+        assertTrue(Settings.LINE_SLIDE_ANIMATION.defaultValue);
         assertTrue(Settings.APPLE_LIFT.defaultValue);
         assertEquals(Settings.INTERNAL, Settings.APPLE_LIFT.section); // edited in the layout editor
-        assertFalse(Settings.AUTO_RESUME_FOLLOW.defaultValue);
+        assertTrue(Settings.AUTO_RESUME_FOLLOW.defaultValue);
         assertEquals(3, (int) Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS.defaultValue);
         assertEquals(Settings.LYRICS, Settings.AUTO_RESUME_FOLLOW_DELAY_SECONDS.section);
         assertEquals("Auto", Settings.SKIP_CHIP_STYLE.defaultValue);
@@ -96,7 +99,7 @@ public class SettingsDefaultsTest {
         assertEquals("Off", Settings.KOREAN_ROMANIZATION.coerce("Off"));
         assertEquals("Off", Settings.KOREAN_ROMANIZATION.coerce("off"));
 
-        assertEquals(Integer.valueOf(100), Settings.LYRICS_BLUR_INTENSITY.defaultValue);
+        assertEquals(Integer.valueOf(51), Settings.LYRICS_BLUR_INTENSITY.defaultValue);
         assertEquals(25, Settings.LYRICS_BLUR_INTENSITY.minValue);
         assertEquals(250, Settings.LYRICS_BLUR_INTENSITY.maxValue);
         assertEquals(5, Settings.LYRICS_BLUR_INTENSITY.stepValue);
@@ -112,19 +115,13 @@ public class SettingsDefaultsTest {
         assertEquals(10, Settings.FURIGANA_POSITION_PERCENT.stepValue);
 
         // Text glow defaults ON since the B322+ desktop-parity rework made it subtle and cheap.
-        assertEquals("Word/syllable synced only", Settings.WORD_BOUNCE.defaultValue);
-        assertEquals("Phrase zoom", Settings.WORD_BOUNCE_STYLE.defaultValue);
-        assertEquals(java.util.Arrays.asList("Phrase zoom", "Word zoom", "Phrase lift", "Word lift", "Apple lift"),
-                Settings.WORD_BOUNCE_STYLE.allowedValues);
-        assertEquals("Apple lift", Settings.WORD_BOUNCE_STYLE.coerce("Apple lift"));
-        assertEquals("Phrase zoom", Settings.WORD_BOUNCE_STYLE.coerce("bogus"));
         assertFalse(Settings.ALIGNED_PER_WORD_ROMAJI.defaultValue);
         assertTrue(Settings.ENABLE_GLOW_BLUR.defaultValue);
-        assertEquals("Off", Settings.ENABLE_LINE_BLUR.defaultValue);
+        assertEquals("Heavy", Settings.ENABLE_LINE_BLUR.defaultValue);
         assertEquals(java.util.Arrays.asList("Off", "Slight", "Heavy"),
                 Settings.ENABLE_LINE_BLUR.allowedValues);
         assertEquals("Heavy", Settings.ENABLE_LINE_BLUR.coerce("Heavy"));
-        assertEquals("Off", Settings.ENABLE_LINE_BLUR.coerce("bogus"));
+        assertEquals("Heavy", Settings.ENABLE_LINE_BLUR.coerce("bogus"));
         assertTrue(Settings.FORCE_DARK_BACKGROUND.defaultValue);
         assertEquals(Integer.valueOf(35), Settings.EXTRA_DARK_BACKGROUND.defaultValue);
     }

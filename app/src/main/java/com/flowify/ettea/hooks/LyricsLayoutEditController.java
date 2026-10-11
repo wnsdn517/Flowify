@@ -368,16 +368,14 @@ final class LyricsLayoutEditController {
                 Settings.SHOW_FULLSCREEN_BACK_BUTTON, Settings.FULLSCREEN_CONTROLS,
                 Settings.LYRICS_ADAPTIVE_TEXT_SIZE, Settings.INTERLUDE_ICON,
                 Settings.TRACK_INFO_BACKGROUND, Settings.TRACK_INFO_TEXT_OVERFLOW,
-                Settings.WORD_BOUNCE, Settings.WORD_BOUNCE_STYLE,
-                Settings.ENABLE_GLOW_BLUR, Settings.LINE_SYNC_FILL,
-                Settings.ANIMATION_STYLE, Settings.LOAD_LIFT_ANIMATION,
-                Settings.APPLE_CASCADE_SPEED, Settings.APPLE_SPRING_STRENGTH,
+                Settings.ENABLE_GLOW_BLUR, Settings.LOAD_LIFT_ANIMATION,
+                Settings.APPLE_CASCADE_SPEED, Settings.APPLE_SPRING_STRENGTH, Settings.SCROLL_MOTION,
                 Settings.ADAPTIVE_SECTIONING, Settings.ADAPTIVE_LANDSCAPE_LAYOUT,
                 Settings.PANEL_MEDIA_CONTROLS, Settings.LYRICS_FONT_CUSTOM_PATH,
                 Settings.APPLE_FADE_PASSED_LINES, Settings.LINE_SLIDE_ANIMATION, Settings.APPLE_LIFT,
                 Settings.LIVE_CARD_TEXT_SIZE, Settings.LIVE_CARD_TEXT_SIZE_CUSTOM, Settings.LIVE_CARD_WEIGHT,
                 Settings.LIVE_CARD_SECONDARY_MODE, Settings.LIVE_CARD_ANIMATION, Settings.LIVE_CARD_GLOW,
-                Settings.LIVE_CARD_LINE_SYNC_FILL, Settings.LIVE_CARD_OVERFLOW,
+                Settings.LIVE_CARD_OVERFLOW,
                 Settings.LIVE_CARD_SCROLL_SCOPE, Settings.LIVE_CARD_TRANSITION
         };
 
@@ -2264,10 +2262,8 @@ final class LyricsLayoutEditController {
                     cardChips(Settings.LIVE_CARD_SCROLL_SCOPE, new String[]{"Grouped", "Individual lines"});
                 }
             } else {
-                cardChips(Settings.LIVE_CARD_ANIMATION, new String[]{"Minimal", "Karaoke fill", "Spotlight word"});
+                cardChips(Settings.LIVE_CARD_ANIMATION, new String[]{"Minimal", "Apple Music"});
                 cardChips(Settings.LIVE_CARD_GLOW, new String[]{"Off", "Word only", "Subtle line"});
-                cardChips(Settings.LIVE_CARD_LINE_SYNC_FILL,
-                        new String[]{"Top to bottom", "Left to right (block)", "Left to right (sentence)"});
                 cardChips(Settings.LIVE_CARD_TRANSITION, new String[]{"Fade up", "Crossfade", "None"});
             }
             endGroup();
@@ -3123,45 +3119,28 @@ final class LyricsLayoutEditController {
             endGroup();
         }
 
-        /** Animation style and everything that depends on it, in the order they appear. */
+        /**
+         * Apple Music is the only animation style, so there is no style picker: just its motion
+         * options. Scroll motion is one Static / Smooth / Spring choice (it replaced the separate
+         * slide toggle and spring-strength slider).
+         */
         private void buildAnimationOptions() {
-            beginGroup(strings.setting(Settings.ANIMATION_STYLE));
-            addOption(chipRow(Settings.ANIMATION_STYLE,
-                    new String[]{"Gradient wash", "Spotlight", "Apple Music"},
-                    () -> selectElement(Element.TEXT)), matchWrap(8));
+            beginGroup(strings.get("settings_label_lyric_animation_style", "Animation"));
             addOption(toggleRow(Settings.LOAD_LIFT_ANIMATION,
-                    strings.setting(Settings.LOAD_LIFT_ANIMATION), null), matchWrap(12));
-            if (isAppleStyle()) {
-                addOption(toggleRow(Settings.LINE_SLIDE_ANIMATION,
-                        strings.setting(Settings.LINE_SLIDE_ANIMATION), null), matchWrap(6));
-                addOption(toggleRow(Settings.APPLE_LIFT,
-                        strings.setting(Settings.APPLE_LIFT), null), matchWrap(6));
-                addOption(toggleRow(Settings.APPLE_FADE_PASSED_LINES,
-                        strings.setting(Settings.APPLE_FADE_PASSED_LINES), null), matchWrap(12));
+                    strings.setting(Settings.LOAD_LIFT_ANIMATION), null), matchWrap(6));
+            addOption(toggleRow(Settings.APPLE_LIFT,
+                    strings.setting(Settings.APPLE_LIFT), null), matchWrap(6));
+            addOption(toggleRow(Settings.APPLE_FADE_PASSED_LINES,
+                    strings.setting(Settings.APPLE_FADE_PASSED_LINES), null), matchWrap(12));
+            addOption(text(strings.setting(Settings.SCROLL_MOTION),
+                    12, GROUP_TITLE_COLOR, true), matchWrap(8));
+            addOption(chipRow(Settings.SCROLL_MOTION,
+                    new String[]{"Static", "Smooth", "Spring"},
+                    () -> selectElement(Element.TEXT)), matchWrap(12));
+            if (!"Static".equals(store.get(Settings.SCROLL_MOTION))) {
                 addOption(text(strings.setting(Settings.APPLE_CASCADE_SPEED),
                         12, GROUP_TITLE_COLOR, true), matchWrap(8));
                 addOption(settingSlider(Settings.APPLE_CASCADE_SPEED, "%", null), matchWrap(12));
-                addOption(text(strings.setting(Settings.APPLE_SPRING_STRENGTH),
-                        12, GROUP_TITLE_COLOR, true), matchWrap(8));
-                addOption(settingSlider(Settings.APPLE_SPRING_STRENGTH, "%", null), matchWrap(12));
-            }
-            if (!isAppleStyle()) {
-                addDivider();
-                addSectionLabel(Settings.WORD_BOUNCE, 10);
-                addOption(chipRow(Settings.WORD_BOUNCE,
-                        new String[]{"Off", "Word/syllable synced only", "All synced rows"},
-                        () -> selectElement(Element.TEXT)), matchWrap(8));
-                if (!"Off".equals(store.get(Settings.WORD_BOUNCE))) {
-                    addOption(chipRow(Settings.WORD_BOUNCE_STYLE,
-                            new String[]{"Phrase zoom", "Word zoom", "Phrase lift", "Word lift", "Apple lift"},
-                            () -> selectElement(Element.TEXT)), matchWrap(14));
-                }
-
-                addDivider();
-                addSectionLabel(Settings.LINE_SYNC_FILL, 10);
-                addOption(chipRow(Settings.LINE_SYNC_FILL,
-                        new String[]{"Top to bottom", "Left to right (block)", "Left to right (sentence)"},
-                        () -> selectElement(Element.TEXT)), matchWrap(0));
             }
             endGroup();
         }
@@ -3898,10 +3877,6 @@ final class LyricsLayoutEditController {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.bottomMargin = dp(bottomMarginDp);
             return lp;
-        }
-
-        private boolean isAppleStyle() {
-            return "Apple Music".equals(store.get(Settings.ANIMATION_STYLE));
         }
 
         private int safeGet(Settings.IntegerSetting setting) {

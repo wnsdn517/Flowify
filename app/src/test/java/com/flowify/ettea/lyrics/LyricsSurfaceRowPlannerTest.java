@@ -60,10 +60,7 @@ public class LyricsSurfaceRowPlannerTest {
     public void adaptiveSectioningPolicyThreadsToMountedRowOptions() {
         AppliedLine source = line("plain upstream wrapping");
         LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, false, false, "off", false,
-                false, false, false, false,
-                "Medium", "default", 1f, false, true,
-                false, false, false);
+                1f, false, false, "off", false, false, "Medium", "default", 1f, false, true, false, false, false, true, false);
 
         LyricsSurfaceRowPlanner.RowPlan plan = LyricsSurfaceRowPlanner.plan(source, document(source), policy);
 
@@ -90,10 +87,7 @@ public class LyricsSurfaceRowPlannerTest {
     public void adaptiveTextSizePolicyThreadsToMountedRowOptions() {
         AppliedLine source = line("plain upstream wrapping");
         LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, false, false, "off", false,
-                false, false, false, false,
-                "Medium", "default", 1f, false, true,
-                false, false, false, false);
+                1f, false, false, "off", false, false, "Medium", "default", 1f, false, true, false, false, false, false, false);
 
         LyricsSurfaceRowPlanner.RowPlan plan = LyricsSurfaceRowPlanner.plan(source, document(source), policy);
 
@@ -130,32 +124,25 @@ public class LyricsSurfaceRowPlannerTest {
     }
 
     @Test
-    public void fullscreenAndLiveCardShareSyntheticWordPlanning() {
+    public void fullscreenAndLiveCardKeepLineOnlyTimingAsOneLine() {
         AppliedLine fullscreen = line("hello bright world");
         AppliedLine liveCard = line("hello bright world");
         LyricsDocument doc = document(fullscreen);
         LyricsDocument liveDoc = document(liveCard);
 
         LyricsSurfaceRowPlanner.SurfacePolicy fullscreenPolicy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, true, true, "off", true,
-                false, false, true, false,
-                "Medium", "default", 1f, false, true);
+                1f, true, true, "off", true, false, "Medium", "default", 1f, false, true);
         LyricsSurfaceRowPlanner.SurfacePolicy livePolicy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                0.30f, true, false, "off", true,
-                false, false, true, false,
-                "Medium", "default", 0.68f, false, false);
+                0.30f, true, false, "off", true, false, "Medium", "default", 0.68f, false, false);
 
         LyricsSurfaceRowPlanner.plan(fullscreen, doc, fullscreenPolicy);
         LyricsSurfaceRowPlanner.plan(liveCard, liveDoc, livePolicy);
 
-        assertTrue(fullscreen.syntheticWords);
-        assertTrue(liveCard.syntheticWords);
+        // Apple Music sweeps a line-synced row as one line: no synthetic word spans on either
+        // surface unless a timed reading has to attach under each word.
+        assertFalse(fullscreen.syntheticWords);
+        assertFalse(liveCard.syntheticWords);
         assertEquals(fullscreen.words.size(), liveCard.words.size());
-        for (int i = 0; i < fullscreen.words.size(); i++) {
-            assertEquals(fullscreen.words.get(i).text, liveCard.words.get(i).text);
-            assertEquals(fullscreen.words.get(i).startMs, liveCard.words.get(i).startMs);
-            assertEquals(fullscreen.words.get(i).endMs, liveCard.words.get(i).endMs);
-        }
     }
 
     @Test
@@ -199,20 +186,6 @@ public class LyricsSurfaceRowPlannerTest {
         assertEquals(java.util.Arrays.asList("Ya", "tebya", "lyublyu"),
                 LyricsRowViewFactory.alignedCyrillicReadingWords(line));
         assertTrue(LyricsRowViewFactory.canBuildTimedRomanRow(line, true, false));
-    }
-
-    @Test
-    public void japaneseWordModeCreatesSyntheticWordsForLineOnlyTiming() {
-        AppliedLine line = line("今年も早い");
-        LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, false, false, "off", false,
-                false, false, true, false,
-                "Medium", "default", 1f, false, true);
-
-        LyricsSurfaceRowPlanner.plan(line, document(line), policy);
-
-        assertTrue(line.syntheticWords);
-        assertTrue(line.words.size() >= 2);
     }
 
     @Test
@@ -307,9 +280,7 @@ public class LyricsSurfaceRowPlannerTest {
         line.romanizedText = "heh-loh world";
         LyricsDocument doc = document(line);
         LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, true, false, "off", true,
-                false, false, false, false,
-                "Medium", "default", 1f, false, true);
+                1f, true, false, "off", true, false, "Medium", "default", 1f, false, true);
 
         LyricsSurfaceRowPlanner.RowPlan plan = LyricsSurfaceRowPlanner.plan(line, doc, policy);
 
@@ -323,35 +294,11 @@ public class LyricsSurfaceRowPlannerTest {
         line.romanizedText = "heh-loh world";
         LyricsDocument doc = document(line);
         LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, true, false, "off", false,
-                false, false, false, false,
-                "Medium", "default", 1f, false, true);
+                1f, true, false, "off", false, false, "Medium", "default", 1f, false, true);
 
         LyricsSurfaceRowPlanner.RowPlan plan = LyricsSurfaceRowPlanner.plan(line, doc, policy);
 
         assertFalse(plan.options.attachTransliterationToWords);
-    }
-
-    @Test
-    public void chineseSentenceSyncCreatesTimedLayoutGroupsWithoutSpaces() {
-        AppliedLine line = line("看看鏡子裡的你帶著");
-        line.sourceLine.detection = com.eza.spicyex.lyrics.session.DetectionResult.detected("",
-                line.text, ScriptClassifier.ScriptClass.CHINESE, "zh", .99);
-        line.startMs = 1000;
-        line.endMs = 5000;
-        LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, false, false, "off", false,
-                false, true, false, false,
-                "Medium", "default", 1f, false, true);
-
-        LyricsSurfaceRowPlanner.RowPlan plan = LyricsSurfaceRowPlanner.plan(
-                line, document(line), policy);
-
-        assertTrue(plan.line.syntheticWords);
-        assertTrue(plan.line.words.size() > 1);
-        assertEquals(plan.line.startMs, plan.line.words.get(0).startMs);
-        assertEquals(plan.line.endMs,
-                plan.line.words.get(plan.line.words.size() - 1).endMs);
     }
 
     @Test
@@ -361,9 +308,7 @@ public class LyricsSurfaceRowPlannerTest {
                 "今年 は", "kotoshi wa", java.util.Collections.singletonList(
                 new SpicyJapaneseChineseProcessor.FuriganaSegment(0, 2, "ことし")));
         LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, true, false, "furigana_only", true,
-                false, false, true, false,
-                "Medium", "default", 1f, false, true);
+                1f, true, false, "furigana_only", true, false, "Medium", "default", 1f, false, true);
 
         LyricsSurfaceRowPlanner.RowPlan plan = LyricsSurfaceRowPlanner.plan(line, document(line), policy);
 
@@ -371,44 +316,6 @@ public class LyricsSurfaceRowPlannerTest {
         assertTrue(line.words.isEmpty());
         assertTrue(plan.options.showJapaneseFurigana);
         assertNotNull(plan.options);
-    }
-
-    @Test
-    public void japaneseSentenceFillSynthesizesLayoutGroupWordsWithoutSpaces() {
-        AppliedLine line = line("君は歌う");
-        LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, true, false, "romaji_only", false,
-                false, true, false, false, "Medium", "default", 1f,
-                false, true, false, false, true);
-
-        LyricsSurfaceRowPlanner.plan(line, document(line), policy);
-
-        assertTrue(line.syntheticWords);
-        assertTrue(line.words.size() >= 2);
-    }
-
-    @Test
-    public void japaneseSyntheticSectionsOnlyExposeAuthoredMainLineSpaces() {
-        AppliedLine line = line("銀河を超えて 君を探すの 行ったり来たり");
-        line.japaneseReading = SpicyJapaneseChineseProcessor.analyzeJapaneseLine(line.text, null);
-        LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                1f, true, false, "romaji_only", false,
-                false, true, false, false, "Medium", "default", 1f,
-                false, true, false, false, true);
-
-        LyricsSurfaceRowPlanner.plan(line, document(line), policy);
-
-        assertTrue(line.syntheticWords);
-        int visibleBoundaries = 0;
-        for (SyllableSegment segment : line.words) {
-            if (segment == null || segment.text.trim().isEmpty() || !segment.boundaryAfter) continue;
-            visibleBoundaries++;
-            int end = com.eza.spicyex.lyrics.reading.CodePointRanges
-                    .codePointOffsetToUtf16Index(line.text, segment.canonicalEndCp);
-            assertTrue(end < line.text.length());
-            assertTrue(Character.isWhitespace(line.text.codePointAt(end)));
-        }
-        assertEquals(2, visibleBoundaries);
     }
 
     @Test
@@ -550,9 +457,7 @@ public class LyricsSurfaceRowPlannerTest {
         AppliedLine source = line("right aligned lyric");
         source.oppositeAligned = true;
         LyricsSurfaceRowPlanner.SurfacePolicy policy = new LyricsSurfaceRowPlanner.SurfacePolicy(
-                0.30f, false, false, "off", false,
-                false, false, false, false,
-                "Medium", "default", 0.68f, false, false, true);
+                0.30f, false, false, "off", false, false, "Medium", "default", 0.68f, false, false, true);
 
         LyricsSurfaceRowPlanner.RowPlan plan = LyricsSurfaceRowPlanner.plan(source, document(source), policy);
 

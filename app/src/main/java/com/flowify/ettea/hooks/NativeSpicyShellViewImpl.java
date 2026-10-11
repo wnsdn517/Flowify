@@ -1780,9 +1780,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         rowContainer().addView(subtitle, subtitleLp);
 
         lyricsScroll = new com.eza.spicyex.lyrics.ElasticScrollView(activity);
-        // Rubber-banding and the shortened scroll end are Apple Music's; every other animation
-        // style scrolls like the plain ScrollView it was before.
-        setElasticScrollEnabled(appleStyle());
+        // Apple Music's rubber-banding and shortened scroll end.
+        setElasticScrollEnabled(true);
         lyricsScroll.setFillViewport(false);
         lyricsScroll.setClipToPadding(false);
         lyricsScroll.setClipChildren(false);
@@ -2488,9 +2487,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         }
 
         renderConfig = next;
-        // Rubber band and scroll end limit belong to the Apple style; switching the style in the
-        // panel has to take them on or off, and switching off also lifts any limit already set.
-        setElasticScrollEnabled(next.appleStyle);
         if (diff.needsLocalReprocess || diff.needsTranslationReprocess || diff.needsToggleOnly) {
             updateToggleVisuals();
         }
@@ -2797,7 +2793,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (pendingLoadEntrance) {
             pendingLoadEntrance = false;
             if (!shouldEnter && config != null && Boolean.TRUE.equals(config.get(Settings.LOAD_LIFT_ANIMATION))
-                    && appleStyle() && com.eza.spicyex.ui.Motion.animationsEnabled()) {
+                    && com.eza.spicyex.ui.Motion.animationsEnabled()) {
                 // Hide now, synchronously, before this mount is ever measured or drawn. The reveal
                 // itself can only start once the rows have a height, i.e. one layout pass later -
                 // by which point they have already been painted at full brightness for a frame,
@@ -2960,7 +2956,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         if (index <= 0 || index >= document.appliedLines.size()) return;
         View row = rowMountController.attachedRowView(document.appliedLines.get(index));
         if (row == null || row.getHeight() <= 0 || lyricsScroll.getHeight() <= 0) return;
-        int target = Math.max(0, scrollController.centeredScrollTarget(row, dp(56), appleStyle()));
+        int target = Math.max(0, scrollController.centeredScrollTarget(row, dp(56)));
         if (Math.abs(target - lyricsScroll.getScrollY()) <= 2) return;
         scrollSpring = null;
         applyingLyricScroll = true;
@@ -3704,10 +3700,8 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
      * scrollY, not the row's layout position, so they are never counteracted.
      */
     /** Tells the scroll view where the content ends: the last lyric line resting on the focus
-     *  position, not the source credit and bottom padding below it scrolling on past. Apple Music
-     *  only - {@link com.eza.spicyex.lyrics.ElasticScrollView} ignores the limit otherwise. */
+     *  position, not the source credit and bottom padding below it scrolling on past. */
     private void updateScrollEndLimit() {
-        if (!appleStyle()) return;
         com.eza.spicyex.lyrics.ElasticScrollView scroll = elasticScroll();
         if (scroll == null) return;
         int limit = Integer.MAX_VALUE;
@@ -3717,7 +3711,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                     document.appliedLines.get(document.appliedLines.size() - 1));
             if (last != null && last.getHeight() > 0) {
                 int focusLimit = Math.max(0, scrollController.centeredScrollTarget(
-                        last, dp(56), true));
+                        last, dp(56)));
                 // Reveal the footer text without scrolling through its large bottom padding.
                 int footerTextBottom = sourceFooter.getTop() + sourceFooter.getHeight()
                         - sourceFooter.getPaddingBottom();
@@ -3750,13 +3744,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                     LyricsLineViewState.ensureScalePivots(document.appliedLines.get(i));
                 }
             }
-        }
-        if (!appleStyle()) {
-            // Browser-style scroll anchoring is Apple Music's. Other styles scroll only from
-            // setActiveLine()'s own scrollTo, exactly as they did before this pre-draw step.
-            scrollAnchorLine = null;
-            scrollAnchorTop = Float.NaN;
-            return;
         }
         AppliedLine line = null;
         View row = null;
@@ -4234,7 +4221,7 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     private void setActiveLine(int index, long positionMs, SpotifyTrack track, boolean instantScroll) {
         int old = followState.activeIndex();
         boolean placeFirstActiveInstantly = LyricsScrollController.shouldScrollInstantly(
-                instantScroll, old, appleStyle());
+                instantScroll, old);
         if (document != null && index >= 0) {
             boolean activeVisible = rowMountController.containsIndex(index);
             if (!activeVisible || followState.isHoldingNow()) {
@@ -4321,28 +4308,20 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
                 }
             }
             int target = scrollController == null ? 0
-                    : scrollController.centeredScrollTarget(row, dp(56), appleStyle());
+                    : scrollController.centeredScrollTarget(row, dp(56));
             scrollToActiveTarget(Math.max(0, target), instantScroll);
         });
     }
 
-    /** Apple-owned slide: on only while the Animation style is Apple Music and its row is on. */
+    /** Apple row cascade: on for the Smooth and Spring scroll motions, off for Static. */
     private boolean readSlideEnabled() {
         if (config == null) return false;
-        return "Apple Music".equals(config.get(Settings.ANIMATION_STYLE))
-                && Boolean.TRUE.equals(config.get(Settings.LINE_SLIDE_ANIMATION));
+        return !"Static".equals(config.get(Settings.SCROLL_MOTION));
     }
 
-    /**
-     * Animation style is "Apple Music" - the single switch every Apple-only motion path in this
-     * shell is gated on. {@link LyricsRenderConfig#appleStyle} is read straight from
-     * {@link com.eza.spicyex.lyrics.LyricsShellSettings#appleAnimation()}, so the shell reuses the
-     * already-resolved config rather than resolving the style a second way; before the config
-     * exists (construction order) it asks the settings wrapper directly.
-     */
-    private boolean appleStyle() {
-        if (renderConfig != null) return renderConfig.appleStyle;
-        return new com.eza.spicyex.lyrics.LyricsShellSettings(activity, config).appleAnimation();
+    /** Smooth: the cascade and scroll arrive critically damped, with no overshoot. */
+    private boolean smoothScrollMotion() {
+        return config != null && "Smooth".equals(config.get(Settings.SCROLL_MOTION));
     }
 
     /** The fullscreen scroll view as an {@link com.eza.spicyex.lyrics.ElasticScrollView}, or null
@@ -4398,15 +4377,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
             lyricsScroll.scrollTo(0, target);
             applyingLyricScroll = false;
             if (moved) clearRowCascade();
-            return;
-        }
-        if (!appleStyle() && !returnToCurrentPending && Math.abs(delta) <= springTravelCapPx()) {
-            // Not the Apple style: the row cascade and the Apple speed/strength editor keys do not
-            // apply, so an ordinary advance stays on the ScrollView's own smoothScrollTo(). A
-            // return from far away falls through to the capped spring below instead, since
-            // smoothScrollTo() would just slide the whole distance as a plain scroll.
-            clearRowCascade();
-            lyricsScroll.smoothScrollTo(0, target);
             return;
         }
         if (slideAnimationEnabled && Math.abs(delta) <= glideCapPx()) {
@@ -4517,34 +4487,22 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
         return slideAnimationEnabled ? elasticDamping(SCROLL_SPRING_DAMPING) : 1f;
     }
 
-    /** Cascade and spring speed from the Apple speed editor. Apple Music only: the other animation
-     *  styles run every spring at the plain constants, so the setting cannot reach them. */
+    /** Cascade and spring speed from the speed editor (Settings.APPLE_CASCADE_SPEED). */
     private float cascadeSpeedMultiplier() {
-        if (!appleStyle()) return 1f;
         float speedPct = config != null ? (float) config.get(Settings.APPLE_CASCADE_SPEED) : 100f;
         return Math.max(0.5f, Math.min(2f, speedPct / 100f));
     }
 
-    /** Maps the editor's strength control to elasticity (damping), not travel speed. Apple Music
-     *  only, like {@link #cascadeSpeedMultiplier}. */
+    /** Damping from the single Scroll motion choice: Smooth is critically damped (no overshoot);
+     *  Spring keeps the tuned Apple damping and its small overshoot. */
     private float elasticDamping(float baseDamping) {
-        if (!appleStyle()) return baseDamping;
-        float strengthPct = config != null ? (float) config.get(Settings.APPLE_SPRING_STRENGTH) : 100f;
-        // Strength > 100% reduces damping for more bounce; < 100% increases it toward 1.0 (dead).
-        float elasticity = (strengthPct - 100f) / 100f;
-        float adjusted = baseDamping - elasticity * 0.25f;
-        return Math.max(0.45f, Math.min(0.95f, adjusted));
+        if (smoothScrollMotion()) return 1f;
+        return Math.max(0.45f, Math.min(0.95f, baseDamping));
     }
 
-    /** Compensates for the "slower" feel of low-damping bouncy springs by slightly raising
-     *  the base frequency as strength increases. Apple Music only. */
+    /** Springs run at their tuned frequency; speed is APPLE_CASCADE_SPEED's job. */
     private float elasticFrequencyMultiplier() {
-        if (!appleStyle()) return 1f;
-        float strengthPct = config != null ? (float) config.get(Settings.APPLE_SPRING_STRENGTH) : 100f;
-        if (strengthPct <= 100f) return 1f;
-        float extra = (strengthPct - 100f) / 100f;
-        // Raised from 0.15 to 0.28 to keep the "snappiness" even when damping is very low.
-        return 1f + extra * 0.28f;
+        return 1f;
     }
 
     /** How much of a far jump the scroll spring actually animates, in px. */
@@ -4607,8 +4565,6 @@ final class NativeSpicyShellViewImpl extends FrameLayout {
     }
 
     private float glideCapPx() {
-        boolean apple = renderConfig != null && renderConfig.appleStyle;
-        if (!apple) return ROW_CASCADE_MAX_OFFSET_PX;
         if (pipPresentation && pipScreenHeightPx > 0) {
             // The PiP lyrics area is a small part of the window; measured against it, ordinary
             // line changes read as long jumps and skipped the slide animation.

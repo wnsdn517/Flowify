@@ -16,11 +16,12 @@ public class AppleCompactCjkTest {
     }
 
     @Test
-    public void letterAnimatorWidensOnlyUnderAppleFlag() {
+    public void letterAnimatorTakesLongSegments() {
         SyllableSegment seg = new SyllableSegment();
         seg.text = "hello world this is long";
         seg.totalMs = 500;
+        assertTrue(LyricVisuals.shouldUseLetterAnimator(seg));
+        seg.text = "this segment is far too long to animate";
         assertFalse(LyricVisuals.shouldUseLetterAnimator(seg));
-        assertTrue(LyricVisuals.shouldUseLetterAnimator(seg, true));
     }
 }

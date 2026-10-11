@@ -87,6 +87,8 @@
     <string name="settings_label_player_apple_style">Apple Music-style player screen</string>
     <string name="settings_search_player_apple_style">full screen artwork, cover fills the top, blurred background, now playing design, no square cover</string>
     <string name="settings_label_player_apple_time">Apple-style time: remaining time, rolling digits</string>
+    <string name="settings_label_player_inline_lyrics">Lyrics inside the Apple-style player</string>
+    <string name="settings_search_player_inline_lyrics">tap the lyric line, lyrics in place of the cover, inline lyrics, apple music lyrics view</string>
     <string name="settings_search_player_apple_time">remaining time, minus time, time left, seek bar time, animated numbers, digits</string>
     <string name="settings_label_player_animated_artwork">Use animated artwork on the player screen</string>
     <string name="settings_search_player_animated_artwork">moving album art, animated background, now playing, replace cover</string>
@@ -149,7 +151,6 @@
     <string name="settings_label_lyrics_live_card_secondary_mode">Extra line</string>
     <string name="settings_label_lyrics_live_card_animation">Animation</string>
     <string name="settings_label_lyrics_live_card_glow">Glow</string>
-    <string name="settings_label_lyrics_live_card_line_sync_fill">Fill direction</string>
     <string name="settings_label_lyrics_live_card_overflow">Overflow</string>
     <string name="settings_label_lyrics_live_card_scroll_scope">Scroll scope</string>
     <string name="settings_label_lyrics_live_card_transition">Transition</string>
@@ -195,21 +196,14 @@
     <string name="settings_label_lyric_apple_fade_passed_lines">Fade passed lines</string>
     <string name="settings_label_lyric_apple_compact_text">Apple-style text proportions</string>
     <string name="settings_label_lyric_line_slide_animation">Apple Music-style slide</string>
+    <string name="settings_label_lyric_scroll_motion">Scroll motion</string>
+    <string name="settings_option_lyric_scroll_motion_static">Static</string>
+    <string name="settings_option_lyric_scroll_motion_smooth">Smooth</string>
+    <string name="settings_option_lyric_scroll_motion_spring">Spring</string>
     <string name="settings_label_lyric_apple_lift">Apple lift</string>
     <string name="settings_label_lyric_word_bounce">Word bounce</string>
-    <string name="settings_label_lyric_word_bounce_mode">Word bounce</string>
-    <string name="settings_option_lyric_word_bounce_mode_off">Off</string>
-    <string name="settings_option_lyric_word_bounce_mode_word_syllable_synced_only">Word/syllable synced only</string>
-    <string name="settings_option_lyric_word_bounce_mode_all_synced_rows">All synced rows</string>
-    <string name="settings_label_lyric_word_bounce_style">Bounce style</string>
-    <string name="settings_option_lyric_word_bounce_style_phrase_zoom">Phrase zoom</string>
-    <string name="settings_option_lyric_word_bounce_style_word_zoom">Word zoom</string>
-    <string name="settings_option_lyric_word_bounce_style_phrase_lift">Phrase lift</string>
-    <string name="settings_option_lyric_word_bounce_style_word_lift">Word lift</string>
-    <string name="settings_option_lyric_word_bounce_style_apple_lift">Apple lift</string>
     <string name="settings_label_lyric_enable_glow_blur">Text glow</string>
     <string name="settings_label_lyric_enable_line_blur">Blur distant lines</string>
-    <string name="settings_label_lyric_line_sync_fill">Lyric fill direction</string>
     <string name="settings_label_lyric_enable_background">Animated background</string>
     <string name="settings_label_lyric_background_style">Background style</string>
     <string name="settings_label_lyric_force_dark_background">Force dark background</string>
@@ -250,13 +244,8 @@
     <string name="settings_option_translation">Translation</string>
     <string name="settings_option_both">Both</string>
     <string name="settings_option_minimal">Minimal</string>
-    <string name="settings_option_karaoke_fill">Karaoke fill</string>
-    <string name="settings_option_spotlight_word">Spotlight word</string>
     <string name="settings_option_word_only">Word only</string>
     <string name="settings_option_subtle_line">Subtle line</string>
-    <string name="settings_option_top_to_bottom">Top to bottom</string>
-    <string name="settings_option_left_to_right_sentence">Left to right (sentence)</string>
-    <string name="settings_option_left_to_right_block">Left to right (block)</string>
     <string name="settings_option_wrap">Wrap</string>
     <string name="settings_option_scroll_with_lyric">Scroll with lyric</string>
     <string name="settings_option_clip">Clip</string>
@@ -274,8 +263,6 @@
     <string name="settings_option_apple">Apple</string>
     <string name="settings_option_dots">Dots</string>
     <string name="settings_option_note">Music note</string>
-    <string name="settings_option_gradient_wash">Gradient wash</string>
-    <string name="settings_option_spotlight">Spotlight</string>
     <string name="settings_option_gradient">Gradient</string>
     <string name="settings_option_static_texture">Static texture</string>
     <string name="settings_option_animated_texture">Animated texture</string>
@@ -577,6 +564,7 @@
     <string name="settings_resync_timing_done">Lyrics sync reset</string>
     <string name="lyrics_translation_retrying">Retrying translation…</string>
     <string name="lyrics_instrumental">Instrumental</string>
+    <string name="lyrics_inline_unavailable">No lyrics for this song</string>
     <string name="settings_label_lyrics_status_bar_hidden_mode">Hide status bar</string>
     <string name="settings_label_lyrics_blur_intensity">Blur intensity</string>
     <string name="settings_label_lyrics_furigana_brightness">Furigana brightness</string>
@@ -820,7 +808,6 @@
     <string name="settings_search_lyrics_live_card_tap_target">tap the album cover to open lyrics</string>
     <string name="settings_search_lyrics_chrome_cluster_position">buttons top right, top left, where the settings button sits</string>
     <string name="settings_search_lyrics_fullscreen_controls">play pause buttons, playback controls, hide controls</string>
-    <string name="settings_search_lyric_animation_style">apple music style, karaoke highlight, word by word</string>
     <string name="settings_search_download_language_models">japanese and chinese dictionary, offline readings, download</string>
     <string name="settings_search_lyric_aligned_per_word_romaji">reading under each word</string>
     <string name="settings_search_lyrics_korean_romanization">korean pronunciation in latin letters</string>
@@ -867,12 +854,6 @@
     <string name="settings_about_developer">Developer</string>
     <string name="settings_about_original">Original developer</string>
     <string name="settings_about_source">Source code on GitHub</string>
-    <string name="settings_about_official">Official</string>
-    <string name="settings_about_unofficial">Unofficial</string>
-    <string name="settings_about_telegram_caption">Telegram</string>
-    <string name="settings_about_share_bug_info">Share for a bug report</string>
-    <string name="settings_about_share_info_chooser">Share app info</string>
-    <string name="settings_about_latest">Latest on GitHub</string>
     <string name="settings_about_latest_commit">Latest commit</string>
     <string name="settings_about_checking">Checking…</string>
     <string name="settings_about_update">Update available</string>
@@ -880,6 +861,8 @@
     <string name="settings_about_up_to_date">Up to date</string>
     <string name="settings_about_unavailable">Unavailable</string>
     <string name="settings_about_device">Device</string>
+    <string name="settings_about_diagnostics_caption">Diagnostics</string>
+    <string name="settings_about_current_lyrics_caption">Current lyrics</string>
     <string name="settings_about_framework">Framework</string>
     <string name="settings_about_build">Build</string>
     <string name="diagnostic_json_copied">Diagnostic JSON copied - paste it into the issue</string>
@@ -891,8 +874,5 @@
     <string name="lyrics_device_wired">Wired headphones</string>
     <string name="lyrics_device_usb">USB audio</string>
     <string name="lyrics_device_now_playing_on">Now playing on</string>
-    <string name="settings_about_announcements">Announcements</string>
-    <string name="settings_about_discussion">Discussion</string>
-    <string name="settings_about_ci_channel">CI builds</string>
     <string name="settings_source_list_title">Sources</string>
 </resources>

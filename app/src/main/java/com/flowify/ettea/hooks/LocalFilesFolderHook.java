@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Adds folder-aware grouping and hiding to Spotify's own MediaStore-backed Local Files list. */
+/** Adds folder hiding to Spotify's own MediaStore-backed Local Files list. */
 public final class LocalFilesFolderHook {
     private static final String TAG = NativeSpicyLyricsHook.TAG;
     private static final String PREF_HIDDEN_FOLDERS = "spotify_local_files_hidden_folders";
@@ -117,10 +117,13 @@ public final class LocalFilesFolderHook {
             return;
         }
 
+        // Leave Spotify's cursor untouched unless the user actually hid a folder.
+        Set<String> hidden = hiddenFolders(context);
+        if (hidden.isEmpty()) return;
+
         Cursor source = (Cursor) param.getResult();
         try {
-            MatrixCursor filtered = filterCursor(context.getContentResolver(), source,
-                    hiddenFolders(context));
+            MatrixCursor filtered = filterCursor(context.getContentResolver(), source, hidden);
             if (filtered != null) {
                 source.close();
                 param.setResult(filtered);
@@ -140,7 +143,6 @@ public final class LocalFilesFolderHook {
 
         Map<Long, String> folderById = readFolderPaths(resolver);
         String[] columns = source.getColumnNames();
-        int albumColumn = source.getColumnIndex(MediaStore.Audio.Media.ALBUM);
         MatrixCursor result = new MatrixCursor(columns, source.getCount());
         int kept = 0;
         int originalPosition = source.getPosition();
@@ -150,11 +152,7 @@ public final class LocalFilesFolderHook {
                 String folder = folderById.get(id);
                 if (LocalFilesFolderPolicy.isHidden(hiddenFolders, folder)) continue;
 
-                Object[] row = readRow(source, columns.length);
-                if (albumColumn >= 0) {
-                    row[albumColumn] = LocalFilesFolderPolicy.folderLabel(folder);
-                }
-                result.addRow(row);
+                result.addRow(readRow(source, columns.length));
                 kept++;
             }
             result.moveToPosition(-1);

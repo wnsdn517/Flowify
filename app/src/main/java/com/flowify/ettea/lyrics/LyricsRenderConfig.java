@@ -17,11 +17,6 @@ public final class LyricsRenderConfig {
     public final boolean forceDarkBackground;
     public final int extraDarkBackground;
     public final boolean lineGradientEnabled;
-    public final boolean spotlight;
-    public final boolean wordBounceEnabled;
-    public final String wordBounceScope;
-    public final String wordBounceStyle;
-    public final boolean appleStyle;
     public final boolean appleLift;
     public final boolean appleDimPassed;
     public final boolean appleCompactText;
@@ -51,11 +46,9 @@ public final class LyricsRenderConfig {
     public final boolean liveCardMinimalAnimation;
     public final String liveCardAnimationMode;
     public final String liveCardGlowMode;
-    public final String liveCardLineSyncFillMode;
     public final String liveCardTransitionMode;
     public final String liveCardOverflowMode;
     public final String liveCardScrollScope;
-    public final String lineSyncFillMode;
     public final String japaneseModeConfig;
     public final String defaultJapaneseReadingMode;
     public final String chineseModeConfig;
@@ -79,11 +72,6 @@ public final class LyricsRenderConfig {
             boolean forceDarkBackground,
             int extraDarkBackground,
             boolean lineGradientEnabled,
-            boolean spotlight,
-            boolean wordBounceEnabled,
-            String wordBounceScope,
-            String wordBounceStyle,
-            boolean appleStyle,
             boolean appleLift,
             boolean appleDimPassed,
             boolean appleCompactText,
@@ -113,11 +101,9 @@ public final class LyricsRenderConfig {
             boolean liveCardMinimalAnimation,
             String liveCardAnimationMode,
             String liveCardGlowMode,
-            String liveCardLineSyncFillMode,
             String liveCardTransitionMode,
             String liveCardOverflowMode,
             String liveCardScrollScope,
-            String lineSyncFillMode,
             String japaneseModeConfig,
             String defaultJapaneseReadingMode,
             String chineseModeConfig,
@@ -142,11 +128,6 @@ public final class LyricsRenderConfig {
         this.forceDarkBackground = forceDarkBackground;
         this.extraDarkBackground = extraDarkBackground;
         this.lineGradientEnabled = lineGradientEnabled;
-        this.spotlight = spotlight;
-        this.wordBounceEnabled = wordBounceEnabled;
-        this.wordBounceScope = safe(wordBounceScope);
-        this.wordBounceStyle = safe(wordBounceStyle);
-        this.appleStyle = appleStyle;
         this.appleLift = appleLift;
         this.appleDimPassed = appleDimPassed;
         this.appleCompactText = appleCompactText;
@@ -176,11 +157,9 @@ public final class LyricsRenderConfig {
         this.liveCardMinimalAnimation = liveCardMinimalAnimation;
         this.liveCardAnimationMode = safe(liveCardAnimationMode);
         this.liveCardGlowMode = safe(liveCardGlowMode);
-        this.liveCardLineSyncFillMode = safe(liveCardLineSyncFillMode);
         this.liveCardTransitionMode = safe(liveCardTransitionMode);
         this.liveCardOverflowMode = safe(liveCardOverflowMode);
         this.liveCardScrollScope = safe(liveCardScrollScope);
-        this.lineSyncFillMode = safe(lineSyncFillMode);
         this.japaneseModeConfig = safe(japaneseModeConfig);
         this.defaultJapaneseReadingMode = safe(defaultJapaneseReadingMode);
         this.chineseModeConfig = safe(chineseModeConfig);
@@ -198,46 +177,6 @@ public final class LyricsRenderConfig {
         this.translationTarget = safe(translationTarget);
         this.translationBright = translationBright;
         this.syncOffsetMs = syncOffsetMs;
-    }
-
-    // Keep reflection-based JVM fixtures stable while the scope setting is added.
-    private LyricsRenderConfig(
-            String backgroundStyle, boolean forceDarkBackground, boolean lineGradientEnabled,
-            boolean spotlight, boolean wordBounceEnabled, boolean glowBlurEnabled,
-            boolean lineBlurEnabled, float blurQuality, boolean interludeNoteIcon,
-            boolean toggleSpinnerEnabled, boolean attachTransliterationToWords,
-            boolean transliterationEnabled, boolean adaptiveSectioningEnabled,
-            String lineSpacingMode, float lineSpacingMultiplier, String lyricWeight,
-            String liveCardWeight, String lyricsFont, String lyricsFontCustomPath, String lyricsTextSizeMode,
-            float lyricsTextSizeMultiplier, String liveCardTextSizeMode,
-            float liveCardTextSizeMultiplier, String liveCardSecondaryMode,
-            boolean liveCardShowTransliteration, boolean liveCardShowTranslation,
-            boolean liveCardMinimalAnimation, String liveCardAnimationMode,
-            String liveCardGlowMode, String liveCardLineSyncFillMode,
-            String liveCardTransitionMode, String liveCardOverflowMode,
-            String liveCardScrollScope, String lineSyncFillMode, String japaneseModeConfig,
-            String defaultJapaneseReadingMode, String chineseModeConfig, String defaultChineseMode,
-            String koreanModeConfig, String defaultKoreanMode, String koreanMode,
-            boolean chineseTones, String cyrillicModeConfig, String defaultCyrillicMode,
-            String cyrillicMode, boolean cyrillicKeepSigns, boolean translationEnabled,
-            String translationBackend, String translationTarget, boolean translationBright,
-            int syncOffsetMs
-    ) {
-        this(backgroundStyle, forceDarkBackground, 0, lineGradientEnabled, spotlight,
-                wordBounceEnabled, "Word/syllable synced only", "Phrase zoom", false, false, false,
-                false, glowBlurEnabled,
-                lineBlurEnabled, false, blurQuality, interludeNoteIcon, toggleSpinnerEnabled,
-                attachTransliterationToWords, transliterationEnabled, adaptiveSectioningEnabled,
-                lineSpacingMode, lineSpacingMultiplier, lyricWeight, liveCardWeight, lyricsFont, "",
-                lyricsTextSizeMode, lyricsTextSizeMultiplier, true, liveCardTextSizeMode,
-                liveCardTextSizeMultiplier, liveCardSecondaryMode, liveCardShowTransliteration,
-                liveCardShowTranslation, liveCardMinimalAnimation, liveCardAnimationMode,
-                liveCardGlowMode, liveCardLineSyncFillMode, liveCardTransitionMode,
-                liveCardOverflowMode, liveCardScrollScope, lineSyncFillMode, japaneseModeConfig,
-                defaultJapaneseReadingMode, chineseModeConfig, defaultChineseMode, koreanModeConfig,
-                defaultKoreanMode, koreanMode, chineseTones, cyrillicModeConfig, defaultCyrillicMode,
-                cyrillicMode, cyrillicKeepSigns, translationEnabled, translationBackend,
-                translationTarget, translationBright, syncOffsetMs);
     }
 
     public static LyricsRenderConfig read(Context context, SpotifyPlusConfig config) {
@@ -265,22 +204,8 @@ public final class LyricsRenderConfig {
         boolean transliterationEnabled = get(cfg, Settings.TRANSLITERATION_ENABLED);
         boolean translationEnabled = translationEnabled(cfg);
 
-        String wordBounceMode = cfg == null ? Settings.WORD_BOUNCE.defaultValue
-                : cfg.get(Settings.WORD_BOUNCE);
-        boolean wordBounceEnabled = !"Off".equals(wordBounceMode);
-        String wordBounceScope = "All synced rows".equals(wordBounceMode)
-                ? "All synced rows" : "Word/syllable synced only";
-        String wordBounceStyle = cfg == null ? Settings.WORD_BOUNCE_STYLE.defaultValue
-                : cfg.get(Settings.WORD_BOUNCE_STYLE);
-        // Dedicated Apple mode (R3): the style flag plus Apple-owned keys only. Shared keys
-        // (bounce style, line blur, font, ...) are never rewritten, so no snapshot cycle exists.
-        // "Apple lift" is also a shared Bounce style value: it selects the Apple lift motion
-        // curve in any animation style without enabling the rest of the Apple stack.
-        boolean appleStyle = shell.appleAnimation();
-        // The karaoke shader reads its base colour from the view; this is the one place the style is
-        // resolved, so it publishes the flag rather than each row having to carry it.
-        SpicyAnimatedTextView.setAppleGradientBaseStyle(appleStyle);
-        boolean appleLift = appleLiftMotion(wordBounceStyle, appleStyle, get(cfg, Settings.APPLE_LIFT));
+        // Apple Music is the only lyric animation; these keys shape it.
+        boolean appleLift = get(cfg, Settings.APPLE_LIFT);
         String lineBlurLevel = cfg == null ? Settings.ENABLE_LINE_BLUR.defaultValue
                 : cfg.get(Settings.ENABLE_LINE_BLUR);
 
@@ -290,14 +215,9 @@ public final class LyricsRenderConfig {
                 get(cfg, Settings.FORCE_DARK_BACKGROUND),
                 get(cfg, Settings.EXTRA_DARK_BACKGROUND),
                 get(cfg, Settings.ENABLE_LINE_GRADIENT),
-                shell.spotlightAnimation(),
-                wordBounceEnabled,
-                wordBounceScope,
-                wordBounceStyle,
-                appleStyle,
                 appleLift,
-                appleStyle && get(cfg, Settings.APPLE_FADE_PASSED_LINES),
-                appleStyle && get(cfg, Settings.APPLE_COMPACT_TEXT),
+                get(cfg, Settings.APPLE_FADE_PASSED_LINES),
+                get(cfg, Settings.APPLE_COMPACT_TEXT),
                 get(cfg, Settings.ENABLE_GLOW_BLUR),
                 !"Off".equals(lineBlurLevel),
                 "Heavy".equals(lineBlurLevel),
@@ -328,11 +248,9 @@ public final class LyricsRenderConfig {
                 "Minimal".equals(shell.liveCardAnimationMode()),
                 shell.liveCardAnimationMode(),
                 shell.liveCardGlowMode(),
-                shell.liveCardLineSyncFillMode(),
                 shell.liveCardTransitionMode(),
                 shell.liveCardOverflowMode(),
                 shell.liveCardScrollScope(),
-                shell.lineSyncFillMode(),
                 jp,
                 defaultJp,
                 cn,
@@ -362,41 +280,27 @@ public final class LyricsRenderConfig {
         return Math.max(0L, lyricPositionMs - syncOffsetMs);
     }
 
-    public boolean lineSyncFillTopDown() {
-        return "Top to bottom".equals(lineSyncFillMode);
-    }
-
-    public boolean lineSyncFillWord() {
-        return "Left to right (word)".equals(lineSyncFillMode);
-    }
-
-    public boolean lineSyncFillSentence() {
-        return "Left to right (sentence)".equals(lineSyncFillMode);
-    }
-
+    /**
+     * The card under the player title: the same Apple Music rendering as the lyrics screen, at the
+     * card's own size, or no animation at all under "Minimal". It is a single line, so passed-line
+     * dimming and the compact Apple proportions stay off.
+     */
     public LyricsRenderConfig forLiveCard() {
         boolean minimal = "Minimal".equals(liveCardAnimationMode);
-        boolean spotlightCard = "Spotlight word".equals(liveCardAnimationMode);
-        boolean glow = !"Off".equals(liveCardGlowMode)
-                && !"auto".equalsIgnoreCase(liveCardGlowMode)
-                && !spotlightCard;
-        String fillMode = spotlightCard
-                ? "Left to right (word)"
-                : ("Karaoke fill".equals(liveCardAnimationMode) ? liveCardLineSyncFillMode : "Top to bottom");
+        boolean glow = !minimal && !"Off".equals(liveCardGlowMode)
+                && !"auto".equalsIgnoreCase(liveCardGlowMode);
         return new LyricsRenderConfig(
                 backgroundStyle,
                 forceDarkBackground,
                 extraDarkBackground,
                 !minimal,
-                spotlightCard,
-                 wordBounceEnabled,
-                 wordBounceScope,
-                 wordBounceStyle,
-                 false, false, false, false,
-                 glow,
-                 false,
-                 false,
-                 blurQuality,
+                !minimal && appleLift,
+                false,
+                false,
+                glow,
+                false,
+                false,
+                blurQuality,
                 interludeNoteIcon,
                 toggleSpinnerEnabled,
                 attachTransliterationToWords,
@@ -419,11 +323,9 @@ public final class LyricsRenderConfig {
                 minimal,
                 liveCardAnimationMode,
                 liveCardGlowMode,
-                fillMode,
                 liveCardTransitionMode,
                 liveCardOverflowMode,
                 liveCardScrollScope,
-                fillMode,
                 japaneseModeConfig,
                 defaultJapaneseReadingMode,
                 chineseModeConfig,
@@ -446,16 +348,6 @@ public final class LyricsRenderConfig {
 
     public Diff diff(LyricsRenderConfig next) {
         return new Diff(this, next);
-    }
-
-    /**
-     * Apple lift motion selector (pure, unit-tested): the shared "Apple lift" Bounce style
-     * value selects the lift curve in any animation style; the Apple-owned toggle applies
-     * only under the Apple Music style. No shared key is rewritten either way.
-     */
-    static boolean appleLiftMotion(String wordBounceStyle, boolean appleStyle, boolean appleLiftSetting) {
-        if ("Apple lift".equals(wordBounceStyle)) return true;
-        return appleStyle && appleLiftSetting;
     }
 
     private static <T> T get(SpotifyPlusConfig config, Settings.Setting<T> setting) {
@@ -527,7 +419,6 @@ public final class LyricsRenderConfig {
             boolean adaptiveSectioningChanged = oldValue.adaptiveSectioningEnabled != next.adaptiveSectioningEnabled;
             boolean spacingChanged = changed(oldValue.lineSpacingMode, next.lineSpacingMode)
                     || changed(oldValue.lineSpacingMultiplier, next.lineSpacingMultiplier);
-            boolean fillChanged = changed(oldValue.lineSyncFillMode, next.lineSyncFillMode);
             japaneseModeConfigChanged = changed(oldValue.japaneseModeConfig, next.japaneseModeConfig);
             chineseModeConfigChanged = changed(oldValue.chineseModeConfig, next.chineseModeConfig)
                     || changed(oldValue.defaultChineseMode, next.defaultChineseMode);
@@ -540,11 +431,6 @@ public final class LyricsRenderConfig {
                     || oldValue.cyrillicKeepSigns != next.cyrillicKeepSigns;
             boolean visualOnlyChanged = oldValue.toggleSpinnerEnabled != next.toggleSpinnerEnabled
                     || oldValue.lineGradientEnabled != next.lineGradientEnabled
-                    || oldValue.spotlight != next.spotlight
-                     || oldValue.wordBounceEnabled != next.wordBounceEnabled
-                     || changed(oldValue.wordBounceScope, next.wordBounceScope)
-                     || changed(oldValue.wordBounceStyle, next.wordBounceStyle)
-                     || oldValue.appleStyle != next.appleStyle
                      || oldValue.appleLift != next.appleLift
                      || oldValue.appleDimPassed != next.appleDimPassed
                      || oldValue.glowBlurEnabled != next.glowBlurEnabled
@@ -561,7 +447,6 @@ public final class LyricsRenderConfig {
                     || oldValue.liveCardMinimalAnimation != next.liveCardMinimalAnimation
                     || changed(oldValue.liveCardAnimationMode, next.liveCardAnimationMode)
                     || changed(oldValue.liveCardGlowMode, next.liveCardGlowMode)
-                    || changed(oldValue.liveCardLineSyncFillMode, next.liveCardLineSyncFillMode)
                     || changed(oldValue.liveCardTransitionMode, next.liveCardTransitionMode)
                     || changed(oldValue.liveCardOverflowMode, next.liveCardOverflowMode)
                     || changed(oldValue.liveCardScrollScope, next.liveCardScrollScope)
@@ -573,7 +458,7 @@ public final class LyricsRenderConfig {
             needsTimingOnly = oldValue.syncOffsetMs != next.syncOffsetMs;
 
             needsRowRemount = interludeChanged || weightChanged || textSizeChanged || attachChanged || transliterationChanged
-                    || adaptiveSectioningChanged || spacingChanged || fillChanged || japaneseModeConfigChanged
+                    || adaptiveSectioningChanged || spacingChanged || japaneseModeConfigChanged
                     || oldValue.translationBright != next.translationBright
                     || oldValue.appleCompactText != next.appleCompactText;
             needsLocalReprocess = transliterationChanged || chineseModeConfigChanged || koreanChanged || chineseTonesChanged || cyrillicChanged;

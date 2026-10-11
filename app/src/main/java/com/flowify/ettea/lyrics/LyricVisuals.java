@@ -113,27 +113,15 @@ public final class LyricVisuals {
         return Math.max(14, Math.round(baseTextSp * 0.48f));
     }
 
-    public static boolean shouldUseLetterAnimator(SyllableSegment seg) {
-        return shouldUseLetterAnimator(seg, false);
-    }
-
     /**
-     * Apple variant: the lift wave drives per-letter motion, so the timing gate drops to 80ms
-     * and the length cap widens to 28 code points. Shared path unchanged.
+     * Whether a timed segment animates letter by letter: Apple's lift wave drives per-letter
+     * motion, so any segment held at least 80ms and up to 28 code points qualifies (never RTL,
+     * whose glyphs must stay joined).
      */
-    public static boolean shouldUseLetterAnimator(SyllableSegment seg, boolean appleStyle) {
+    public static boolean shouldUseLetterAnimator(SyllableSegment seg) {
         if (seg == null || isBlank(seg.text)) return false;
         String text = safe(seg.text);
         int codePoints = text.codePointCount(0, text.length());
-        if (!appleStyle) {
-            boolean multiCjk = codePoints > 1
-                    && (SpicyTextDetection.itemJapaneseTest(text)
-                    || SpicyTextDetection.itemKoreanTest(text));
-            return (seg.totalMs >= 1000 || multiCjk)
-                    && codePoints > 0
-                    && codePoints <= 12
-                    && !SpicyTextDetection.containsRtl(text);
-        }
         return seg.totalMs >= 80
                 && codePoints > 0
                 && codePoints <= 28

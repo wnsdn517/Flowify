@@ -59,17 +59,7 @@ public class HeldNoteEmphasisTest {
         for (int i = 0; i <= 100; i++) {
             float t = i / 100f;
             assertTrue("dipped at t=" + t, LyricAnimations.emphasisEnvelope(t) >= 0f);
-            assertTrue("shrank at t=" + t, LyricAnimations.emphasisScale(t, 1f) >= 1f);
         }
-    }
-
-    @Test
-    public void scaleTracksStrength() {
-        assertEquals(1f, LyricAnimations.emphasisScale(0.5f, 0f), 0.0001f);
-        assertEquals(1f + LyricAnimations.EMPHASIS_MAX_SCALE,
-                LyricAnimations.emphasisScale(0.5f, 1f), 0.0001f);
-        assertTrue(LyricAnimations.emphasisScale(0.5f, 1f)
-                > LyricAnimations.emphasisScale(0.5f, 0.4f));
     }
 
     @Test
@@ -96,16 +86,6 @@ public class HeldNoteEmphasisTest {
         assertEquals(0f, LyricsAnimationApplier.emphasisStrength(broken, 1), 0f);
         assertEquals(0f, LyricsAnimationApplier.emphasisStrength(null, 0), 0f);
         assertEquals(0f, LyricsAnimationApplier.emphasisStrength(broken, 99), 0f);
-    }
-
-    @Test
-    public void wordScaleFoldsEmphasisOnTopOfTheOrdinaryCurve() {
-        float plain = LyricsAnimationApplier.wordMotionScale(false, true, false, 0.5f, false, 0f);
-        float swollen = LyricsAnimationApplier.wordMotionScale(false, true, false, 0.5f, false, 1f);
-        assertTrue(swollen > plain);
-        // Apple lift is vertical-only; held-note enlargement belongs to non-Apple letter motion.
-        assertEquals(1f, LyricsAnimationApplier.wordMotionScale(true, true, false, 0.5f, false, 0f), 0.0001f);
-        assertEquals(1f, LyricsAnimationApplier.wordMotionScale(true, true, false, 0.5f, false, 1f), 0.0001f);
     }
 
     private static AppliedLine line(long[][] spans) {
